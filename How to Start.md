@@ -1,0 +1,187 @@
+# How to Start
+
+This guide explains how to reproduce ClaudIA from zero in a clean Microsoft 365 lab tenant and Azure subscription.
+
+## 1. Local Workstation
+
+Use Windows with PowerShell 7. Run PowerShell as Administrator for the first setup.
+
+Install these tools:
+
+| Tool | Why it is needed |
+| --- | --- |
+| PowerShell 7 | Runs the installer, modules, validation, and operations scripts. |
+| Azure CLI | Signs in to Azure, reads Key Vault values, configures Azure resources, and obtains Graph tokens. |
+| Git | Clones and updates the repository. |
+| Node.js LTS | Runs Playwright browser agents and validation scripts. |
+| Microsoft Edge or Chromium | Browser automation target for Playwright tests. |
+| Visual Studio Code | Optional, but useful for editing config and running GitHub Copilot assisted deployments. |
+
+Install required PowerShell modules:
+
+```powershell
+Install-Module Az -Scope CurrentUser -Force
+Install-Module ExchangeOnlineManagement -Scope CurrentUser -Force
+Install-Module Microsoft.Graph -Scope CurrentUser -Force
+```
+
+Install Node dependencies for browser agents only when you plan to run browser automation:
+
+```powershell
+cd .\BrowserAgents
+npm install
+npx playwright install chromium
+cd ..
+```
+
+## 2. Azure And Microsoft 365 Requirements
+
+Use a non-production lab tenant.
+
+Minimum cloud requirements:
+
+| Requirement | Notes |
+| --- | --- |
+| Azure subscription | Contributor or Owner access is recommended for the resource group used by ClaudIA. |
+| Microsoft Entra ID tenant | Global Administrator or equivalent setup rights are required during initial provisioning. |
+| Microsoft 365 E5 or equivalent trial/lab licenses | Needed for Purview, Defender, DLP, sensitivity labels, audit, Teams, Exchange, SharePoint, OneDrive, and optional Copilot scenarios. |
+| Azure Key Vault | Stores agent and app secrets so secrets stay outside the repository. |
+| Azure Automation | Runs autonomous agent jobs and operational runbooks. |
+| Azure OpenAI or Azure AI Foundry | Generates synthetic business content. |
+| Log Analytics and Microsoft Sentinel | Stores and analyzes generated telemetry. |
+| Azure Data Explorer | Optional but recommended for storyline and activity analytics. |
+| Azure Functions and Storage Static Website | Required for the activity story map portal. |
+| Microsoft Playwright Testing or local Playwright | Optional browser-persona execution. |
+
+Register providers before deployment:
+
+```powershell
+az provider register -n Microsoft.CognitiveServices --wait
+az provider register -n Microsoft.Automation --wait
+az provider register -n Microsoft.KeyVault --wait
+az provider register -n Microsoft.OperationalInsights --wait
+az provider register -n Microsoft.Kusto --wait
+az provider register -n Microsoft.Web --wait
+az provider register -n Microsoft.Storage --wait
+```
+
+## 3. Clone And Prepare
+
+```powershell
+git clone https://github.com/MH-Demos/CaludIA.git ClaudIA
+cd ClaudIA
+
+Get-ChildItem -Recurse -Filter *.ps1 | Unblock-File
+```
+
+If the repository remote is renamed to `ClaudIA`, update the clone URL accordingly.
+
+## 4. Configure The Lab
+
+Start from [config/agents.json](config/agents.json). Replace public placeholders with your lab values:
+
+| Field | Replace with |
+| --- | --- |
+| `tenant.domain` | Your lab tenant domain, for example `contoso.onmicrosoft.com`. |
+| `tenant.tenantId` | Your Entra tenant ID. |
+| `tenant.subscriptionId` | Your Azure subscription ID. |
+| `infrastructure.resourceGroup` | Resource group for ClaudIA. |
+| `infrastructure.keyVaultName` | Your Key Vault name. |
+| `infrastructure.openAiAccountName` | Your Azure OpenAI account or deployment host. |
+| `adx.*` | Your ADX cluster, database, table, and app identity values if ADX is enabled. |
+| `activityStoryMap.*` | Your storage, function app, API, and optional Front Door values. |
+| `agents[*].userPrincipalName` | Persona users in your lab tenant. |
+
+Do not write passwords, client secrets, access tokens, connection strings, or browser storage states into JSON files.
+
+Use Key Vault for secrets:
+
+```powershell
+az keyvault secret set --vault-name kv-claudia-lab --name agent-client-secret --value "<client-secret>"
+az keyvault secret set --vault-name kv-claudia-lab --name priya-sharma --value "<persona-password>"
+```
+
+## 5. Sign In And Validate
+
+```powershell
+az logout
+az login --tenant contoso.onmicrosoft.com
+az account set --subscription 11111111-1111-1111-1111-111111111111
+
+.\prerequisites\Test-Prerequisites.ps1
+.\tools\Test-PublicRepoSafety.ps1
+```
+
+Fix all prerequisite failures before running the installer.
+
+## 6. Deploy Core ClaudIA
+
+Run the wizard:
+
+```powershell
+.\Install-AutonomousAgents.ps1
+```
+
+Expected deployment areas:
+
+| Area | Result |
+| --- | --- |
+| Entra personas | Lab users or selected existing users configured for autonomous activity. |
+| Microsoft 365 workloads | SharePoint, OneDrive, Outlook, Teams, and optional Fabric targets. |
+| Purview | Sensitivity labels, DLP policies, Insider Risk and DSPM-related scenarios where available. |
+| Azure | Automation, Key Vault, OpenAI, Log Analytics, Sentinel, ADX, storage, Functions, and optional Front Door. |
+| Runbooks | Scheduled agent execution and supporting operational tasks. |
+
+The wizard is designed to be re-run safely. Use dry run mode before changes when needed:
+
+```powershell
+.\Install-AutonomousAgents.ps1 -DryRun
+```
+
+## 7. Run A Smoke Test
+
+```powershell
+.\tests\Test-SingleAgent.ps1 -Agent priya.sharma
+.\Manage-Costs.ps1 -Action Status
+```
+
+For browser automation:
+
+```powershell
+.\tools\Invoke-BrowserAgentAuth.ps1 -Agent priya.sharma
+.\tools\Invoke-BrowserAgentDaily.ps1 -Agent priya.sharma -Services owa
+```
+
+Browser sessions are stored under `BrowserAgents/.auth` and are intentionally ignored by Git.
+
+## 8. Reproduce The Storyline
+
+Use these assets in order:
+
+1. Read [Storyline/profiles.md](Storyline/profiles.md) to understand personas.
+2. Review [Storyline/live_demo_runbook_defender_purview.md](Storyline/live_demo_runbook_defender_purview.md) for the demo flow.
+3. Use [Storyline/banking-finance-e5-activity-scenarios](Storyline/banking-finance-e5-activity-scenarios) for deeper scenario packs.
+4. Publish or run [activity-story-map/web](activity-story-map/web) to show the visual portal.
+5. Keep [Images](Images) aligned with persona and service references.
+
+When adding a new scenario, update the storyline, config, relevant scripts, and README links together.
+
+## 9. Keep The Repo Public-Safe
+
+Before pushing:
+
+```powershell
+.\tools\Test-PublicRepoSafety.ps1
+```
+
+Do not commit generated folders:
+
+- `BrowserAgents/.auth`
+- `BrowserAgents/node_modules`
+- `BrowserAgents/playwright-report`
+- `BrowserAgents/test-results`
+- `logs`
+- `out`
+- `.env`
+- `temp_*.json`
+

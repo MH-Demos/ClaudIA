@@ -1,0 +1,1425 @@
+{
+  "schemaVersion": "1.0",
+  "runId": "20260519-115519",
+  "createdAt": "2026-05-19T11:55:23.0423841-05:00",
+  "updatedAt": "2026-05-20T18:54:16.7924186-05:00",
+  "sourceConfigPath": "C:\\MyDev\\Nabil\\ClaudIA-master\\ClaudIA\\config\\agents.json",
+  "runLogPath": "C:\\MyDev\\Nabil\\ClaudIA-master\\ClaudIA\\logs\\Install-AutonomousAgents-20260520-185156.log",
+  "tenant": {
+    "domain": "contoso.example",
+    "tenantId": "00000000-0000-0000-0000-000000000000",
+    "subscriptionId": "11111111-1111-1111-1111-111111111111",
+    "location": "westus",
+    "country": "US"
+  },
+  "infrastructure": {
+    "resourceGroup": "rg-claudia-lab",
+    "automationAccountName": "aa-claudia-lab",
+    "openAiAccountName": "oai-claudia-lab",
+    "openAiModel": "gpt-4.1-mini",
+    "openAiModelVersion": "2025-04-14",
+    "openAiImageModel": "",
+    "openAiImageModelVersion": "",
+    "openAiTpm": 30,
+    "fabricEnabled": false,
+    "keyVaultName": "kv-claudia-lab"
+  },
+  "agents": [
+    {
+      "sam": "ana.rodriguez",
+      "userPrincipalName": "ana.rodriguez@contoso.example",
+      "displayName": "Ana Rodriguez",
+      "department": "HR",
+      "jobTitle": "Analista de TI/Seguridad",
+      "wave": 1,
+      "workload": "SPO",
+      "copilotLicense": false,
+      "existingUser": true,
+      "workingHours": {
+        "end": 17,
+        "start": 8
+      },
+      "filesPerDay": [
+        4,
+        7
+      ],
+      "emailsPerDay": [
+        2,
+        4
+      ],
+      "style": "professional, context-appropriate",
+      "topics": [
+        "payroll",
+        "onboarding",
+        "absences",
+        "employee files",
+        "privacy compliance"
+      ],
+      "keyVaultSecretName": "ana-rodriguez"
+    },
+    {
+      "sam": "carlos.delgado",
+      "userPrincipalName": "carlos.delgado@contoso.example",
+      "displayName": "Carlos Delgado",
+      "department": "Finance",
+      "jobTitle": "Analista de Datos",
+      "wave": 1,
+      "workload": "SPO",
+      "copilotLicense": false,
+      "existingUser": true,
+      "workingHours": {
+        "end": 17,
+        "start": 8
+      },
+      "filesPerDay": [
+        4,
+        7
+      ],
+      "emailsPerDay": [
+        2,
+        4
+      ],
+      "style": "professional, context-appropriate",
+      "topics": [
+        "supplier payments",
+        "quarterly reports",
+        "expense reports",
+        "budgets",
+        "tax filings"
+      ],
+      "keyVaultSecretName": "carlos-delgado"
+    },
+    {
+      "sam": "david.chen",
+      "userPrincipalName": "david.chen@contoso.example",
+      "displayName": "David Chen",
+      "department": "Legal",
+      "jobTitle": "Especialista en atención al cliente",
+      "wave": 1,
+      "workload": "SPO",
+      "copilotLicense": false,
+      "existingUser": true,
+      "workingHours": {
+        "end": 17,
+        "start": 8
+      },
+      "filesPerDay": [
+        4,
+        7
+      ],
+      "emailsPerDay": [
+        2,
+        4
+      ],
+      "style": "professional, context-appropriate",
+      "topics": [
+        "privacy audits",
+        "employment contracts",
+        "privacy registers",
+        "litigation",
+        "NDA"
+      ],
+      "keyVaultSecretName": "david-chen"
+    },
+    {
+      "sam": "james.wilson",
+      "userPrincipalName": "james.wilson@contoso.example",
+      "displayName": "James Wilson",
+      "department": "Engineering",
+      "jobTitle": "Director de Operaciones",
+      "wave": 1,
+      "workload": "SPO",
+      "copilotLicense": false,
+      "existingUser": true,
+      "workingHours": {
+        "end": 17,
+        "start": 8
+      },
+      "filesPerDay": [
+        4,
+        7
+      ],
+      "emailsPerDay": [
+        2,
+        4
+      ],
+      "style": "professional, context-appropriate",
+      "topics": [
+        "test data with PII",
+        "API specs",
+        "debug logs",
+        "code reviews",
+        "sprint reports"
+      ],
+      "keyVaultSecretName": "james-wilson"
+    },
+    {
+      "sam": "marcus.olsson",
+      "userPrincipalName": "marcus.olsson@contoso.example",
+      "displayName": "Marcus Olsson",
+      "department": "Sales",
+      "jobTitle": "Gerente de Ciberseguridad",
+      "wave": 1,
+      "workload": "SPO",
+      "copilotLicense": false,
+      "existingUser": true,
+      "workingHours": {
+        "end": 17,
+        "start": 8
+      },
+      "filesPerDay": [
+        4,
+        7
+      ],
+      "emailsPerDay": [
+        2,
+        4
+      ],
+      "style": "professional, context-appropriate",
+      "topics": [
+        "sales pipeline",
+        "proposals",
+        "commissions",
+        "meeting notes",
+        "prospects"
+      ],
+      "keyVaultSecretName": "marcus-olsson"
+    },
+    {
+      "sam": "alexander.meyer",
+      "userPrincipalName": "alexander.meyer@contoso.example",
+      "displayName": "Alexander Meyer",
+      "department": "HR",
+      "jobTitle": "CEO",
+      "wave": 2,
+      "workload": "Teams",
+      "copilotLicense": true,
+      "existingUser": true,
+      "workingHours": {
+        "end": 17,
+        "start": 8
+      },
+      "filesPerDay": [
+        4,
+        7
+      ],
+      "emailsPerDay": [
+        2,
+        4
+      ],
+      "style": "professional, context-appropriate",
+      "topics": [
+        "payroll",
+        "onboarding",
+        "absences",
+        "employee files",
+        "privacy compliance"
+      ],
+      "keyVaultSecretName": "alexander-meyer"
+    },
+    {
+      "sam": "diego.martinez",
+      "userPrincipalName": "diego.martinez@contoso.example",
+      "displayName": "Diego Martinez",
+      "department": "Finance",
+      "jobTitle": "Gerente Comercial",
+      "wave": 2,
+      "workload": "Lists",
+      "copilotLicense": true,
+      "existingUser": true,
+      "workingHours": {
+        "end": 17,
+        "start": 8
+      },
+      "filesPerDay": [
+        4,
+        7
+      ],
+      "emailsPerDay": [
+        2,
+        4
+      ],
+      "style": "professional, context-appropriate",
+      "topics": [
+        "supplier payments",
+        "quarterly reports",
+        "expense reports",
+        "budgets",
+        "tax filings"
+      ],
+      "keyVaultSecretName": "diego-martinez"
+    },
+    {
+      "sam": "emily.johnson",
+      "userPrincipalName": "emily.johnson@contoso.example",
+      "displayName": "Emily Johnson",
+      "department": "Legal",
+      "jobTitle": "Abogada Corporativa",
+      "wave": 2,
+      "workload": "Chat",
+      "copilotLicense": true,
+      "existingUser": true,
+      "workingHours": {
+        "end": 17,
+        "start": 8
+      },
+      "filesPerDay": [
+        4,
+        7
+      ],
+      "emailsPerDay": [
+        2,
+        4
+      ],
+      "style": "professional, context-appropriate",
+      "topics": [
+        "privacy audits",
+        "employment contracts",
+        "privacy registers",
+        "litigation",
+        "NDA"
+      ],
+      "keyVaultSecretName": "emily-johnson"
+    },
+    {
+      "sam": "laura.gomez",
+      "userPrincipalName": "laura.gomez@contoso.example",
+      "displayName": "Laura Gomez",
+      "department": "Engineering",
+      "jobTitle": "Analista de RRHH",
+      "wave": 2,
+      "workload": "Fabric",
+      "copilotLicense": true,
+      "existingUser": true,
+      "workingHours": {
+        "end": 17,
+        "start": 8
+      },
+      "filesPerDay": [
+        4,
+        7
+      ],
+      "emailsPerDay": [
+        2,
+        4
+      ],
+      "style": "professional, context-appropriate",
+      "topics": [
+        "test data with PII",
+        "API specs",
+        "debug logs",
+        "code reviews",
+        "sprint reports"
+      ],
+      "keyVaultSecretName": "laura-gomez"
+    },
+    {
+      "sam": "priya.sharma",
+      "userPrincipalName": "priya.sharma@contoso.example",
+      "displayName": "Priya Sharma",
+      "department": "Sales",
+      "jobTitle": "Cientifica de Datos",
+      "wave": 2,
+      "workload": "Meetings",
+      "copilotLicense": true,
+      "existingUser": true,
+      "workingHours": {
+        "end": 17,
+        "start": 8
+      },
+      "filesPerDay": [
+        4,
+        7
+      ],
+      "emailsPerDay": [
+        2,
+        4
+      ],
+      "style": "professional, context-appropriate",
+      "topics": [
+        "sales pipeline",
+        "proposals",
+        "commissions",
+        "meeting notes",
+        "prospects"
+      ],
+      "keyVaultSecretName": "priya-sharma"
+    },
+    {
+      "sam": "miguel.santos",
+      "userPrincipalName": "miguel.santos@contoso.example",
+      "displayName": "Miguel Santos",
+      "department": "TI / Infraestructura",
+      "jobTitle": "Platform Engineer",
+      "wave": 3.0,
+      "workload": "ExternalAI",
+      "copilotLicense": false,
+      "existingUser": true,
+      "workingHours": {
+        "end": 17,
+        "start": 8
+      },
+      "filesPerDay": [
+        3,
+        6
+      ],
+      "emailsPerDay": [
+        2,
+        4
+      ],
+      "style": "professional, realistic workplace tone, concise and context-aware",
+      "topics": [
+        "collaboration",
+        "business operations",
+        "sensitive data handling",
+        "project updates"
+      ],
+      "keyVaultSecretName": "miguel-santos"
+    },
+    {
+      "sam": "sofia.lopez",
+      "userPrincipalName": "sofia.lopez@contoso.example",
+      "displayName": "Sofia Lopez",
+      "department": "PMO",
+      "jobTitle": "Project Manager",
+      "wave": 3.0,
+      "workload": "ExternalAI",
+      "copilotLicense": false,
+      "existingUser": true,
+      "workingHours": {
+        "end": 17,
+        "start": 8
+      },
+      "filesPerDay": [
+        3,
+        6
+      ],
+      "emailsPerDay": [
+        2,
+        4
+      ],
+      "style": "professional, realistic workplace tone, concise and context-aware",
+      "topics": [
+        "collaboration",
+        "business operations",
+        "sensitive data handling",
+        "project updates"
+      ],
+      "keyVaultSecretName": "sofia-lopez"
+    },
+    {
+      "sam": "devon.reyes",
+      "userPrincipalName": "devon.reyes@contoso.example",
+      "displayName": "Devon Reyes",
+      "department": "Operations Support",
+      "jobTitle": "Business Operation Analyst",
+      "wave": 4.0,
+      "workload": "ExternalAI",
+      "copilotLicense": false,
+      "existingUser": true,
+      "workingHours": {
+        "end": 17,
+        "start": 8
+      },
+      "filesPerDay": [
+        3,
+        6
+      ],
+      "emailsPerDay": [
+        2,
+        4
+      ],
+      "style": "professional, realistic workplace tone, concise and context-aware",
+      "topics": [
+        "collaboration",
+        "business operations",
+        "sensitive data handling",
+        "project updates"
+      ],
+      "keyVaultSecretName": "devon-reyes"
+    }
+  ],
+  "selectedUsers": [
+    {
+      "sam": "ana.rodriguez",
+      "userPrincipalName": "ana.rodriguez@contoso.example",
+      "displayName": "Ana Rodriguez",
+      "department": "HR",
+      "jobTitle": "Analista de TI/Seguridad",
+      "wave": 1,
+      "workload": "SPO",
+      "keyVaultSecretName": "ana-rodriguez"
+    },
+    {
+      "sam": "carlos.delgado",
+      "userPrincipalName": "carlos.delgado@contoso.example",
+      "displayName": "Carlos Delgado",
+      "department": "Finance",
+      "jobTitle": "Analista de Datos",
+      "wave": 1,
+      "workload": "SPO",
+      "keyVaultSecretName": "carlos-delgado"
+    },
+    {
+      "sam": "david.chen",
+      "userPrincipalName": "david.chen@contoso.example",
+      "displayName": "David Chen",
+      "department": "Legal",
+      "jobTitle": "Especialista en atención al cliente",
+      "wave": 1,
+      "workload": "SPO",
+      "keyVaultSecretName": "david-chen"
+    },
+    {
+      "sam": "james.wilson",
+      "userPrincipalName": "james.wilson@contoso.example",
+      "displayName": "James Wilson",
+      "department": "Engineering",
+      "jobTitle": "Director de Operaciones",
+      "wave": 1,
+      "workload": "SPO",
+      "keyVaultSecretName": "james-wilson"
+    },
+    {
+      "sam": "marcus.olsson",
+      "userPrincipalName": "marcus.olsson@contoso.example",
+      "displayName": "Marcus Olsson",
+      "department": "Sales",
+      "jobTitle": "Gerente de Ciberseguridad",
+      "wave": 1,
+      "workload": "SPO",
+      "keyVaultSecretName": "marcus-olsson"
+    },
+    {
+      "sam": "alexander.meyer",
+      "userPrincipalName": "alexander.meyer@contoso.example",
+      "displayName": "Alexander Meyer",
+      "department": "HR",
+      "jobTitle": "CEO",
+      "wave": 2,
+      "workload": "Teams",
+      "keyVaultSecretName": "alexander-meyer"
+    },
+    {
+      "sam": "diego.martinez",
+      "userPrincipalName": "diego.martinez@contoso.example",
+      "displayName": "Diego Martinez",
+      "department": "Finance",
+      "jobTitle": "Gerente Comercial",
+      "wave": 2,
+      "workload": "Lists",
+      "keyVaultSecretName": "diego-martinez"
+    },
+    {
+      "sam": "emily.johnson",
+      "userPrincipalName": "emily.johnson@contoso.example",
+      "displayName": "Emily Johnson",
+      "department": "Legal",
+      "jobTitle": "Abogada Corporativa",
+      "wave": 2,
+      "workload": "Chat",
+      "keyVaultSecretName": "emily-johnson"
+    },
+    {
+      "sam": "laura.gomez",
+      "userPrincipalName": "laura.gomez@contoso.example",
+      "displayName": "Laura Gomez",
+      "department": "Engineering",
+      "jobTitle": "Analista de RRHH",
+      "wave": 2,
+      "workload": "Fabric",
+      "keyVaultSecretName": "laura-gomez"
+    },
+    {
+      "sam": "priya.sharma",
+      "userPrincipalName": "priya.sharma@contoso.example",
+      "displayName": "Priya Sharma",
+      "department": "Sales",
+      "jobTitle": "Cientifica de Datos",
+      "wave": 2,
+      "workload": "Meetings",
+      "keyVaultSecretName": "priya-sharma"
+    },
+    {
+      "sam": "miguel.santos",
+      "userPrincipalName": "miguel.santos@contoso.example",
+      "displayName": "Miguel Santos",
+      "department": "TI / Infraestructura",
+      "jobTitle": "Platform Engineer",
+      "wave": 3.0,
+      "workload": "ExternalAI",
+      "keyVaultSecretName": "miguel-santos"
+    },
+    {
+      "sam": "sofia.lopez",
+      "userPrincipalName": "sofia.lopez@contoso.example",
+      "displayName": "Sofia Lopez",
+      "department": "PMO",
+      "jobTitle": "Project Manager",
+      "wave": 3.0,
+      "workload": "ExternalAI",
+      "keyVaultSecretName": "sofia-lopez"
+    },
+    {
+      "sam": "devon.reyes",
+      "userPrincipalName": "devon.reyes@contoso.example",
+      "displayName": "Devon Reyes",
+      "department": "Operations Support",
+      "jobTitle": "Business Operation Analyst",
+      "wave": 4.0,
+      "workload": "ExternalAI",
+      "keyVaultSecretName": "devon-reyes"
+    }
+  ],
+  "environmentScan": {
+    "collectedAt": "2026-05-20T18:52:13.8883871-05:00",
+    "results": {
+      "automation": "exists",
+      "app": "exists",
+      "users": "exists",
+      "openai": "exists",
+      "subscription": "ok",
+      "rg": "exists"
+    },
+    "existingCount": 5,
+    "newOrPartialCount": 0,
+    "total": 6,
+    "actualResourceGroups": {
+      "automation": "rg-claudia-lab",
+      "openAi": null
+    }
+  },
+  "steps": {
+    "0": {
+      "activity": "Reset connections and validate prerequisites",
+      "completedAt": "2026-05-20T18:52:17.3605257-05:00",
+      "skipped": true,
+      "reason": "Skipped by parameter."
+    },
+    "1": {
+      "activity": "Create or select agent users",
+      "completedAt": "2026-05-19T11:59:50.0763397-05:00",
+      "userMode": "existing",
+      "agentCount": 13,
+      "agents": [
+        {
+          "sam": "ana.rodriguez",
+          "userPrincipalName": "ana.rodriguez@contoso.example",
+          "displayName": "Ana Rodriguez",
+          "department": "HR",
+          "jobTitle": "Analista de TI/Seguridad",
+          "wave": 1,
+          "workload": "SPO",
+          "copilotLicense": false,
+          "existingUser": true,
+          "workingHours": {
+            "end": 17,
+            "start": 8
+          },
+          "filesPerDay": [
+            4,
+            7
+          ],
+          "emailsPerDay": [
+            2,
+            4
+          ],
+          "style": "professional, context-appropriate",
+          "topics": [
+            "payroll",
+            "onboarding",
+            "absences",
+            "employee files",
+            "privacy compliance"
+          ],
+          "keyVaultSecretName": "ana-rodriguez"
+        },
+        {
+          "sam": "carlos.delgado",
+          "userPrincipalName": "carlos.delgado@contoso.example",
+          "displayName": "Carlos Delgado",
+          "department": "Finance",
+          "jobTitle": "Analista de Datos",
+          "wave": 1,
+          "workload": "SPO",
+          "copilotLicense": false,
+          "existingUser": true,
+          "workingHours": {
+            "end": 17,
+            "start": 8
+          },
+          "filesPerDay": [
+            4,
+            7
+          ],
+          "emailsPerDay": [
+            2,
+            4
+          ],
+          "style": "professional, context-appropriate",
+          "topics": [
+            "supplier payments",
+            "quarterly reports",
+            "expense reports",
+            "budgets",
+            "tax filings"
+          ],
+          "keyVaultSecretName": "carlos-delgado"
+        },
+        {
+          "sam": "david.chen",
+          "userPrincipalName": "david.chen@contoso.example",
+          "displayName": "David Chen",
+          "department": "Legal",
+          "jobTitle": "Especialista en atención al cliente",
+          "wave": 1,
+          "workload": "SPO",
+          "copilotLicense": false,
+          "existingUser": true,
+          "workingHours": {
+            "end": 17,
+            "start": 8
+          },
+          "filesPerDay": [
+            4,
+            7
+          ],
+          "emailsPerDay": [
+            2,
+            4
+          ],
+          "style": "professional, context-appropriate",
+          "topics": [
+            "privacy audits",
+            "employment contracts",
+            "privacy registers",
+            "litigation",
+            "NDA"
+          ],
+          "keyVaultSecretName": "david-chen"
+        },
+        {
+          "sam": "james.wilson",
+          "userPrincipalName": "james.wilson@contoso.example",
+          "displayName": "James Wilson",
+          "department": "Engineering",
+          "jobTitle": "Director de Operaciones",
+          "wave": 1,
+          "workload": "SPO",
+          "copilotLicense": false,
+          "existingUser": true,
+          "workingHours": {
+            "end": 17,
+            "start": 8
+          },
+          "filesPerDay": [
+            4,
+            7
+          ],
+          "emailsPerDay": [
+            2,
+            4
+          ],
+          "style": "professional, context-appropriate",
+          "topics": [
+            "test data with PII",
+            "API specs",
+            "debug logs",
+            "code reviews",
+            "sprint reports"
+          ],
+          "keyVaultSecretName": "james-wilson"
+        },
+        {
+          "sam": "marcus.olsson",
+          "userPrincipalName": "marcus.olsson@contoso.example",
+          "displayName": "Marcus Olsson",
+          "department": "Sales",
+          "jobTitle": "Gerente de Ciberseguridad",
+          "wave": 1,
+          "workload": "SPO",
+          "copilotLicense": false,
+          "existingUser": true,
+          "workingHours": {
+            "end": 17,
+            "start": 8
+          },
+          "filesPerDay": [
+            4,
+            7
+          ],
+          "emailsPerDay": [
+            2,
+            4
+          ],
+          "style": "professional, context-appropriate",
+          "topics": [
+            "sales pipeline",
+            "proposals",
+            "commissions",
+            "meeting notes",
+            "prospects"
+          ],
+          "keyVaultSecretName": "marcus-olsson"
+        },
+        {
+          "sam": "alexander.meyer",
+          "userPrincipalName": "alexander.meyer@contoso.example",
+          "displayName": "Alexander Meyer",
+          "department": "HR",
+          "jobTitle": "CEO",
+          "wave": 2,
+          "workload": "Teams",
+          "copilotLicense": true,
+          "existingUser": true,
+          "workingHours": {
+            "end": 17,
+            "start": 8
+          },
+          "filesPerDay": [
+            4,
+            7
+          ],
+          "emailsPerDay": [
+            2,
+            4
+          ],
+          "style": "professional, context-appropriate",
+          "topics": [
+            "payroll",
+            "onboarding",
+            "absences",
+            "employee files",
+            "privacy compliance"
+          ],
+          "keyVaultSecretName": "alexander-meyer"
+        },
+        {
+          "sam": "diego.martinez",
+          "userPrincipalName": "diego.martinez@contoso.example",
+          "displayName": "Diego Martinez",
+          "department": "Finance",
+          "jobTitle": "Gerente Comercial",
+          "wave": 2,
+          "workload": "Lists",
+          "copilotLicense": true,
+          "existingUser": true,
+          "workingHours": {
+            "end": 17,
+            "start": 8
+          },
+          "filesPerDay": [
+            4,
+            7
+          ],
+          "emailsPerDay": [
+            2,
+            4
+          ],
+          "style": "professional, context-appropriate",
+          "topics": [
+            "supplier payments",
+            "quarterly reports",
+            "expense reports",
+            "budgets",
+            "tax filings"
+          ],
+          "keyVaultSecretName": "diego-martinez"
+        },
+        {
+          "sam": "emily.johnson",
+          "userPrincipalName": "emily.johnson@contoso.example",
+          "displayName": "Emily Johnson",
+          "department": "Legal",
+          "jobTitle": "Abogada Corporativa",
+          "wave": 2,
+          "workload": "Chat",
+          "copilotLicense": true,
+          "existingUser": true,
+          "workingHours": {
+            "end": 17,
+            "start": 8
+          },
+          "filesPerDay": [
+            4,
+            7
+          ],
+          "emailsPerDay": [
+            2,
+            4
+          ],
+          "style": "professional, context-appropriate",
+          "topics": [
+            "privacy audits",
+            "employment contracts",
+            "privacy registers",
+            "litigation",
+            "NDA"
+          ],
+          "keyVaultSecretName": "emily-johnson"
+        },
+        {
+          "sam": "laura.gomez",
+          "userPrincipalName": "laura.gomez@contoso.example",
+          "displayName": "Laura Gomez",
+          "department": "Engineering",
+          "jobTitle": "Analista de RRHH",
+          "wave": 2,
+          "workload": "Fabric",
+          "copilotLicense": true,
+          "existingUser": true,
+          "workingHours": {
+            "end": 17,
+            "start": 8
+          },
+          "filesPerDay": [
+            4,
+            7
+          ],
+          "emailsPerDay": [
+            2,
+            4
+          ],
+          "style": "professional, context-appropriate",
+          "topics": [
+            "test data with PII",
+            "API specs",
+            "debug logs",
+            "code reviews",
+            "sprint reports"
+          ],
+          "keyVaultSecretName": "laura-gomez"
+        },
+        {
+          "sam": "priya.sharma",
+          "userPrincipalName": "priya.sharma@contoso.example",
+          "displayName": "Priya Sharma",
+          "department": "Sales",
+          "jobTitle": "Cientifica de Datos",
+          "wave": 2,
+          "workload": "Meetings",
+          "copilotLicense": true,
+          "existingUser": true,
+          "workingHours": {
+            "end": 17,
+            "start": 8
+          },
+          "filesPerDay": [
+            4,
+            7
+          ],
+          "emailsPerDay": [
+            2,
+            4
+          ],
+          "style": "professional, context-appropriate",
+          "topics": [
+            "sales pipeline",
+            "proposals",
+            "commissions",
+            "meeting notes",
+            "prospects"
+          ],
+          "keyVaultSecretName": "priya-sharma"
+        },
+        {
+          "sam": "miguel.santos",
+          "userPrincipalName": "miguel.santos@contoso.example",
+          "displayName": "Miguel Santos",
+          "department": "TI / Infraestructura",
+          "jobTitle": "Platform Engineer",
+          "wave": 3.0,
+          "workload": "ExternalAI",
+          "copilotLicense": false,
+          "existingUser": true,
+          "workingHours": {
+            "end": 17,
+            "start": 8
+          },
+          "filesPerDay": [
+            3,
+            6
+          ],
+          "emailsPerDay": [
+            2,
+            4
+          ],
+          "style": "professional, realistic workplace tone, concise and context-aware",
+          "topics": [
+            "collaboration",
+            "business operations",
+            "sensitive data handling",
+            "project updates"
+          ],
+          "keyVaultSecretName": "miguel-santos"
+        },
+        {
+          "sam": "sofia.lopez",
+          "userPrincipalName": "sofia.lopez@contoso.example",
+          "displayName": "Sofia Lopez",
+          "department": "PMO",
+          "jobTitle": "Project Manager",
+          "wave": 3.0,
+          "workload": "ExternalAI",
+          "copilotLicense": false,
+          "existingUser": true,
+          "workingHours": {
+            "end": 17,
+            "start": 8
+          },
+          "filesPerDay": [
+            3,
+            6
+          ],
+          "emailsPerDay": [
+            2,
+            4
+          ],
+          "style": "professional, realistic workplace tone, concise and context-aware",
+          "topics": [
+            "collaboration",
+            "business operations",
+            "sensitive data handling",
+            "project updates"
+          ],
+          "keyVaultSecretName": "sofia-lopez"
+        },
+        {
+          "sam": "devon.reyes",
+          "userPrincipalName": "devon.reyes@contoso.example",
+          "displayName": "Devon Reyes",
+          "department": "Operations Support",
+          "jobTitle": "Business Operation Analyst",
+          "wave": 4.0,
+          "workload": "ExternalAI",
+          "copilotLicense": false,
+          "workingHours": {
+            "end": 17,
+            "start": 8
+          },
+          "filesPerDay": [
+            3,
+            6
+          ],
+          "emailsPerDay": [
+            2,
+            4
+          ],
+          "style": "professional, realistic workplace tone, concise and context-aware",
+          "topics": [
+            "collaboration",
+            "business operations",
+            "sensitive data handling",
+            "project updates"
+          ],
+          "existingUser": true
+        }
+      ]
+    },
+    "2": {
+      "activity": "Licenses and MFA exclusion",
+      "completedAt": "2026-05-19T11:59:58.3032184-05:00",
+      "dryRun": false,
+      "mfaExclusionGroup": "grp-agent-mfa-exclusion",
+      "mfaExclusionGroupId": "70578f1f-4e11-4827-9627-f41e9d9f0615",
+      "selectedLicenseSku": "Microsoft_365_E5_(no_Teams)",
+      "copilotSku": "Microsoft_365_Copilot",
+      "agentUpns": [
+        "ana.rodriguez@contoso.example",
+        "carlos.delgado@contoso.example",
+        "david.chen@contoso.example",
+        "james.wilson@contoso.example",
+        "marcus.olsson@contoso.example",
+        "alexander.meyer@contoso.example",
+        "diego.martinez@contoso.example",
+        "emily.johnson@contoso.example",
+        "laura.gomez@contoso.example",
+        "priya.sharma@contoso.example"
+      ]
+    },
+    "3": {
+      "activity": "Register app-dataagent",
+      "completedAt": "2026-05-19T12:00:27.0788954-05:00",
+      "dryRun": false,
+      "appName": "app-dataagent",
+      "appId": "22222222-2222-2222-2222-222222222222"
+    },
+    "4": {
+      "activity": "Azure infrastructure and Key Vault",
+      "completedAt": "2026-05-20T18:54:16.7907454-05:00",
+      "dryRun": false,
+      "resourceGroup": "rg-claudia-lab",
+      "automationAccountName": "aa-claudia-lab",
+      "openAiAccountName": "oai-claudia-lab",
+      "openAiModel": "gpt-4.1-mini",
+      "openAiModelVersion": "2025-04-14",
+      "openAiImageModel": "",
+      "openAiImageModelVersion": "",
+      "adx": {
+        "enabled": true,
+        "tenantId": "00000000-0000-0000-0000-000000000000",
+        "clientId": "22222222-2222-2222-2222-222222222222",
+        "clientSecretName": "agent-client-secret",
+        "keyVaultName": "kv-claudia-lab",
+        "m365Scope": "https://manage.office.com/.default",
+        "resourceGroup": "rg-claudia-lab",
+        "location": "westus",
+        "clusterName": "adx-claudia-lab",
+        "clusterSku": "Dev(No SLA)_Standard_E2a_v4",
+        "clusterTier": "Basic",
+        "streamingIngestion": true,
+        "enablePurge": false,
+        "autoStopCluster": false,
+        "publicNetworkAccess": "Enabled",
+        "ingestBaseUri": "https://adx-claudia-lab.westus.kusto.windows.net",
+        "queryBaseUri": "https://adx-claudia-lab.westus.kusto.windows.net",
+        "databaseName": "ADX-CLAUDIA",
+        "tableName": "CLAUDIA_AgentActivity",
+        "mappingName": "CLAUDIA_AgentActivity_mapping",
+        "retentionInDays": 365,
+        "ingestorPrincipalId": "22222222-2222-2222-2222-222222222222",
+        "ingestorPrincipalType": "App",
+        "ingestorRole": "Ingestor"
+      },
+      "keyVaultName": "kv-claudia-lab",
+      "fabricEnabled": false
+    },
+    "4a": {
+      "activity": "M365 collaboration",
+      "completedAt": "2026-05-20T11:03:47.1617631-05:00",
+      "dryRun": false,
+      "mode": "create",
+      "teamName": "CorpLab - Departments",
+      "departments": [
+        "HR",
+        "Finance",
+        "Legal",
+        "Engineering",
+        "Sales"
+      ],
+      "agentUpns": [
+        "ana.rodriguez@contoso.example",
+        "carlos.delgado@contoso.example",
+        "david.chen@contoso.example",
+        "james.wilson@contoso.example",
+        "marcus.olsson@contoso.example",
+        "alexander.meyer@contoso.example",
+        "diego.martinez@contoso.example",
+        "emily.johnson@contoso.example",
+        "laura.gomez@contoso.example",
+        "priya.sharma@contoso.example",
+        "miguel.santos@contoso.example",
+        "sofia.lopez@contoso.example",
+        "devon.reyes@contoso.example"
+      ]
+    },
+    "4b": {
+      "activity": "Sensitivity labels",
+      "completedAt": "2026-05-20T11:05:17.725799-05:00",
+      "dryRun": false,
+      "requested": false,
+      "labels": [
+        "General",
+        "Confidential",
+        "Conf-HR",
+        "Conf-Finance",
+        "Highly Confidential"
+      ],
+      "policyName": "CorpLab-Labels-Policy"
+    },
+    "4c": {
+      "activity": "Fabric provisioning",
+      "completedAt": "2026-05-20T11:05:17.7378209-05:00",
+      "enabled": false,
+      "reason": "fabricEnabled=false"
+    },
+    "5": {
+      "activity": "Key Vault secrets and runbook",
+      "completedAt": "2026-05-20T11:11:19.4353586-05:00",
+      "dryRun": false,
+      "keyVaultName": "kv-claudia-lab",
+      "clientSecretName": "agent-client-secret",
+      "agentSecretNames": [
+        {
+          "upn": "ana.rodriguez@contoso.example",
+          "secretName": "ana-rodriguez"
+        },
+        {
+          "upn": "carlos.delgado@contoso.example",
+          "secretName": "carlos-delgado"
+        },
+        {
+          "upn": "david.chen@contoso.example",
+          "secretName": "david-chen"
+        },
+        {
+          "upn": "james.wilson@contoso.example",
+          "secretName": "james-wilson"
+        },
+        {
+          "upn": "marcus.olsson@contoso.example",
+          "secretName": "marcus-olsson"
+        },
+        {
+          "upn": "alexander.meyer@contoso.example",
+          "secretName": "alexander-meyer"
+        },
+        {
+          "upn": "diego.martinez@contoso.example",
+          "secretName": "diego-martinez"
+        },
+        {
+          "upn": "emily.johnson@contoso.example",
+          "secretName": "emily-johnson"
+        },
+        {
+          "upn": "laura.gomez@contoso.example",
+          "secretName": "laura-gomez"
+        },
+        {
+          "upn": "priya.sharma@contoso.example",
+          "secretName": "priya-sharma"
+        },
+        {
+          "upn": "miguel.santos@contoso.example",
+          "secretName": "miguel-santos"
+        },
+        {
+          "upn": "sofia.lopez@contoso.example",
+          "secretName": "sofia-lopez"
+        },
+        {
+          "upn": "devon.reyes@contoso.example",
+          "secretName": "devon-reyes"
+        }
+      ],
+      "runbookName": "Invoke-AgentRunbook",
+      "schedules": [
+        {
+          "name": "daily-morning",
+          "hour": 9,
+          "minute": 30,
+          "timezone": "Romance Standard Time"
+        },
+        {
+          "name": "daily-midday",
+          "hour": 12,
+          "minute": 30,
+          "timezone": "Romance Standard Time"
+        },
+        {
+          "name": "daily-afternoon",
+          "hour": 16,
+          "minute": 0,
+          "timezone": "Romance Standard Time"
+        }
+      ]
+    },
+    "7": {
+      "activity": "Agent Activity Monitor workbook",
+      "completedAt": "2026-05-19T16:27:48.5459515-05:00",
+      "dryRun": false,
+      "requested": true,
+      "workbookName": "Agent Activity Monitor",
+      "logAnalyticsName": "la-claudia-lab"
+    },
+    "8": {
+      "activity": "Activity Story Map",
+      "completedAt": "2026-05-19T18:42:06.0577602-05:00",
+      "dryRun": false,
+      "requested": true,
+      "staticWebsiteUrl": "https://stclaudiamap.z22.web.core.windows.net/",
+      "apiBaseUrl": "https://func-claudia-story.azurewebsites.net",
+      "launchUrl": "https://stclaudiamap.z22.web.core.windows.net/?api=https://func-claudia-story.azurewebsites.net",
+      "functionAppName": "func-claudia-story"
+    },
+    "6a": {
+      "activity": "Core DLP policies",
+      "completedAt": "2026-05-20T18:35:10.2488913-05:00",
+      "dryRun": false,
+      "requested": false,
+      "policies": [
+        "EXO Policy - CLAUDIA",
+        "SPO Policy - CLAUDIA",
+        "ODB Policy - CLAUDIA",
+        "Teams Policy - CLAUDIA",
+        "Endpoint Policy - CLAUDIA",
+        "Copilot Policy - CLAUDIA"
+      ]
+    },
+    "6b": {
+      "activity": "DSPM for AI policies",
+      "completedAt": "2026-05-20T18:35:15.7287888-05:00",
+      "dryRun": false,
+      "requested": false,
+      "policies": [
+        "DLP-CopilotStudio-PII-Monitor",
+        "DSPM-AI-Labels-Restrict",
+        "DSPM-AI-AgentActivity-Audit"
+      ],
+      "agentUpns": [
+        "ana.rodriguez@contoso.example",
+        "carlos.delgado@contoso.example",
+        "david.chen@contoso.example",
+        "james.wilson@contoso.example",
+        "marcus.olsson@contoso.example",
+        "alexander.meyer@contoso.example",
+        "diego.martinez@contoso.example",
+        "emily.johnson@contoso.example",
+        "laura.gomez@contoso.example",
+        "priya.sharma@contoso.example",
+        "miguel.santos@contoso.example",
+        "sofia.lopez@contoso.example",
+        "devon.reyes@contoso.example"
+      ]
+    },
+    "6c": {
+      "activity": "Insider Risk Management",
+      "completedAt": "2026-05-20T18:35:29.5382779-05:00",
+      "dryRun": false,
+      "requested": true,
+      "policies": [
+        "IRM-DataLeaks-Lab",
+        "IRM-RiskyAI-Lab"
+      ],
+      "priorityUserGroup": "Autonomous Agents",
+      "agentUpns": [
+        "ana.rodriguez@contoso.example",
+        "carlos.delgado@contoso.example",
+        "david.chen@contoso.example",
+        "james.wilson@contoso.example",
+        "marcus.olsson@contoso.example",
+        "alexander.meyer@contoso.example",
+        "diego.martinez@contoso.example",
+        "emily.johnson@contoso.example",
+        "laura.gomez@contoso.example",
+        "priya.sharma@contoso.example",
+        "miguel.santos@contoso.example",
+        "sofia.lopez@contoso.example",
+        "devon.reyes@contoso.example"
+      ]
+    }
+  },
+  "sessionReset": {
+    "PowerShellSessions": 0,
+    "ExchangeOnline": "closed",
+    "MicrosoftGraph": "closed",
+    "AzContext": "closed-process-scope",
+    "PnPOnline": "not-loaded",
+    "AzureCli": "preserved",
+    "Errors": []
+  },
+  "notes": [],
+  "deploymentResults": [
+    {
+      "Step": "0",
+      "Main Activity": "Prerequisite validation",
+      "Status": "skipped",
+      "Comments": "Skipped by parameter."
+    },
+    {
+      "Step": "1",
+      "Main Activity": "Create or select agent users",
+      "Status": "skipped",
+      "Comments": "Skipped by targeted step selection."
+    },
+    {
+      "Step": "2",
+      "Main Activity": "Licenses and MFA exclusion",
+      "Status": "skipped",
+      "Comments": "Skipped by targeted step selection."
+    },
+    {
+      "Step": "3",
+      "Main Activity": "Register app-dataagent",
+      "Status": "skipped",
+      "Comments": "Skipped by targeted step selection."
+    },
+    {
+      "Step": "4",
+      "Main Activity": "Azure infrastructure and Key Vault",
+      "Status": "skipped",
+      "Comments": "Skipped by targeted step selection."
+    },
+    {
+      "Step": "4a",
+      "Main Activity": "M365 collaboration",
+      "Status": "skipped",
+      "Comments": "Skipped by targeted step selection."
+    },
+    {
+      "Step": "4b",
+      "Main Activity": "Sensitivity labels",
+      "Status": "skipped",
+      "Comments": "Skipped by targeted step selection."
+    },
+    {
+      "Step": "4c",
+      "Main Activity": "Fabric provisioning",
+      "Status": "skipped",
+      "Comments": "fabricEnabled=false or skipped by targeted step selection."
+    },
+    {
+      "Step": "5",
+      "Main Activity": "Key Vault secrets and runbook",
+      "Status": "skipped",
+      "Comments": "Skipped by targeted step selection."
+    },
+    {
+      "Step": "6a",
+      "Main Activity": "Core DLP policies",
+      "Status": "deployed",
+      "Comments": "Completed in this run. Review module output above for detailed actions."
+    },
+    {
+      "Step": "6b",
+      "Main Activity": "DSPM for AI policies",
+      "Status": "deployed",
+      "Comments": "Completed in this run. Review module output above for detailed actions."
+    },
+    {
+      "Step": "6c",
+      "Main Activity": "Insider Risk Management",
+      "Status": "deployed",
+      "Comments": "Completed in this run. Review module output above for detailed actions."
+    },
+    {
+      "Step": "7",
+      "Main Activity": "Agent Activity Monitor workbook",
+      "Status": "skipped",
+      "Comments": "Skipped by targeted step selection."
+    },
+    {
+      "Step": "8",
+      "Main Activity": "Activity Story Map",
+      "Status": "skipped",
+      "Comments": "Skipped by targeted step selection."
+    }
+  ],
+  "adx": {
+    "enabled": true,
+    "tenantId": "00000000-0000-0000-0000-000000000000",
+    "clientId": "22222222-2222-2222-2222-222222222222",
+    "clientSecretName": "agent-client-secret",
+    "keyVaultName": "kv-claudia-lab",
+    "m365Scope": "https://manage.office.com/.default",
+    "resourceGroup": "rg-claudia-lab",
+    "location": "westus",
+    "clusterName": "adx-claudia-lab",
+    "clusterSku": "Dev(No SLA)_Standard_E2a_v4",
+    "clusterTier": "Basic",
+    "streamingIngestion": true,
+    "enablePurge": false,
+    "autoStopCluster": false,
+    "publicNetworkAccess": "Enabled",
+    "ingestBaseUri": "https://adx-claudia-lab.westus.kusto.windows.net",
+    "queryBaseUri": "https://adx-claudia-lab.westus.kusto.windows.net",
+    "databaseName": "ADX-CLAUDIA",
+    "tableName": "CLAUDIA_AgentActivity",
+    "mappingName": "CLAUDIA_AgentActivity_mapping",
+    "retentionInDays": 365,
+    "ingestorPrincipalId": "22222222-2222-2222-2222-222222222222",
+    "ingestorPrincipalType": "App",
+    "ingestorRole": "Ingestor"
+  }
+}

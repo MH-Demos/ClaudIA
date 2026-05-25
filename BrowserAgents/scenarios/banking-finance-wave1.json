@@ -1,0 +1,162 @@
+{
+  "metadata": {
+    "packName": "Banking Finance E5 Web Implementation Wave 1",
+    "version": "1.0",
+    "source": "../Storyline/banking-finance-e5-activity-scenarios/complex-scenarios.json",
+    "implementationScope": "web-first",
+    "scenarioCount": 8,
+    "description": "Short-term web-ready banking/finance scenarios for BrowserAgent scheduled execution."
+  },
+  "defaults": {
+    "isSynthetic": true,
+    "implementationMode": "SyntheticTelemetryCompanion",
+    "liveWebReadiness": "BrowserAgent and Graph-backed execution",
+    "externalRecipient": "advisor.review@external-example.test"
+  },
+  "scenarios": [
+    {
+      "scenarioId": "BF-SCEN-0002",
+      "title": "Monthly AML Review Workbook Download and External AI Upload",
+      "cadence": "Monthly",
+      "primaryPersona": "devon.reyes",
+      "actors": ["devon.reyes", "marcus.olsson", "ana.rodriguez", "priya.sharma"],
+      "workloads": ["SharePoint Online", "OneDrive for Business", "Excel Web", "Internal AI Workbench", "Microsoft Purview DLP"],
+      "expectedFiles": ["Monthly_AML_Review_Workbook_AML-CASE-2026-0519.xlsx", "AML_Trend_Summary_Internal.docx"],
+      "sensitivityLabel": "Highly Confidential - Regulated Financial Data",
+      "businessContext": "Devon downloads synthetic AML review data and uses an unmanaged AI-style workflow to summarize sensitive rows.",
+      "actions": [
+        { "operation": "FileAccessed", "workload": "SharePoint Online", "implementationMode": "LiveWebActionWithDelayedSignal" },
+        { "operation": "FileDownloaded", "workload": "SharePoint Online", "implementationMode": "LiveWebActionWithDelayedSignal" },
+        { "operation": "AIAppInteraction", "workload": "Internal AI Workbench", "implementationMode": "LiveWebAction" },
+        { "operation": "DLPPolicyMatch", "workload": "Microsoft Purview DLP", "implementationMode": "SyntheticTelemetryCompanion" },
+        { "operation": "InsiderRiskSequence", "workload": "Microsoft Purview", "implementationMode": "SyntheticTelemetryCompanion" }
+      ]
+    },
+    {
+      "scenarioId": "BF-SCEN-0013",
+      "title": "Finance Close Evidence Collection and Label Downgrade",
+      "cadence": "Monthly",
+      "primaryPersona": "carlos.delgado",
+      "actors": ["carlos.delgado", "devon.reyes", "ana.rodriguez"],
+      "workloads": ["SharePoint Online", "Excel Web", "Outlook Web", "Sensitivity Labels", "Microsoft Purview DLP"],
+      "expectedFiles": ["Finance_Close_Evidence_Collection.xlsx", "Finance_Close_Label_Downgrade_Review.docx"],
+      "sensitivityLabel": "Highly Confidential - Regulated Financial Data",
+      "businessContext": "Finance close evidence is collected and a risky label downgrade is represented before external sharing review.",
+      "actions": [
+        { "operation": "FileCreated", "workload": "SharePoint Online", "implementationMode": "LiveWebActionWithDelayedSignal" },
+        { "operation": "SensitivityLabelApplied", "workload": "Microsoft Purview Information Protection", "implementationMode": "LiveWebActionWithDelayedSignal" },
+        { "operation": "SensitivityLabelChanged", "workload": "Microsoft Purview Information Protection", "implementationMode": "LiveWebActionWithDelayedSignal" },
+        { "operation": "EmailSent", "workload": "Outlook Web", "implementationMode": "LiveWebAction" },
+        { "operation": "DLPPolicyMatch", "workload": "Microsoft Purview DLP", "implementationMode": "SyntheticTelemetryCompanion" }
+      ]
+    },
+    {
+      "scenarioId": "BF-SCEN-0001",
+      "title": "Weekly Loan Committee Package Oversharing",
+      "cadence": "Weekly",
+      "primaryPersona": "sofia.lopez",
+      "actors": ["sofia.lopez", "carlos.delgado", "emily.johnson", "devon.reyes", "ana.rodriguez"],
+      "workloads": ["SharePoint Online", "Teams", "Excel Web", "PowerPoint Web", "Outlook Web", "Sensitivity Labels"],
+      "expectedFiles": ["Weekly_Loan_Committee_Package_Internal.pptx", "Credit_Exposure_Workbook_LOAN-FIC-2026-1187.xlsx", "KYC_Supporting_Documents_Index_KYC-FIC-88421.xlsx"],
+      "sensitivityLabel": "Highly Confidential - Regulated Financial Data",
+      "businessContext": "Loan committee files are prepared in restricted collaboration areas, then a KYC index is shared too broadly.",
+      "actions": [
+        { "operation": "FileCreated", "workload": "SharePoint Online", "implementationMode": "LiveWebActionWithDelayedSignal" },
+        { "operation": "SensitivityLabelApplied", "workload": "Microsoft Purview Information Protection", "implementationMode": "LiveWebActionWithDelayedSignal" },
+        { "operation": "TeamsMessageSent", "workload": "Microsoft Teams", "implementationMode": "LiveWebAction" },
+        { "operation": "ExternalEmailSent", "workload": "Outlook Web", "implementationMode": "LiveWebAction" },
+        { "operation": "DLPPolicyMatch", "workload": "Microsoft Purview DLP", "implementationMode": "SyntheticTelemetryCompanion" }
+      ]
+    },
+    {
+      "scenarioId": "BF-SCEN-0023",
+      "title": "Customer Risk Model Feature Matrix Shared with Data Vendor",
+      "cadence": "Monthly",
+      "primaryPersona": "priya.sharma",
+      "actors": ["priya.sharma", "devon.reyes", "ana.rodriguez"],
+      "workloads": ["SharePoint Online", "OneDrive for Business", "Excel Web", "Outlook Web", "Copilot for Microsoft 365", "Microsoft Purview DLP"],
+      "expectedFiles": ["Customer_Risk_Model_Feature_Matrix_PreAnonymized.xlsx", "Customer_Risk_Model_Feature_Matrix_Anonymized.xlsx"],
+      "sensitivityLabel": "Highly Confidential - Regulated Financial Data",
+      "businessContext": "A pre-anonymized model matrix is selected instead of the sanitized vendor-safe version.",
+      "actions": [
+        { "operation": "FileCreated", "workload": "SharePoint Online", "implementationMode": "LiveWebActionWithDelayedSignal" },
+        { "operation": "SensitivityLabelApplied", "workload": "Microsoft Purview Information Protection", "implementationMode": "LiveWebActionWithDelayedSignal" },
+        { "operation": "CopilotInteraction", "workload": "Microsoft 365 Copilot Web", "implementationMode": "LiveWebActionWithDelayedSignal" },
+        { "operation": "ExternalEmailSent", "workload": "Outlook Web", "implementationMode": "LiveWebAction" },
+        { "operation": "DLPPolicyMatch", "workload": "Microsoft Purview DLP", "implementationMode": "SyntheticTelemetryCompanion" }
+      ]
+    },
+    {
+      "scenarioId": "BF-SCEN-0024",
+      "title": "Executive Assistant Sends Board Appendix to Wrong Audience",
+      "cadence": "Monthly",
+      "primaryPersona": "alexander.meyer",
+      "actors": ["alexander.meyer", "sofia.lopez", "carlos.delgado", "ana.rodriguez"],
+      "workloads": ["Outlook Web", "SharePoint Online", "PowerPoint Web", "Sensitivity Labels", "Microsoft Purview DLP"],
+      "expectedFiles": ["Board_Appendix_Customer_Concentration_HighlyConfidential.xlsx", "Board_Distribution_Error_Response.docx"],
+      "sensitivityLabel": "Highly Confidential",
+      "businessContext": "Board appendix content is sent to a broader audience and then remediated through link and label governance.",
+      "actions": [
+        { "operation": "FileCreated", "workload": "SharePoint Online", "implementationMode": "LiveWebActionWithDelayedSignal" },
+        { "operation": "SensitivityLabelApplied", "workload": "Microsoft Purview Information Protection", "implementationMode": "LiveWebActionWithDelayedSignal" },
+        { "operation": "EmailSent", "workload": "Outlook Web", "implementationMode": "LiveWebAction" },
+        { "operation": "ExternalEmailSent", "workload": "Outlook Web", "implementationMode": "LiveWebAction" },
+        { "operation": "DLPPolicyMatch", "workload": "Microsoft Purview DLP", "implementationMode": "SyntheticTelemetryCompanion" }
+      ]
+    },
+    {
+      "scenarioId": "BF-SCEN-0008",
+      "title": "Customer Onboarding KYC Packet Sent to Vendor",
+      "cadence": "Daily",
+      "primaryPersona": "devon.reyes",
+      "actors": ["devon.reyes", "david.chen", "emily.johnson", "marcus.olsson"],
+      "workloads": ["SharePoint Online", "Outlook Web", "Teams", "Microsoft Purview DLP", "Sensitivity Labels"],
+      "expectedFiles": ["Full_KYC_Packet_KYC-FIC-88421_Internal.pdf", "KYC_Vendor_Safe_Checklist.docx"],
+      "sensitivityLabel": "Highly Confidential - Regulated Financial Data",
+      "businessContext": "A full internal KYC packet is prepared for onboarding and risks being sent to a vendor instead of a sanitized checklist.",
+      "actions": [
+        { "operation": "FileCreated", "workload": "SharePoint Online", "implementationMode": "LiveWebActionWithDelayedSignal" },
+        { "operation": "TeamsMessageSent", "workload": "Microsoft Teams", "implementationMode": "LiveWebAction" },
+        { "operation": "ExternalEmailSent", "workload": "Outlook Web", "implementationMode": "LiveWebAction" },
+        { "operation": "DLPBlocked", "workload": "Microsoft Purview DLP", "implementationMode": "SyntheticTelemetryCompanion" },
+        { "operation": "DLPPolicyMatch", "workload": "Microsoft Purview DLP", "implementationMode": "SyntheticTelemetryCompanion" }
+      ]
+    },
+    {
+      "scenarioId": "BF-SCEN-0006",
+      "title": "Regulatory Response Draft Shared Before Legal Approval",
+      "cadence": "EventDriven",
+      "primaryPersona": "emily.johnson",
+      "actors": ["emily.johnson", "sofia.lopez", "ana.rodriguez", "devon.reyes"],
+      "workloads": ["SharePoint Online", "Word Web", "Teams", "Outlook Web", "Microsoft Purview Information Protection"],
+      "expectedFiles": ["Regulatory_Response_Draft_REG-REQ-FIC-2026-2044.docx", "Regulatory_Evidence_Index_EVID-FIC-3319.xlsx"],
+      "sensitivityLabel": "Highly Confidential - Legal Privileged",
+      "businessContext": "A privileged regulatory response draft is downloaded and shared before legal approval.",
+      "actions": [
+        { "operation": "FileCreated", "workload": "SharePoint Online", "implementationMode": "LiveWebActionWithDelayedSignal" },
+        { "operation": "FileModified", "workload": "Word Web", "implementationMode": "LiveWebActionWithDelayedSignal" },
+        { "operation": "SensitivityLabelApplied", "workload": "Microsoft Purview Information Protection", "implementationMode": "LiveWebActionWithDelayedSignal" },
+        { "operation": "ExternalEmailSent", "workload": "Outlook Web", "implementationMode": "LiveWebAction" },
+        { "operation": "DLPPolicyMatch", "workload": "Microsoft Purview DLP", "implementationMode": "SyntheticTelemetryCompanion" }
+      ]
+    },
+    {
+      "scenarioId": "BF-SCEN-0026",
+      "title": "Customer Support Email Includes Transaction Monitoring Details",
+      "cadence": "Daily",
+      "primaryPersona": "david.chen",
+      "actors": ["david.chen", "devon.reyes", "marcus.olsson", "emily.johnson"],
+      "workloads": ["Outlook Web", "Teams", "SharePoint Online", "Microsoft Purview DLP", "Communication Compliance"],
+      "expectedFiles": ["Transaction_Review_Customer_Response_Draft.docx", "Transaction_Review_CustomerSafe_Response.docx"],
+      "sensitivityLabel": "Confidential",
+      "businessContext": "A customer response draft includes internal transaction monitoring details that should be removed before sending.",
+      "actions": [
+        { "operation": "EmailSent", "workload": "Outlook Web", "implementationMode": "LiveWebAction" },
+        { "operation": "ExternalEmailSent", "workload": "Outlook Web", "implementationMode": "LiveWebAction" },
+        { "operation": "TeamsMessageSent", "workload": "Microsoft Teams", "implementationMode": "LiveWebAction" },
+        { "operation": "DLPPolicyMatch", "workload": "Microsoft Purview DLP", "implementationMode": "SyntheticTelemetryCompanion" },
+        { "operation": "CommunicationComplianceMatch", "workload": "Microsoft Purview Communication Compliance", "implementationMode": "SyntheticTelemetryCompanion" }
+      ]
+    }
+  ]
+}

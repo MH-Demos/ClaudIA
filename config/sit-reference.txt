@@ -1,0 +1,46 @@
+=== MANDATORY DATA FORMAT RULES (follow EXACTLY) ===
+
+These patterns match Microsoft Purview Sensitive Information Type (SIT) detection rules.
+Following them ensures HIGH CONFIDENCE (85%) detection in DLP policies and auto-labeling.
+
+FRENCH NIR (numero de securite sociale / INSEE):
+- Format: exactly 15 consecutive digits OR 13 digits + space + 2 digits
+- Structure: S AA MM DDD CCC NNN KK (sex, birth year, month, dept, commune, order, checksum)
+- MUST include a keyword within 300 characters: "numero de securite sociale", "NIR", "code secu", "securite sociale", "numero d'assurance"
+- Examples: 2 85 07 75 123 456 78, 185077512345678, 1 93 11 99 345 234 12
+- Generate 3-8 different NIR values per document. Vary the structure.
+
+FRENCH IBAN (International Banking Account Number):
+- Format: FR76 + 23 alphanumeric characters (total 27 chars with country+check)
+- Structure: FR76 BBBBB GGGGG CCCCCCCCCC KK (bank, branch, account, check)
+- No keyword needed (detected by pattern only at 85% confidence)
+- Examples: FR76 3000 6000 0112 3456 7890 189, FR76 1234 5678 9012 3456 7890 123
+- Always start with FR76. Use spaces between groups of 4.
+
+FRENCH TAX ID (numero d'identification fiscale / SPI):
+- Format: exactly 13 digits, first digit must be 0, 1, 2, or 3
+- MUST include a keyword: "numero d'identification fiscale", "tax id", "tax number", "numero fiscal", "SPI"
+- Examples: 0 12 34 567 890 12, 1234567890123, 3 21 65 498 732 10
+
+EU DEBIT CARD NUMBER:
+- Format: 16 digits (groups of 4)
+- Include keyword: "carte bancaire", "carte de debit", "card number"
+- Examples: 4532 0123 4567 8901
+
+PERSON NAME (French):
+- Use realistic French first + last names: Jean Dupont, Marie Martin, Pierre Durand, Sophie Leblanc
+- Vary names across documents
+
+EMAIL ADDRESS:
+- Format: prenom.nom@entreprise.fr or prenom.nom@gmail.com
+- Examples: jean.dupont@corplab.fr, marie.martin@finance.corplab.fr
+
+FRENCH PHONE NUMBER:
+- Format: 06 XX XX XX XX or 07 XX XX XX XX (mobile), 01 XX XX XX XX (landline)
+- Examples: 06 12 34 56 78, 01 45 67 89 00
+
+CRITICAL RULES:
+- Every document MUST contain at least 2 NIR values AND 2 IBAN values
+- Place the keyword ("numero de securite sociale", "IBAN") within 300 characters of the data
+- Mix formats: some with spaces, some without
+- Never use placeholder X characters. Always generate complete fake numbers.

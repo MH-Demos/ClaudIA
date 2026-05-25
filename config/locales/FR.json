@@ -1,0 +1,105 @@
+{
+  "_comment": "French locale - NIR, IBAN FR76, Numero fiscal, SIRET",
+  "country": "FR",
+  "language": "fr",
+  "currency": "EUR",
+  "companyName": "CorpLab SAS",
+  "personas": [
+    { "sam": "amoreau",    "displayName": "Alice Moreau",     "department": "HR",          "jobTitle": "HR Coordinator" },
+    { "sam": "mlefebvre",  "displayName": "Marc Lefebvre",    "department": "Finance",     "jobTitle": "Finance Controller" },
+    { "sam": "nrousseau",  "displayName": "Nadia Rousseau",   "department": "Legal",       "jobTitle": "Legal Counsel" },
+    { "sam": "tnguyen",    "displayName": "Thomas Nguyen",    "department": "Engineering", "jobTitle": "DevOps Engineer" },
+    { "sam": "selamrani",  "displayName": "Samira El Amrani", "department": "Sales",       "jobTitle": "Sales Manager" },
+    { "sam": "jperrin",    "displayName": "Julien Perrin",    "department": "HR",          "jobTitle": "HR Onboarding Specialist" },
+    { "sam": "cbonnet",    "displayName": "Claire Bonnet",    "department": "Finance",     "jobTitle": "Budget Analyst" },
+    { "sam": "khaddad",    "displayName": "Karim Haddad",     "department": "Legal",       "jobTitle": "Contract Manager" },
+    { "sam": "eleroy",     "displayName": "Emma Leroy",       "department": "Engineering", "jobTitle": "Data Engineer" },
+    { "sam": "omartin",    "displayName": "Olivier Martin",   "department": "Sales",       "jobTitle": "Account Executive" }
+  ],
+  "sitReference": "=== MANDATORY DATA FORMAT RULES (follow EXACTLY) ===\n\nThese patterns match Microsoft Purview Sensitive Information Type (SIT) detection rules.\nFollowing them ensures HIGH CONFIDENCE (85%) detection in DLP policies and auto-labeling.\n\nFRENCH NIR (numero de securite sociale / INSEE):\n- Format: exactly 15 consecutive digits OR 13 digits + space + 2 digits\n- Structure: S AA MM DDD CCC NNN KK (sex, birth year, month, dept, commune, order, checksum)\n- MUST include a keyword within 300 characters: \"numero de securite sociale\", \"NIR\", \"code secu\"\n- Examples: 2 85 07 75 123 456 78, 185077512345678\n- Generate 3-8 different values per document.\n\nFRENCH IBAN:\n- Format: FR76 + 23 alphanumeric characters (total 27 chars)\n- No keyword needed (detected by pattern only at 85% confidence)\n- Examples: FR76 3000 6000 0112 3456 7890 189\n- Always start with FR76.\n\nFRENCH TAX ID (numero d'identification fiscale / SPI):\n- Format: exactly 13 digits, first digit must be 0, 1, 2, or 3\n- MUST include keyword: \"numero d'identification fiscale\", \"numero fiscal\", \"SPI\"\n- Examples: 0 12 34 567 890 12\n\nEU DEBIT CARD NUMBER:\n- Format: 16 digits (groups of 4)\n- Include keyword: \"carte bancaire\", \"carte de debit\"\n- Examples: 4532 0123 4567 8901\n\nFRENCH PHONE: 06 XX XX XX XX or 07 XX XX XX XX\nEMAIL: prenom.nom@corplab.fr\nNAMES: Use realistic French names",
+  "documentTypes": {
+    "payslip": "Bulletin de paie",
+    "employeeFile": "Fiche employe",
+    "onboarding": "Checklist d'integration",
+    "absenceReport": "Rapport d'absences",
+    "hiringDeclaration": "DPAE (Declaration Prealable a Embauche)",
+    "performanceReview": "Entretien annuel",
+    "personnelRegister": "Registre du personnel",
+    "supplierPayment": "Virements fournisseurs",
+    "financialReport": "Rapport financier",
+    "socialDeclaration": "DSN (Declaration Sociale Nominative)",
+    "expenseReport": "Notes de frais",
+    "budget": "Budget previsionnel",
+    "invoice": "Facture",
+    "auditReport": "Audit CNIL",
+    "contract": "Contrat CDI",
+    "gdprRegister": "Registre RGPD",
+    "litigation": "Contentieux",
+    "legalOpinion": "Avis juridique"
+  },
+  "scanTemplates": {
+    "payslip": {
+      "title": "BULLETIN DE PAIE",
+      "fields": ["Nom", "Departement", "NIR", "N. Fiscal", "IBAN", "Salaire brut", "Cotisations", "CSG/CRDS", "Net a payer"],
+      "bank": "BNP Paribas",
+      "bic": "BNPAFRPP"
+    },
+    "badge": {
+      "title": "BADGE EMPLOYE - CONFIDENTIEL",
+      "fields": ["Nom", "Departement", "Poste", "NIR", "N. Fiscal", "IBAN", "Email", "Tel"]
+    },
+    "invoice": {
+      "title": "FACTURE",
+      "supplierPrefix": "SAS",
+      "taxLabel": "TVA",
+      "taxPrefix": "FR",
+      "taxRate": 20
+    }
+  },
+  "piiGenerators": {
+    "primaryId": { "name": "NIR", "prefix": ["1","2"], "digits": 13, "checkDigits": 2, "format": "X XX XX XX XXX XXX XX" },
+    "bankAccount": { "name": "IBAN", "prefix": "FR76", "groups": [4,4,4,4,4], "format": "FR76 XXXX XXXX XXXX XXXX XXXX" },
+    "taxId": { "name": "N. Fiscal", "digits": 13, "format": "XXXXXXXXXXXXX" },
+    "phone": { "prefixes": ["06","07"], "format": "XX XX XX XX XX" },
+    "emailDomain": "corplab.fr"
+  },
+  "companyDescription": "a French company",
+  "fileTypes": {
+    "HR": [
+      { "Type": "Paie_Mensuelle",       "Ext": ".csv", "Prompt": "Generate a monthly payroll CSV with semicolons: Employe;NIR;IBAN;Salaire_Brut;Date. Include 6-10 rows of fake French employees." },
+      { "Type": "Fiche_Employe",        "Ext": ".txt", "Prompt": "Generate a confidential employee file with full name, NIR (numero de securite sociale), IBAN FR76, annual salary, home address in France, start date." },
+      { "Type": "Onboarding_Checklist", "Ext": ".txt", "Prompt": "Generate an onboarding checklist for a new employee with their NIR, IBAN FR76 for salary, manager name, equipment list." },
+      { "Type": "Rapport_Absences",     "Ext": ".csv", "Prompt": "Generate an absence report CSV: Employe;Type;Debut;Fin;NIR. Include 5-8 rows with sick leave, vacation, etc." },
+      { "Type": "DPAE_Declaration",     "Ext": ".txt", "Prompt": "Generate a DPAE (Declaration Prealable a Embauche) with employee NIR, birth date, IBAN FR76, contract type (CDI/CDD)." },
+      { "Type": "Entretien_Annuel",     "Ext": ".txt", "Prompt": "Generate an annual performance review with employee name, NIR, objectives, salary discussion, IBAN FR76 for bonus." },
+      { "Type": "Registre_Personnel",   "Ext": ".csv", "Prompt": "Generate a personnel register extract: Nom;Prenom;NIR;Date_Entree;Poste;IBAN;Salaire. 8-12 rows." },
+      { "Type": "Scan_Bulletin_Paie",   "Ext": ".png", "Prompt": "SCAN" },
+      { "Type": "Scan_Badge_Employe",   "Ext": ".png", "Prompt": "SCAN" }
+    ],
+    "Finance": [
+      { "Type": "Virements_Fournisseurs", "Ext": ".csv", "Prompt": "Generate a supplier payment CSV: Fournisseur;IBAN;Montant;Devise;Reference. Include 6-8 French suppliers with IBAN FR76." },
+      { "Type": "Rapport_Financier",     "Ext": ".txt", "Prompt": "Generate a quarterly financial report in French with revenue, costs, treasury IBAN FR76, EU VAT number." },
+      { "Type": "DSN_Mensuelle",         "Ext": ".csv", "Prompt": "Generate a DSN (Declaration Sociale Nominative) CSV: Employe;NIR;Net_Imposable;Prelevement;IBAN. 5-8 rows." },
+      { "Type": "Notes_Frais",           "Ext": ".txt", "Prompt": "Generate an expense report in French with employee name, reimbursement IBAN FR76, itemized expenses, total in EUR." },
+      { "Type": "Budget_Previsionnel",   "Ext": ".txt", "Prompt": "Generate a budget forecast in French with salary costs, treasury IBAN FR76, department breakdowns, total amounts in EUR." },
+      { "Type": "Facture",               "Ext": ".txt", "Prompt": "Generate an invoice in French with supplier details, IBAN FR76 for payment, TVA intracommunautaire FR, line items, total HT/TTC." },
+      { "Type": "Scan_Facture",          "Ext": ".png", "Prompt": "SCAN" }
+    ],
+    "Legal": [
+      { "Type": "Audit_CNIL",          "Ext": ".txt", "Prompt": "Generate a CNIL compliance audit report listing 4-6 persons with their NIR (numero de securite sociale), findings, and corrective actions." },
+      { "Type": "Contrat_CDI",         "Ext": ".txt", "Prompt": "Generate a French employment contract (CDI) with employee NIR, IBAN FR76, salary in EUR, working hours, probation period." },
+      { "Type": "Registre_RGPD",       "Ext": ".txt", "Prompt": "Generate a GDPR/RGPD processing register entry for payroll: data types (NIR,IBAN), legal basis, retention period." },
+      { "Type": "Contentieux",         "Ext": ".txt", "Prompt": "Generate a litigation file summary with plaintiff NIR, claimed amount in EUR, case timeline, settlement IBAN FR76." },
+      { "Type": "Avis_Juridique",      "Ext": ".txt", "Prompt": "Generate a legal opinion memo about data protection compliance referencing specific employee NIR found in breach." },
+      { "Type": "NDA",                 "Ext": ".txt", "Prompt": "Generate an NDA document in French with party names, addresses, confidential information description, penalty amounts in EUR." }
+    ],
+    "Sales": [
+      { "Type": "Pipeline_Commercial",  "Ext": ".csv", "Prompt": "Generate a sales pipeline CSV: Client;Contact;Email;IBAN;Montant_Contrat. Include 5-8 French prospects." },
+      { "Type": "Proposition_Commerciale", "Ext": ".txt", "Prompt": "Generate a commercial proposal in French with client details, contact email, payment IBAN FR76, quote amount in EUR HT/TTC." },
+      { "Type": "Commissions",           "Ext": ".csv", "Prompt": "Generate a commission report CSV: Commercial;Client;CA;Commission;IBAN_Commission. 4-6 rows." },
+      { "Type": "CR_Reunion_Client",     "Ext": ".txt", "Prompt": "Generate client meeting notes in French with attendees, client budget in EUR, next steps, IBAN FR76 for advance payment." },
+      { "Type": "Liste_Prospects",       "Ext": ".txt", "Prompt": "Generate a prospect list in French with company names, contact person, email, phone (06XXXXXXXX), estimated contract value in EUR." },
+      { "Type": "RFP_Response",          "Ext": ".txt", "Prompt": "Generate an RFP response in French with company credentials, proposed pricing in EUR, bank details (IBAN FR76), references." }
+    ]
+  }
+}

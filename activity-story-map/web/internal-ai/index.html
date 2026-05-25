@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Internal AI Workbench</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="shell">
+    <section class="topbar">
+      <div>
+        <p class="eyebrow">M365 Autonomous IA Lab</p>
+        <h1>Internal AI Workbench</h1>
+      </div>
+      <div class="badge" id="modelBadge">DeepSeek</div>
+    </section>
+
+    <section class="workspace">
+      <aside class="models" aria-label="Model selector">
+        <button class="model active" data-model="deepseek" data-provider="DeepSeek" data-family="deepseek">
+          <span>DeepSeek</span>
+          <small>Code and log review</small>
+        </button>
+        <button class="model" data-model="claude" data-provider="Anthropic" data-family="claude">
+          <span>Claude</span>
+          <small>Legal and policy reasoning</small>
+        </button>
+        <button class="model" data-model="grok" data-provider="xAI" data-family="grok">
+          <span>Grok</span>
+          <small>Incident evidence review</small>
+        </button>
+        <button class="model" data-model="llama" data-provider="Meta" data-family="llama">
+          <span>Llama</span>
+          <small>Open model summarization</small>
+        </button>
+        <button class="model" data-model="gemini" data-provider="Google" data-family="gemini">
+          <span>Gemini</span>
+          <small>Multimodal planning review</small>
+        </button>
+      </aside>
+
+      <section class="chat" aria-label="Internal AI chat">
+        <div class="conversation" id="conversation">
+          <article class="message assistant">
+            <strong>Internal AI Workbench</strong>
+            <p>Select a model, paste a synthetic business prompt, and submit it for lab telemetry.</p>
+          </article>
+        </div>
+
+        <form class="composer" id="composer">
+          <label for="prompt">Prompt</label>
+          <textarea id="prompt" name="prompt" rows="8" placeholder="Paste synthetic lab content here..."></textarea>
+          <div class="upload-row">
+            <label for="documentUpload">Document</label>
+            <input id="documentUpload" name="documentUpload" type="file">
+            <span id="fileStatus">No document selected</span>
+          </div>
+          <div class="actions">
+            <span id="status">Ready</span>
+            <button type="submit">Send</button>
+          </div>
+        </form>
+      </section>
+    </section>
+  </main>
+  <script src="./portal.js"></script>
+</body>
+</html>

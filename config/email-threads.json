@@ -1,0 +1,127 @@
+[
+  {
+    "threadName": "Quarterly Business Review - Executive Readout",
+    "messages": [
+      {
+        "from": "diego.martinez",
+        "to": "james.wilson",
+        "instruction": "Start a new thread about the Quarterly Business Review. Summarize regional pipeline, forecast risks, three large deals, customer contacts, contract values, and next steps. Include realistic business-sensitive sales details but no regulated personal data."
+      },
+      {
+        "from": "james.wilson",
+        "to": "alexander.meyer",
+        "instruction": "Forward Diego's QBR summary to Alexander. Add operational metrics, capacity constraints, delivery risk, and a concise recommendation for the executive meeting."
+      },
+      {
+        "from": "alexander.meyer",
+        "to": "diego.martinez",
+        "instruction": "Reply with executive feedback. Ask Diego to prepare a Copilot-assisted summary and a sanitized version that can be shared broadly."
+      }
+    ]
+  },
+  {
+    "threadName": "HR Oversharing Risk - Salary Drafts",
+    "messages": [
+      {
+        "from": "laura.gomez",
+        "to": "sofia.lopez",
+        "instruction": "Start a thread about salary planning drafts. Include employee names, job levels, proposed salary ranges, bank routing numbers, account numbers, and SSN values with the keyword 'social security number'. Mention that the draft is temporarily stored in OneDrive."
+      },
+      {
+        "from": "sofia.lopez",
+        "to": "laura.gomez",
+        "instruction": "Reply as a project manager. Confirm that broad sharing permissions may expose the draft to more people than intended. Ask Laura to restrict access before the restructuring meeting."
+      },
+      {
+        "from": "laura.gomez",
+        "to": "marcus.olsson",
+        "instruction": "Forward the thread to Cybersecurity. Ask Marcus to review whether Copilot or Microsoft Search could surface the overshared salary draft. Preserve the sensitive examples from the previous email."
+      }
+    ]
+  },
+  {
+    "threadName": "Priya Discovers Too Much - Copilot Correlation",
+    "messages": [
+      {
+        "from": "priya.sharma",
+        "to": "diego.martinez",
+        "instruction": "Start a thread about a Copilot-assisted analysis correlating sales performance and workforce planning. Mention that Copilot surfaced restructuring notes, account assignments, and HR planning content that seemed overshared."
+      },
+      {
+        "from": "diego.martinez",
+        "to": "laura.gomez",
+        "instruction": "Forward Priya's note to Laura. Ask whether sales managers should have access to HR restructuring drafts. Include one example of a sensitive employee planning detail."
+      },
+      {
+        "from": "laura.gomez",
+        "to": "marcus.olsson",
+        "instruction": "Forward the thread to Marcus. Ask for a security review of semantic indexing, overshared SharePoint/OneDrive files, and Purview DSPM for AI findings."
+      }
+    ]
+  },
+  {
+    "threadName": "Customer Escalation - Legal and Security Review",
+    "messages": [
+      {
+        "from": "david.chen",
+        "to": "emily.johnson",
+        "instruction": "Start a customer escalation thread. Include a customer complaint, support case IDs, contract clause references, customer contact email, phone number, and a requested legal position."
+      },
+      {
+        "from": "emily.johnson",
+        "to": "ana.rodriguez",
+        "instruction": "Forward David's escalation to Ana. Ask whether any security logs, access reviews, or DLP alerts are relevant to the customer complaint."
+      },
+      {
+        "from": "ana.rodriguez",
+        "to": "marcus.olsson",
+        "instruction": "Forward the case to Marcus. Ask him to validate whether the issue should become a Defender XDR investigation or remain a customer operations case."
+      }
+    ]
+  },
+  {
+    "threadName": "Devon Shadow AI - Leakage Review",
+    "messages": [
+      {
+        "from": "devon.reyes",
+        "to": "marcus.olsson",
+        "instruction": "Start a new thread about a controlled non-Copilot AI test. Explain that Grok, Llama, DeepSeek, and Claude are being evaluated through Azure AI Foundry. Include a prompt sample containing 'social security number' followed by a fake XXX-XX-XXXX value, a routing number, and an account number."
+      },
+      {
+        "from": "marcus.olsson",
+        "to": "ana.rodriguez",
+        "instruction": "Reply and ask Ana to validate whether the sample should trigger DSPM for AI and Teams DLP. Quote Devon's sensitive prompt sample and add one employee email and phone number."
+      },
+      {
+        "from": "ana.rodriguez",
+        "to": "priya.sharma",
+        "instruction": "Forward the thread to Priya for correlation analysis. Include all prior sensitive values and request a short risk summary for shadow AI usage."
+      }
+    ]
+  },
+  {
+    "threadName": "External AI Governance - Cross Functional Decision",
+    "messages": [
+      {
+        "from": "alexander.meyer",
+        "to": "emily.johnson",
+        "instruction": "Start a leadership email asking for legal review of a controlled AI data leakage scenario. Include a fake social security number, bank routing/account values, and the phrase 'non-Copilot AI service in Azure'."
+      },
+      {
+        "from": "emily.johnson",
+        "to": "james.wilson",
+        "instruction": "Forward to James for operations impact. Include all sensitive examples from Alexander's message and ask whether the affected dataset appears in SharePoint or Teams."
+      },
+      {
+        "from": "james.wilson",
+        "to": "diego.martinez",
+        "instruction": "Reply with operational findings. Include a customer payment account example, one support case ID, and a recommendation to keep evidence in the Executive AI Risk SharePoint site."
+      },
+      {
+        "from": "diego.martinez",
+        "to": "marcus.olsson",
+        "instruction": "Forward the thread to Marcus for security decision. Include all bank and personal data examples and ask whether DSPM should flag the interaction as risky AI usage."
+      }
+    ]
+  }
+]

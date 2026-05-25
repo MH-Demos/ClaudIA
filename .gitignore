@@ -1,0 +1,38 @@
+# Lab-specific backup files
+config/agents.lab-backup.json
+
+# Local secrets and browser sessions
+.env
+*.env
+!.env.sample
+BrowserAgents/.auth/
+
+# Generated outputs
+logs/
+out/
+temp_*.json
+*.log
+BrowserAgents/playwright-report/
+BrowserAgents/test-results/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# PowerShell temp files
+*.ps1.bak
+
+# Azure CLI auth cache (never commit)
+.azure/
+
+# Node dependencies
+node_modules/
+BrowserAgents/node_modules/

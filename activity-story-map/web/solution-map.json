@@ -1,0 +1,588 @@
+{
+  "generatedAt": "2026-05-24T00:00:00-05:00",
+  "summary": {
+    "title": "MH Demos Autonomous Agents",
+    "tenant": "contoso.example",
+    "subscription": "VSES - MH Demos",
+    "resourceGroup": "rg-claudia-lab",
+    "purpose": "Educational map of the Azure, Microsoft 365, Microsoft Entra, ADX, browser automation, and character dependencies behind the Activity Story Map."
+  },
+  "nodes": [
+    {
+      "id": "tenant:contoso.example",
+      "label": "contoso.example\nTenant",
+      "type": "tenant",
+      "layer": "SaaS",
+      "details": {
+        "Description": "Microsoft 365 and Microsoft Entra tenant used by the demo personas.",
+        "Core activity": "Provides users, identities, Microsoft 365 workloads, licenses, and collaboration surfaces.",
+        "Dependencies": "Microsoft Entra ID, Microsoft 365 services, assigned licenses",
+        "Tenant ID": "00000000-0000-0000-0000-000000000000",
+        "Status": "Required"
+      }
+    },
+    {
+      "id": "subscription:karla",
+      "label": "Azure Subscription\nVSES - MH Demos",
+      "type": "subscription",
+      "layer": "Azure",
+      "details": {
+        "Description": "Azure subscription hosting the PaaS, automation, telemetry, and portal components.",
+        "Core activity": "Hosts resource group rg-claudia-lab and all supporting Azure services.",
+        "Dependencies": "Azure tenant access and resource providers",
+        "Subscription ID": "11111111-1111-1111-1111-111111111111",
+        "Status": "Required"
+      }
+    },
+    {
+      "id": "rg:mh-demos-agents",
+      "label": "Resource Group\nrg-claudia-lab",
+      "type": "resourceGroup",
+      "layer": "Azure",
+      "details": {
+        "Description": "Main resource group for the autonomous agents lab.",
+        "Core activity": "Groups Automation, OpenAI, Key Vault, ADX, portal, browser-agent, and monitoring resources.",
+        "Dependencies": "Azure subscription",
+        "Region baseline": "westus, westus2, eastus, westeurope, eastasia, global",
+        "Status": "Required"
+      }
+    },
+    {
+      "id": "aa:aa-claudia-lab",
+      "label": "Automation Account\naa-claudia-lab",
+      "type": "paas",
+      "layer": "Automation",
+      "details": {
+        "Description": "Azure Automation account that runs the synthetic user activity runbook.",
+        "Core activity": "Schedules and executes Invoke-AgentRunbook several times per day.",
+        "Dependencies": "Key Vault secrets, Microsoft Graph permissions, ADX ingestion configuration",
+        "Region": "westus",
+        "Status": "Required"
+      }
+    },
+    {
+      "id": "runbook:invoke-agent",
+      "label": "Runbook\nInvoke-AgentRunbook",
+      "type": "process",
+      "layer": "Automation",
+      "details": {
+        "Description": "Main automation workflow that simulates daily activity for demo users.",
+        "Core activity": "Creates Microsoft 365 activity, generates content, and emits normalized telemetry.",
+        "Dependencies": "Agent definitions, Key Vault, Azure OpenAI, Microsoft 365 workloads, ADX",
+        "Runtime": "PowerShell 7.2",
+        "Status": "Required"
+      }
+    },
+    {
+      "id": "kv:kv-claudia-lab",
+      "label": "Key Vault\nkv-claudia-lab",
+      "type": "security",
+      "layer": "PaaS",
+      "details": {
+        "Description": "Secret store for app credentials and ADX ingestion secrets.",
+        "Core activity": "Keeps runbook and telemetry secrets out of code and configuration files.",
+        "Dependencies": "Automation managed identity / access policies",
+        "Region": "westus",
+        "Status": "Required"
+      }
+    },
+    {
+      "id": "oai:oai-claudia-lab",
+      "label": "Azure OpenAI\noai-claudia-lab",
+      "type": "ai",
+      "layer": "PaaS",
+      "details": {
+        "Description": "Azure OpenAI account used by the runbook to generate realistic content.",
+        "Core activity": "Produces contextual document/email text for simulated business activities.",
+        "Dependencies": "Runbook prompts and account deployment",
+        "Model": "gpt-4.1-mini",
+        "Model version": "2025-04-14",
+        "Region": "westus",
+        "Status": "Required"
+      }
+    },
+    {
+      "id": "adx:cluster",
+      "label": "Azure Data Explorer\nadx-claudia-lab",
+      "type": "data",
+      "layer": "Telemetry",
+      "details": {
+        "Description": "ADX cluster that stores activity telemetry for story mapping and validation.",
+        "Core activity": "Receives normalized events from the runbook and serves queries to the API.",
+        "Dependencies": "ADX ingestor app registration, database, table, mapping",
+        "Region": "westus",
+        "SKU": "Dev(No SLA)_Standard_E2a_v4",
+        "Status": "Required"
+      }
+    },
+    {
+      "id": "adx:table",
+      "label": "Table\nCLAUDIA_AgentActivity",
+      "type": "data",
+      "layer": "Telemetry",
+      "details": {
+        "Description": "ADX table that stores the enriched Event payload used by the Activity Map.",
+        "Core activity": "Keeps the event history used for graph construction and narrative filters.",
+        "Dependencies": "ADX cluster and JSON ingestion mapping",
+        "Mapping": "CLAUDIA_AgentActivity_mapping",
+        "Retention": "365 days",
+        "Status": "Required"
+      }
+    },
+    {
+      "id": "workbook:activity",
+      "label": "ADX Workbook\nActivity validation",
+      "type": "monitoring",
+      "layer": "Observability",
+      "details": {
+        "Description": "Azure Workbook for operational validation of ADX telemetry.",
+        "Core activity": "Helps validate runbook output, activity counts, and ingestion health.",
+        "Dependencies": "ADX cluster and table",
+        "Region": "westus",
+        "Status": "Useful"
+      }
+    },
+    {
+      "id": "func:story",
+      "label": "Function App\nfunc-claudia-story",
+      "type": "api",
+      "layer": "Portal",
+      "details": {
+        "Description": "HTTP API used by the static portal.",
+        "Core activity": "Serves /api/graph from ADX and /api/visits from Function storage.",
+        "Dependencies": "ADX Viewer permission, Function storage, CORS, managed identity",
+        "Region": "westus2",
+        "Status": "Required"
+      }
+    },
+    {
+      "id": "ai:appinsights",
+      "label": "Application Insights\nfunc-claudia-story",
+      "type": "monitoring",
+      "layer": "Observability",
+      "details": {
+        "Description": "Monitoring component for the Function App.",
+        "Core activity": "Captures API telemetry, failures, and runtime diagnostics.",
+        "Dependencies": "Function App",
+        "Region": "westus2",
+        "Status": "Useful"
+      }
+    },
+    {
+      "id": "storage:web",
+      "label": "Static Website\nstclaudiamap",
+      "type": "web",
+      "layer": "Portal",
+      "details": {
+        "Description": "Storage static website that hosts the Activity Story Map UI and assets.",
+        "Core activity": "Serves HTML, JavaScript, CSS, character images, service icons, and branding.",
+        "Dependencies": "Published web assets and Front Door route",
+        "Region": "westus",
+        "Status": "Required"
+      }
+    },
+    {
+      "id": "storage:function",
+      "label": "Function Storage\nstclaudiafunc",
+      "type": "storage",
+      "layer": "Portal",
+      "details": {
+        "Description": "Storage account used by the Function App runtime.",
+        "Core activity": "Stores Functions runtime data and the Activity Map visit counter JSON.",
+        "Dependencies": "Function App",
+        "Region": "westus",
+        "Status": "Required"
+      }
+    },
+    {
+      "id": "afd:profile",
+      "label": "Azure Front Door\nafd-claudia-story",
+      "type": "edge",
+      "layer": "Portal",
+      "details": {
+        "Description": "Public edge endpoint in front of the static website.",
+        "Core activity": "Provides the short public endpoint and supports the custom domain.",
+        "Dependencies": "Storage static website origin and DNS validation",
+        "Endpoint": "claudia-storymap.azurefd.net",
+        "Custom domain": "activitymap.contoso.example",
+        "Region": "global",
+        "Status": "Required"
+      }
+    },
+    {
+      "id": "m365:entra",
+      "label": "Microsoft Entra ID\nUsers and identities",
+      "type": "saas",
+      "layer": "SaaS",
+      "details": {
+        "Description": "Identity plane for users, manager relationships, and app access.",
+        "Core activity": "Provides user objects, org-chart relationships, and identity context.",
+        "Dependencies": "contoso.example tenant",
+        "Status": "Required"
+      }
+    },
+    {
+      "id": "m365:licenses",
+      "label": "Microsoft 365 Licenses\nBase + Copilot",
+      "type": "license",
+      "layer": "SaaS",
+      "details": {
+        "Description": "License assignments that determine workload and Copilot availability.",
+        "Core activity": "Supports the character profile license story and capability boundaries.",
+        "Dependencies": "Microsoft Entra users",
+        "Status": "Required"
+      }
+    },
+    {
+      "id": "m365:sharepoint",
+      "label": "SharePoint Online",
+      "type": "service",
+      "layer": "SaaS",
+      "serviceKey": "sharepoint",
+      "details": {
+        "Description": "Microsoft 365 collaboration and document platform.",
+        "Core activity": "Receives document uploads and stores many sensitive demo artifacts.",
+        "Dependencies": "Microsoft 365 tenant, user identities, licenses",
+        "Status": "Required"
+      }
+    },
+    {
+      "id": "m365:onedrive",
+      "label": "OneDrive for Business",
+      "type": "service",
+      "layer": "SaaS",
+      "serviceKey": "onedrive",
+      "details": {
+        "Description": "Personal file storage used by demo users.",
+        "Core activity": "Hosts individual files and file activity that can trigger governance stories.",
+        "Dependencies": "Microsoft 365 tenant, user identities, licenses",
+        "Status": "Required"
+      }
+    },
+    {
+      "id": "m365:exchange",
+      "label": "Exchange Online",
+      "type": "service",
+      "layer": "SaaS",
+      "serviceKey": "outlook",
+      "details": {
+        "Description": "Email workload for person-to-person and threaded communications.",
+        "Core activity": "Creates business conversation context around generated files and security events.",
+        "Dependencies": "Microsoft 365 tenant, user mailboxes, licenses",
+        "Status": "Required"
+      }
+    },
+    {
+      "id": "m365:teams",
+      "label": "Microsoft Teams",
+      "type": "service",
+      "layer": "SaaS",
+      "serviceKey": "teams",
+      "details": {
+        "Description": "Chat, collaboration, channels, and meeting workload.",
+        "Core activity": "Adds collaboration context and activity around the simulated users.",
+        "Dependencies": "Microsoft 365 tenant, teams, users, licenses",
+        "Status": "Required"
+      }
+    },
+    {
+      "id": "m365:lists",
+      "label": "Microsoft Lists",
+      "type": "service",
+      "layer": "SaaS",
+      "details": {
+        "Description": "List workload used for business tracking scenarios.",
+        "Core activity": "Supports Diego's list-oriented finance/business tracking activity.",
+        "Dependencies": "SharePoint Online, Microsoft 365 tenant, user identity",
+        "Status": "Required"
+      }
+    },
+    {
+      "id": "m365:copilot",
+      "label": "Microsoft 365 Copilot",
+      "type": "service",
+      "layer": "SaaS",
+      "serviceKey": "copilot",
+      "details": {
+        "Description": "Microsoft 365 Copilot service represented in search and AI-assisted work patterns.",
+        "Core activity": "Provides AI-context storytelling for oversharing and data governance scenarios.",
+        "Dependencies": "Microsoft 365 tenant, licensed users, indexed content",
+        "Status": "Required"
+      }
+    },
+    {
+      "id": "m365:fabric",
+      "label": "Microsoft Fabric",
+      "type": "service",
+      "layer": "SaaS",
+      "serviceKey": "fabric",
+      "details": {
+        "Description": "Analytics service used by data-focused personas.",
+        "Core activity": "Supports analytics and dashboard storylines.",
+        "Dependencies": "Tenant configuration and licensed users",
+        "Status": "Optional"
+      }
+    },
+    {
+      "id": "defs:agents",
+      "label": "Character Definitions\nconfig/agents.json",
+      "type": "definition",
+      "layer": "Config",
+      "details": {
+        "Description": "Configuration file that drives agent behavior.",
+        "Core activity": "Defines departments, workloads, schedules, external AI models, and behavior ranges.",
+        "Dependencies": "Runbook and profile generation scripts",
+        "Status": "Required"
+      }
+    },
+    {
+      "id": "assets:images",
+      "label": "Images and Branding\n/images",
+      "type": "asset",
+      "layer": "Content",
+      "details": {
+        "Description": "Static visual assets used by the portal.",
+        "Core activity": "Provides character portraits, service icons, and welcome branding.",
+        "Dependencies": "Static website storage",
+        "Status": "Required"
+      }
+    },
+    {
+      "id": "browser:platform",
+      "label": "Browser Agents\nRegional automation",
+      "type": "process",
+      "layer": "Browser agents",
+      "details": {
+        "Description": "New browser automation layer for richer user interaction simulation.",
+        "Core activity": "Runs scheduled browser jobs against regional Playwright workspaces.",
+        "Dependencies": "Container Apps jobs, Playwright workspaces, managed identity, ACR, ADX secrets",
+        "Status": "Required for browser-based expansion"
+      }
+    },
+    {
+      "id": "browser:acr",
+      "label": "Container Registry\nacrbrowseragents347fa5e9",
+      "type": "storage",
+      "layer": "Browser agents",
+      "details": {
+        "Description": "Container registry for browser agent job images.",
+        "Core activity": "Stores the container images used by scheduled browser jobs.",
+        "Dependencies": "Container Apps jobs",
+        "Region": "westus2",
+        "Status": "Required for browser agents"
+      }
+    },
+    {
+      "id": "browser:identity",
+      "label": "Managed Identity\nid-browseragents-347fa5e9",
+      "type": "identity",
+      "layer": "Browser agents",
+      "details": {
+        "Description": "User-assigned identity for browser agent jobs.",
+        "Core activity": "Allows jobs to access required Azure resources without embedded credentials.",
+        "Dependencies": "Container Apps jobs, Key Vault/ADX access",
+        "Region": "eastus",
+        "Status": "Required for browser agents"
+      }
+    },
+    {
+      "id": "browser:loganalytics",
+      "label": "Log Analytics\nworkspace-emosgentsBfJX",
+      "type": "monitoring",
+      "layer": "Browser agents",
+      "details": {
+        "Description": "Operational logs workspace for Container Apps environment.",
+        "Core activity": "Stores infrastructure logs for browser-agent job execution.",
+        "Dependencies": "Container Apps managed environment",
+        "Region": "eastus",
+        "Status": "Required by Container Apps"
+      }
+    },
+    {
+      "id": "browser:environment",
+      "label": "Container Apps Env\ncae-browseragents-adx-347fa5e9",
+      "type": "compute",
+      "layer": "Browser agents",
+      "details": {
+        "Description": "Container Apps managed environment hosting the scheduled browser jobs.",
+        "Core activity": "Provides runtime environment for browser automation jobs.",
+        "Dependencies": "Log Analytics, managed identity, ACR",
+        "Region": "eastus",
+        "Status": "Required for browser agents"
+      }
+    },
+    {
+      "id": "browser:jobs",
+      "label": "Container Apps Jobs\nmorning / midday / afternoon",
+      "type": "compute",
+      "layer": "Browser agents",
+      "details": {
+        "Description": "Scheduled jobs that execute browser-agent runs.",
+        "Core activity": "Refreshes browser-driven activity two or three times per day by region.",
+        "Dependencies": "Container Apps environment, ACR image, Playwright workspace, ADX secret",
+        "Region": "eastus",
+        "Status": "Required for browser agents"
+      }
+    },
+    {
+      "id": "browser:playwright-americas",
+      "label": "Playwright Workspace\nAmericas - East US",
+      "type": "paas",
+      "layer": "Browser agents",
+      "details": {
+        "Description": "Azure App Testing Playwright workspace for Americas personas.",
+        "Core activity": "Hosts browser sessions for North America, South America, and Caribbean simulations.",
+        "Dependencies": "Browser jobs",
+        "Region": "eastus",
+        "Status": "Required for browser agents"
+      }
+    },
+    {
+      "id": "browser:playwright-europe",
+      "label": "Playwright Workspace\nEurope - West Europe",
+      "type": "paas",
+      "layer": "Browser agents",
+      "details": {
+        "Description": "Azure App Testing Playwright workspace for Europe personas.",
+        "Core activity": "Hosts browser sessions for European simulation traffic.",
+        "Dependencies": "Browser jobs",
+        "Region": "westeurope",
+        "Status": "Required for browser agents"
+      }
+    },
+    {
+      "id": "browser:playwright-asia",
+      "label": "Playwright Workspace\nAsia - East Asia",
+      "type": "paas",
+      "layer": "Browser agents",
+      "details": {
+        "Description": "Azure App Testing Playwright workspace for Asia personas.",
+        "Core activity": "Hosts browser sessions for Asia simulation traffic.",
+        "Dependencies": "Browser jobs",
+        "Region": "eastasia",
+        "Status": "Required for browser agents"
+      }
+    },
+
+    { "id": "agent:ana.rodriguez", "label": "Ana Rodriguez\nHR | SPO", "type": "user", "layer": "Characters", "details": { "UPN": "ana.rodriguez@contoso.example", "Department": "HR", "Job title": "Analista de TI/Seguridad", "Copilot": "No" } },
+    { "id": "agent:carlos.delgado", "label": "Carlos Delgado\nFinance | SPO", "type": "user", "layer": "Characters", "details": { "UPN": "carlos.delgado@contoso.example", "Department": "Finance", "Job title": "Analista de Datos", "Copilot": "No" } },
+    { "id": "agent:david.chen", "label": "David Chen\nLegal | SPO", "type": "user", "layer": "Characters", "details": { "UPN": "david.chen@contoso.example", "Department": "Legal", "Job title": "Especialista en atención al cliente", "Copilot": "No" } },
+    { "id": "agent:james.wilson", "label": "James Wilson\nEngineering | SPO", "type": "user", "layer": "Characters", "details": { "UPN": "james.wilson@contoso.example", "Department": "Engineering", "Job title": "Director de Operaciones", "Copilot": "No" } },
+    { "id": "agent:marcus.olsson", "label": "Marcus Olsson\nSales | SPO", "type": "user", "layer": "Characters", "details": { "UPN": "marcus.olsson@contoso.example", "Department": "Sales", "Job title": "Gerente de Ciberseguridad", "Copilot": "No" } },
+    { "id": "agent:alexander.meyer", "label": "Alexander Meyer\nHR | Teams", "type": "user", "layer": "Characters", "details": { "UPN": "alexander.meyer@contoso.example", "Department": "HR", "Job title": "CEO", "Copilot": "Yes" } },
+    { "id": "agent:diego.martinez", "label": "Diego Martinez\nFinance | Lists", "type": "user", "layer": "Characters", "details": { "UPN": "diego.martinez@contoso.example", "Department": "Finance", "Job title": "Gerente Comercial", "Copilot": "Yes" } },
+    { "id": "agent:emily.johnson", "label": "Emily Johnson\nLegal | Chat", "type": "user", "layer": "Characters", "details": { "UPN": "emily.johnson@contoso.example", "Department": "Legal", "Job title": "Abogada Corporativa", "Copilot": "Yes" } },
+    { "id": "agent:laura.gomez", "label": "Laura Gomez\nEngineering | Fabric", "type": "user", "layer": "Characters", "details": { "UPN": "laura.gomez@contoso.example", "Department": "Engineering", "Job title": "Analista de RRHH", "Copilot": "Yes" } },
+    { "id": "agent:priya.sharma", "label": "Priya Sharma\nSales | Meetings", "type": "user", "layer": "Characters", "details": { "UPN": "priya.sharma@contoso.example", "Department": "Sales", "Job title": "Cientifica de Datos", "Copilot": "Yes" } },
+    { "id": "agent:miguel.santos", "label": "Miguel Santos\nTI | SPO", "type": "user", "layer": "Characters", "details": { "UPN": "miguel.santos@contoso.example", "Department": "TI / Infraestructura", "Job title": "Platform Engineer", "Copilot": "No" } },
+    { "id": "agent:sofia.lopez", "label": "Sofia Lopez\nPMO | Teams", "type": "user", "layer": "Characters", "details": { "UPN": "sofia.lopez@contoso.example", "Department": "PMO", "Job title": "Project Manager", "Copilot": "No" } }
+  ],
+  "edges": [
+    { "source": "tenant:contoso.example", "target": "subscription:karla", "label": "hosts Azure subscription" },
+    { "source": "subscription:karla", "target": "rg:mh-demos-agents", "label": "contains" },
+    { "source": "rg:mh-demos-agents", "target": "aa:aa-claudia-lab", "label": "PaaS resource" },
+    { "source": "rg:mh-demos-agents", "target": "kv:kv-claudia-lab", "label": "PaaS resource" },
+    { "source": "rg:mh-demos-agents", "target": "oai:oai-claudia-lab", "label": "PaaS resource" },
+    { "source": "rg:mh-demos-agents", "target": "adx:cluster", "label": "PaaS resource" },
+    { "source": "rg:mh-demos-agents", "target": "func:story", "label": "PaaS resource" },
+    { "source": "rg:mh-demos-agents", "target": "storage:web", "label": "PaaS resource" },
+    { "source": "rg:mh-demos-agents", "target": "storage:function", "label": "PaaS resource" },
+    { "source": "rg:mh-demos-agents", "target": "afd:profile", "label": "edge resource" },
+    { "source": "rg:mh-demos-agents", "target": "workbook:activity", "label": "observability" },
+    { "source": "rg:mh-demos-agents", "target": "ai:appinsights", "label": "observability" },
+    { "source": "rg:mh-demos-agents", "target": "browser:platform", "label": "browser automation layer" },
+
+    { "source": "aa:aa-claudia-lab", "target": "runbook:invoke-agent", "label": "executes" },
+    { "source": "runbook:invoke-agent", "target": "kv:kv-claudia-lab", "label": "reads secrets" },
+    { "source": "runbook:invoke-agent", "target": "oai:oai-claudia-lab", "label": "generates content" },
+    { "source": "runbook:invoke-agent", "target": "defs:agents", "label": "reads config" },
+    { "source": "runbook:invoke-agent", "target": "m365:entra", "label": "uses identities" },
+    { "source": "runbook:invoke-agent", "target": "m365:sharepoint", "label": "performs activity" },
+    { "source": "runbook:invoke-agent", "target": "m365:onedrive", "label": "performs activity" },
+    { "source": "runbook:invoke-agent", "target": "m365:exchange", "label": "performs activity" },
+    { "source": "runbook:invoke-agent", "target": "m365:teams", "label": "performs activity" },
+    { "source": "runbook:invoke-agent", "target": "m365:lists", "label": "performs activity" },
+    { "source": "runbook:invoke-agent", "target": "m365:copilot", "label": "performs activity" },
+    { "source": "runbook:invoke-agent", "target": "m365:fabric", "label": "performs activity" },
+    { "source": "runbook:invoke-agent", "target": "adx:cluster", "label": "ingests telemetry" },
+    { "source": "adx:cluster", "target": "adx:table", "label": "stores events" },
+    { "source": "workbook:activity", "target": "adx:table", "label": "queries telemetry" },
+    { "source": "func:story", "target": "adx:table", "label": "queries activity" },
+    { "source": "func:story", "target": "storage:function", "label": "runtime and visits" },
+    { "source": "func:story", "target": "ai:appinsights", "label": "emits diagnostics" },
+    { "source": "storage:web", "target": "func:story", "label": "browser calls API" },
+    { "source": "storage:web", "target": "assets:images", "label": "serves assets" },
+    { "source": "afd:profile", "target": "storage:web", "label": "serves portal" },
+    { "source": "tenant:contoso.example", "target": "m365:entra", "label": "identity plane" },
+    { "source": "m365:entra", "target": "m365:licenses", "label": "assigns licenses" },
+    { "source": "m365:lists", "target": "m365:sharepoint", "label": "backed by SharePoint" },
+
+    { "source": "browser:platform", "target": "browser:acr", "label": "uses image registry" },
+    { "source": "browser:platform", "target": "browser:identity", "label": "uses managed identity" },
+    { "source": "browser:platform", "target": "browser:environment", "label": "runs in" },
+    { "source": "browser:environment", "target": "browser:loganalytics", "label": "writes logs" },
+    { "source": "browser:environment", "target": "browser:jobs", "label": "hosts jobs" },
+    { "source": "browser:jobs", "target": "browser:acr", "label": "pulls image" },
+    { "source": "browser:jobs", "target": "browser:identity", "label": "runs as" },
+    { "source": "browser:jobs", "target": "kv:kv-claudia-lab", "label": "reads ADX secret" },
+    { "source": "browser:jobs", "target": "adx:cluster", "label": "ingests telemetry" },
+    { "source": "browser:jobs", "target": "browser:playwright-americas", "label": "uses workspace" },
+    { "source": "browser:jobs", "target": "browser:playwright-europe", "label": "uses workspace" },
+    { "source": "browser:jobs", "target": "browser:playwright-asia", "label": "uses workspace" },
+    { "source": "browser:jobs", "target": "m365:sharepoint", "label": "browser activity" },
+    { "source": "browser:jobs", "target": "m365:teams", "label": "browser activity" },
+    { "source": "browser:jobs", "target": "m365:exchange", "label": "browser activity" },
+
+    { "source": "defs:agents", "target": "agent:ana.rodriguez", "label": "defines" },
+    { "source": "defs:agents", "target": "agent:carlos.delgado", "label": "defines" },
+    { "source": "defs:agents", "target": "agent:david.chen", "label": "defines" },
+    { "source": "defs:agents", "target": "agent:james.wilson", "label": "defines" },
+    { "source": "defs:agents", "target": "agent:marcus.olsson", "label": "defines" },
+    { "source": "defs:agents", "target": "agent:alexander.meyer", "label": "defines" },
+    { "source": "defs:agents", "target": "agent:diego.martinez", "label": "defines" },
+    { "source": "defs:agents", "target": "agent:emily.johnson", "label": "defines" },
+    { "source": "defs:agents", "target": "agent:laura.gomez", "label": "defines" },
+    { "source": "defs:agents", "target": "agent:priya.sharma", "label": "defines" },
+    { "source": "defs:agents", "target": "agent:miguel.santos", "label": "defines" },
+    { "source": "defs:agents", "target": "agent:sofia.lopez", "label": "defines" },
+
+    { "source": "m365:entra", "target": "agent:ana.rodriguez", "label": "user object" },
+    { "source": "m365:entra", "target": "agent:carlos.delgado", "label": "user object" },
+    { "source": "m365:entra", "target": "agent:david.chen", "label": "user object" },
+    { "source": "m365:entra", "target": "agent:james.wilson", "label": "user object" },
+    { "source": "m365:entra", "target": "agent:marcus.olsson", "label": "user object" },
+    { "source": "m365:entra", "target": "agent:alexander.meyer", "label": "user object" },
+    { "source": "m365:entra", "target": "agent:diego.martinez", "label": "user object" },
+    { "source": "m365:entra", "target": "agent:emily.johnson", "label": "user object" },
+    { "source": "m365:entra", "target": "agent:laura.gomez", "label": "user object" },
+    { "source": "m365:entra", "target": "agent:priya.sharma", "label": "user object" },
+    { "source": "m365:entra", "target": "agent:miguel.santos", "label": "user object" },
+    { "source": "m365:entra", "target": "agent:sofia.lopez", "label": "user object" },
+
+    { "source": "m365:licenses", "target": "agent:alexander.meyer", "label": "Copilot licensed" },
+    { "source": "m365:licenses", "target": "agent:diego.martinez", "label": "Copilot licensed" },
+    { "source": "m365:licenses", "target": "agent:emily.johnson", "label": "Copilot licensed" },
+    { "source": "m365:licenses", "target": "agent:laura.gomez", "label": "Copilot licensed" },
+    { "source": "m365:licenses", "target": "agent:priya.sharma", "label": "Copilot licensed" },
+
+    { "source": "agent:ana.rodriguez", "target": "m365:sharepoint", "label": "primary workload" },
+    { "source": "agent:carlos.delgado", "target": "m365:sharepoint", "label": "primary workload" },
+    { "source": "agent:david.chen", "target": "m365:sharepoint", "label": "primary workload" },
+    { "source": "agent:james.wilson", "target": "m365:sharepoint", "label": "primary workload" },
+    { "source": "agent:marcus.olsson", "target": "m365:sharepoint", "label": "primary workload" },
+    { "source": "agent:alexander.meyer", "target": "m365:teams", "label": "primary workload" },
+    { "source": "agent:diego.martinez", "target": "m365:lists", "label": "primary workload" },
+    { "source": "agent:emily.johnson", "target": "m365:teams", "label": "chat workload" },
+    { "source": "agent:laura.gomez", "target": "m365:fabric", "label": "primary workload" },
+    { "source": "agent:priya.sharma", "target": "m365:teams", "label": "meetings workload" },
+    { "source": "agent:miguel.santos", "target": "m365:sharepoint", "label": "primary workload" },
+    { "source": "agent:sofia.lopez", "target": "m365:teams", "label": "primary workload" }
+  ],
+  "notes": [
+    { "title": "Characters", "body": "Personas are defined in config/agents.json and enriched with Microsoft Entra user and manager relationships." },
+    { "title": "Activity execution", "body": "Azure Automation executes the runbook, reads secrets from Key Vault, uses Azure OpenAI for generated content, and performs Microsoft 365 workload actions." },
+    { "title": "Browser agents", "body": "Container Apps jobs use regional Playwright workspaces to emulate richer browser-based user activity." },
+    { "title": "Telemetry", "body": "Runbook and browser-agent activity is normalized and stored in Azure Data Explorer in CLAUDIA_AgentActivity." },
+    { "title": "Portal", "body": "Azure Front Door serves the static portal from Storage. The browser calls the Azure Function API, which queries ADX and tracks aggregate portal visits." }
+  ]
+}

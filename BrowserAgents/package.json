@@ -1,0 +1,26 @@
+{
+  "name": "claudia-browser-agents",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Browser-based persona agents for Office Web, OWA, SharePoint Web, and Purview Activity Explorer demos.",
+  "scripts": {
+    "test": "playwright test",
+    "test:azure": "playwright test -c playwright.azure.config.js",
+    "auth:priya": "playwright test tests/auth.setup.spec.js --project=chromium --headed",
+    "auth:priya:azure": "playwright test tests/auth.setup.spec.js -c playwright.azure.config.js --headed",
+    "office:priya": "playwright test tests/office-web-smoke.spec.js",
+    "office:priya:azure": "playwright test tests/office-web-smoke.spec.js -c playwright.azure.config.js",
+    "daily:priya": "playwright test tests/owa-daily-activity.spec.js tests/m365-copilot-daily-activity.spec.js",
+    "daily:priya:azure": "playwright test tests/owa-daily-activity.spec.js tests/m365-copilot-daily-activity.spec.js -c playwright.azure.config.js",
+    "banking:wave1": "playwright test tests/banking-finance-wave1.spec.js",
+    "banking:wave1:azure": "playwright test tests/banking-finance-wave1.spec.js -c playwright.azure.config.js",
+    "scheduled": "node scripts/run-scheduled.js",
+    "content:validate": "node scripts/validate-content-pack.js"
+  },
+  "devDependencies": {
+    "@azure/identity": "^4.13.1",
+    "@azure/playwright": "latest",
+    "@playwright/test": "latest",
+    "dotenv": "latest"
+  }
+}

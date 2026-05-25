@@ -1,0 +1,1149 @@
+{
+  "generatedAt": "2026-05-20T18:53:32.8068154-05:00",
+  "source": "C:\\MyDev\\Nabil\\ClaudIA-master\\ClaudIA\\Storyline\\characters_presentations.md",
+  "profiles": [
+    {
+      "id": "agent:alexander.meyer",
+      "key": "alexander.meyer",
+      "displayName": "Alexander Meyer",
+      "tagline": "Leadership through innovation and trust.",
+      "upn": "alexander.meyer@contoso.example",
+      "role": "CEO",
+      "department": "Executive Leadership",
+      "location": "Stockholm, Sweden",
+      "licenses": "Microsoft 365 E5 + Copilot",
+      "highlights": null,
+      "introduction": "Hello! I’m Alexander. As CEO, my responsibility is to ensure the organization grows securely, innovates responsibly, and stays aligned with our strategic vision.",
+      "personality": [
+        "Strategic",
+        "Visionary",
+        "Calm under pressure",
+        "Strong believer in innovation and collaboration"
+      ],
+      "dailyActivities": [
+        "Reviews executive dashboards and business KPIs.",
+        "Uses Copilot to summarize executive meetings.",
+        "Coordinates with legal, operations, and cybersecurity leadership.",
+        "Reviews financial and strategic reports."
+      ],
+      "technologies": [
+        "Microsoft 365 Copilot",
+        "Teams",
+        "Outlook",
+        "Power BI",
+        "SharePoint Online"
+      ],
+      "sensitiveDataExposure": [
+        "Financial forecasts",
+        "Strategic initiatives",
+        "Board communications",
+        "M&A discussions"
+      ],
+      "areasOfExpertise": [
+        null
+      ],
+      "communityLeadership": [
+        null
+      ],
+      "personalMotto": "",
+      "demoFocus": [
+        "Executive access to highly sensitive information.",
+        "Oversharing risks in executive Teams channels.",
+        "Copilot summarization of confidential content."
+      ],
+      "entra": {
+        "exists": true,
+        "manager": null,
+        "directReports": [
+          {
+            "id": "agent:sebastian.zamorano",
+            "displayName": "Sebastian Zamorano",
+            "upn": "Sebastian.Zamorano@contoso.example",
+            "jobTitle": "CTO",
+            "department": ""
+          },
+          {
+            "id": "agent:james.wilson",
+            "displayName": "James Wilson",
+            "upn": "james.wilson@contoso.example",
+            "jobTitle": "Director de Operaciones",
+            "department": "Operaciones"
+          },
+          {
+            "id": "agent:emily.johnson",
+            "displayName": "Emily Johnson",
+            "upn": "emily.johnson@contoso.example",
+            "jobTitle": "Abogada Corporativa",
+            "department": "Legal y Cumplimiento"
+          },
+          {
+            "id": "agent:marcus.olsson",
+            "displayName": "Marcus Olsson",
+            "upn": "marcus.olsson@contoso.example",
+            "jobTitle": "Gerente de Ciberseguridad",
+            "department": "Ciberseguridad"
+          }
+        ],
+        "displayName": "Alexander Meyer",
+        "jobTitle": "CEO",
+        "department": ""
+      }
+    },
+    {
+      "id": "agent:ana.rodriguez",
+      "key": "ana.rodriguez",
+      "displayName": "Ana Rodriguez",
+      "tagline": "Security is not only technology. It is organizational discipline.",
+      "upn": "ana.rodriguez@contoso.example",
+      "role": "Head of IT / Security",
+      "department": "Technology & Security",
+      "location": "Madrid, Spain",
+      "licenses": "Microsoft 365 E5",
+      "highlights": null,
+      "introduction": "Hello! I’m Ana. I work in IT and Security, where my mission is to reduce risk, protect information, and maintain visibility across the organization.",
+      "personality": [
+        "Analytical",
+        "Disciplined",
+        "Security-oriented",
+        "Detail-focused"
+      ],
+      "dailyActivities": [
+        "Reviews Defender XDR alerts.",
+        "Coordinates security investigations.",
+        "Manages access governance initiatives.",
+        "Oversees compliance and data protection efforts."
+      ],
+      "technologies": [
+        "Microsoft Defender XDR",
+        "Microsoft Sentinel",
+        "Microsoft Purview",
+        "Entra ID",
+        "Teams"
+      ],
+      "sensitiveDataExposure": [
+        "Incident reports",
+        "Security alerts",
+        "Audit logs",
+        "Risk assessments"
+      ],
+      "areasOfExpertise": [
+        null
+      ],
+      "communityLeadership": [
+        null
+      ],
+      "personalMotto": "",
+      "demoFocus": [
+        "Incident response workflows.",
+        "Insider Risk investigations.",
+        "Defender and Purview integration scenarios."
+      ],
+      "entra": {
+        "exists": true,
+        "manager": {
+          "id": "agent:marcus.olsson",
+          "displayName": "Marcus Olsson",
+          "upn": "marcus.olsson@contoso.example",
+          "jobTitle": "Gerente de Ciberseguridad",
+          "department": "Ciberseguridad"
+        },
+        "directReports": [
+          {
+            "id": "agent:priya.sharma",
+            "displayName": "Priya Sharma",
+            "upn": "priya.sharma@contoso.example",
+            "jobTitle": "Cientifica de Datos",
+            "department": "Analitica Avanzada"
+          },
+          {
+            "id": "agent:devon.reyes",
+            "displayName": "Devon Reyes",
+            "upn": "devon.reyes@contoso.example",
+            "jobTitle": "Business Operation Analyst",
+            "department": "Operations Support"
+          }
+        ],
+        "displayName": "Ana Rodriguez",
+        "jobTitle": "Analista de TI/Seguridad",
+        "department": "Ciberseguridad"
+      }
+    },
+    {
+      "id": "agent:carlos.delgado",
+      "key": "carlos.delgado",
+      "displayName": "Carlos Delgado",
+      "tagline": "Turning data into business decisions.",
+      "upn": "carlos.delgado@contoso.example",
+      "role": "Data Analyst",
+      "department": "Business Intelligence",
+      "location": "Mexico City, Mexico",
+      "licenses": "Microsoft 365 E5",
+      "highlights": null,
+      "introduction": "Hello! I’m Carlos. I work with business analytics and transform raw data into insights that help the company make better decisions.",
+      "personality": [
+        "Curious",
+        "Analytical",
+        "Collaborative",
+        "Fast learner"
+      ],
+      "dailyActivities": [
+        "Creates Power BI dashboards.",
+        "Processes operational reports.",
+        "Shares reports through Teams and SharePoint.",
+        "Uses Excel and Power Query heavily."
+      ],
+      "technologies": [
+        "Power BI",
+        "Excel",
+        "Teams",
+        "SharePoint Online"
+      ],
+      "sensitiveDataExposure": [
+        "Sales metrics",
+        "Customer segmentation",
+        "Operational reports",
+        "Internal KPIs"
+      ],
+      "areasOfExpertise": [
+        null
+      ],
+      "communityLeadership": [
+        null
+      ],
+      "personalMotto": "",
+      "demoFocus": [
+        "Shadow AI scenarios.",
+        "Risky data exports.",
+        "Data oversharing through collaboration tools."
+      ],
+      "entra": {
+        "exists": true,
+        "manager": {
+          "id": "agent:diego.martinez",
+          "displayName": "Diego Martinez",
+          "upn": "diego.martinez@contoso.example",
+          "jobTitle": "Gerente Comercial",
+          "department": "Comercial"
+        },
+        "directReports": [],
+        "displayName": "Carlos Delgado",
+        "jobTitle": "Analista de Datos",
+        "department": "Inteligencia de Negocios"
+      }
+    },
+    {
+      "id": "agent:david.chen",
+      "key": "david.chen",
+      "displayName": "David Chen",
+      "tagline": "Customer experience matters.",
+      "upn": "david.chen@contoso.example",
+      "role": "Customer Operations Specialist",
+      "department": "Operations",
+      "location": "Lima, Peru",
+      "licenses": "Microsoft 365 E5",
+      "highlights": null,
+      "introduction": "Hello! I’m David. I work in customer operations and help ensure our clients receive the best experience possible.",
+      "personality": [
+        "Friendly",
+        "Service-oriented",
+        "Organized",
+        "Empathetic"
+      ],
+      "dailyActivities": [
+        "Handles customer escalations.",
+        "Updates operational documentation.",
+        "Coordinates with support teams.",
+        "Uses Teams and Outlook throughout the day."
+      ],
+      "technologies": [
+        "Outlook",
+        "Teams",
+        "SharePoint Online",
+        "Excel"
+      ],
+      "sensitiveDataExposure": [
+        "Customer information",
+        "Contracts",
+        "Operational procedures"
+      ],
+      "areasOfExpertise": [
+        null
+      ],
+      "communityLeadership": [
+        null
+      ],
+      "personalMotto": "",
+      "demoFocus": [
+        "External sharing risks.",
+        "Customer data exposure scenarios.",
+        "Collaboration governance."
+      ],
+      "entra": {
+        "exists": true,
+        "manager": {
+          "id": "agent:laura.gomez",
+          "displayName": "Laura Gomez",
+          "upn": "laura.gomez@contoso.example",
+          "jobTitle": "Analista de RRHH",
+          "department": "RRHH"
+        },
+        "directReports": [],
+        "displayName": "David Chen",
+        "jobTitle": "Especialista en atenci�n al cliente",
+        "department": "Operaciones"
+      }
+    },
+    {
+      "id": "agent:diego.martinez",
+      "key": "diego.martinez",
+      "displayName": "Diego Martinez",
+      "tagline": "Technology should help people work smarter.",
+      "upn": "diego.martinez@contoso.example",
+      "role": "Sales Manager",
+      "department": "Sales",
+      "location": "Santiago, Chile",
+      "licenses": "Microsoft 365 E5 + Copilot",
+      "highlights": null,
+      "introduction": "Hello! I’m Diego. I use Copilot daily to prepare proposals, summarize meetings, and move faster with customers.",
+      "personality": [
+        "Charismatic",
+        "Energetic",
+        "Relationship-driven",
+        "Competitive"
+      ],
+      "dailyActivities": [
+        "Creates commercial proposals.",
+        "Shares presentations and pricing documents.",
+        "Coordinates customer opportunities.",
+        "Uses Copilot to draft emails and summaries."
+      ],
+      "technologies": [
+        "Microsoft 365 Copilot",
+        "Teams",
+        "Outlook",
+        "PowerPoint",
+        "SharePoint Online"
+      ],
+      "sensitiveDataExposure": [
+        "Customer pricing",
+        "Commercial proposals",
+        "Sales forecasts",
+        "Contracts"
+      ],
+      "areasOfExpertise": [
+        null
+      ],
+      "communityLeadership": [
+        null
+      ],
+      "personalMotto": "",
+      "demoFocus": [
+        "Copilot adoption.",
+        "Commercial oversharing.",
+        "Unprotected proposal documents."
+      ],
+      "entra": {
+        "exists": true,
+        "manager": {
+          "id": "agent:james.wilson",
+          "displayName": "James Wilson",
+          "upn": "james.wilson@contoso.example",
+          "jobTitle": "Director de Operaciones",
+          "department": "Operaciones"
+        },
+        "directReports": [
+          {
+            "id": "agent:carlos.delgado",
+            "displayName": "Carlos Delgado",
+            "upn": "carlos.delgado@contoso.example",
+            "jobTitle": "Analista de Datos",
+            "department": "Inteligencia de Negocios"
+          },
+          {
+            "id": "agent:sofia.lopez",
+            "displayName": "Sofia Lopez",
+            "upn": "sofia.lopez@contoso.example",
+            "jobTitle": "L�der de Proyectos",
+            "department": "PMO"
+          }
+        ],
+        "displayName": "Diego Martinez",
+        "jobTitle": "Gerente Comercial",
+        "department": "Comercial"
+      }
+    },
+    {
+      "id": "agent:emily.johnson",
+      "key": "emily.johnson",
+      "displayName": "Emily Johnson",
+      "tagline": "Compliance and trust go hand in hand.",
+      "upn": "emily.johnson@contoso.example",
+      "role": "Corporate Lawyer",
+      "department": "Legal & Compliance",
+      "location": "New York, USA",
+      "licenses": "Microsoft 365 E5 + Copilot",
+      "highlights": null,
+      "introduction": "Hello! I’m Emily. I ensure our organization complies with legal and regulatory requirements while protecting sensitive information.",
+      "personality": [
+        "Detail-oriented",
+        "Professional",
+        "Precise",
+        "Compliance-focused"
+      ],
+      "dailyActivities": [
+        "Reviews contracts and legal clauses.",
+        "Uses Copilot to summarize agreements.",
+        "Advises leadership on compliance risks."
+      ],
+      "technologies": [
+        "Word",
+        "Outlook",
+        "Teams",
+        "SharePoint Online",
+        "Microsoft 365 Copilot"
+      ],
+      "sensitiveDataExposure": [
+        "Legal agreements",
+        "Compliance reports",
+        "Regulatory investigations",
+        "Confidential negotiations"
+      ],
+      "areasOfExpertise": [
+        null
+      ],
+      "communityLeadership": [
+        null
+      ],
+      "personalMotto": "",
+      "demoFocus": [
+        "Legal document exposure.",
+        "External sharing controls.",
+        "Sensitivity labeling."
+      ],
+      "entra": {
+        "exists": true,
+        "manager": {
+          "id": "agent:alexander.meyer",
+          "displayName": "Alexander Meyer",
+          "upn": "alexander.meyer@contoso.example",
+          "jobTitle": "CEO",
+          "department": ""
+        },
+        "directReports": [],
+        "displayName": "Emily Johnson",
+        "jobTitle": "Abogada Corporativa",
+        "department": "Legal y Cumplimiento"
+      }
+    },
+    {
+      "id": "agent:james.wilson",
+      "key": "james.wilson",
+      "displayName": "James Wilson",
+      "tagline": "Efficiency drives successful operations.",
+      "upn": "james.wilson@contoso.example",
+      "role": "Director of Operations",
+      "department": "Operations",
+      "location": "Toronto, Canada",
+      "licenses": "Microsoft 365 E5 + Copilot",
+      "highlights": null,
+      "introduction": "Hello! I’m James. I focus on improving operational efficiency and helping teams collaborate effectively.",
+      "personality": [
+        "Organized",
+        "Pragmatic",
+        "Leadership-oriented",
+        "Collaborative"
+      ],
+      "dailyActivities": [
+        "Reviews operational KPIs.",
+        "Coordinates cross-functional projects.",
+        "Uses Copilot to generate summaries and action items."
+      ],
+      "technologies": [
+        "Teams",
+        "Excel",
+        "Power BI",
+        "Copilot"
+      ],
+      "sensitiveDataExposure": [
+        "Operational reports",
+        "Vendor agreements",
+        "Financial planning data"
+      ],
+      "areasOfExpertise": [
+        null
+      ],
+      "communityLeadership": [
+        null
+      ],
+      "personalMotto": "",
+      "demoFocus": [
+        "Cross-functional collaboration.",
+        "Executive reporting.",
+        "Teams governance."
+      ],
+      "entra": {
+        "exists": true,
+        "manager": {
+          "id": "agent:alexander.meyer",
+          "displayName": "Alexander Meyer",
+          "upn": "alexander.meyer@contoso.example",
+          "jobTitle": "CEO",
+          "department": ""
+        },
+        "directReports": [
+          {
+            "id": "agent:diego.martinez",
+            "displayName": "Diego Martinez",
+            "upn": "diego.martinez@contoso.example",
+            "jobTitle": "Gerente Comercial",
+            "department": "Comercial"
+          },
+          {
+            "id": "agent:laura.gomez",
+            "displayName": "Laura Gomez",
+            "upn": "laura.gomez@contoso.example",
+            "jobTitle": "Analista de RRHH",
+            "department": "RRHH"
+          }
+        ],
+        "displayName": "James Wilson",
+        "jobTitle": "Director de Operaciones",
+        "department": "Operaciones"
+      }
+    },
+    {
+      "id": "agent:laura.gomez",
+      "key": "laura.gomez",
+      "displayName": "Laura Gomez",
+      "tagline": "People are the heart of the organization.",
+      "upn": "laura.gomez@contoso.example",
+      "role": "HR Manager",
+      "department": "Human Resources",
+      "location": "Bogotá, Colombia",
+      "licenses": "Microsoft 365 E5 + Copilot",
+      "highlights": null,
+      "introduction": "Hello! I’m Laura. I work in HR managing sensitive employee information and helping build a positive culture.",
+      "personality": [
+        "Supportive",
+        "Organized",
+        "Empathetic",
+        "Collaborative"
+      ],
+      "dailyActivities": [
+        "Manages onboarding processes.",
+        "Reviews employee evaluations.",
+        "Coordinates HR communications.",
+        "Uses Copilot to summarize reports."
+      ],
+      "technologies": [
+        "Excel",
+        "Teams",
+        "SharePoint Online",
+        "Outlook",
+        "Copilot"
+      ],
+      "sensitiveDataExposure": [
+        "Salaries",
+        "Employee records",
+        "Evaluations",
+        "Medical accommodations"
+      ],
+      "areasOfExpertise": [
+        null
+      ],
+      "communityLeadership": [
+        null
+      ],
+      "personalMotto": "",
+      "demoFocus": [
+        "HR oversharing.",
+        "Sensitive document protection.",
+        "Copilot exposure risks."
+      ],
+      "entra": {
+        "exists": true,
+        "manager": {
+          "id": "agent:james.wilson",
+          "displayName": "James Wilson",
+          "upn": "james.wilson@contoso.example",
+          "jobTitle": "Director de Operaciones",
+          "department": "Operaciones"
+        },
+        "directReports": [
+          {
+            "id": "agent:miguel.santos",
+            "displayName": "Miguel Santos",
+            "upn": "miguel.santos@contoso.example",
+            "jobTitle": "Ingeniero de Plataforma",
+            "department": "TI / Infraestructura"
+          },
+          {
+            "id": "agent:david.chen",
+            "displayName": "David Chen",
+            "upn": "david.chen@contoso.example",
+            "jobTitle": "Especialista en atenci�n al cliente",
+            "department": "Operaciones"
+          }
+        ],
+        "displayName": "Laura Gomez",
+        "jobTitle": "Analista de RRHH",
+        "department": "RRHH"
+      }
+    },
+    {
+      "id": "agent:marcus.olsson",
+      "key": "marcus.olsson",
+      "displayName": "Marcus Olsson",
+      "tagline": "Cybersecurity requires visibility and discipline.",
+      "upn": "marcus.olsson@contoso.example",
+      "role": "Cybersecurity Manager",
+      "department": "Cybersecurity",
+      "location": "Stockholm, Sweden",
+      "licenses": "Microsoft 365 E5",
+      "highlights": null,
+      "introduction": "Hello! I’m Marcus. I lead cybersecurity initiatives focused on protecting data, reducing risk, and improving organizational resilience.",
+      "personality": [
+        "Calm",
+        "Methodical",
+        "Risk-aware",
+        "Strategic"
+      ],
+      "dailyActivities": [
+        "Reviews DLP incidents.",
+        "Oversees Insider Risk investigations.",
+        "Coordinates remediation efforts with Ana."
+      ],
+      "technologies": [
+        "Defender XDR",
+        "Microsoft Sentinel",
+        "Microsoft Purview",
+        "Entra ID"
+      ],
+      "sensitiveDataExposure": [
+        "Threat intelligence",
+        "Security investigations",
+        "Incident reports"
+      ],
+      "areasOfExpertise": [
+        null
+      ],
+      "communityLeadership": [
+        null
+      ],
+      "personalMotto": "",
+      "demoFocus": [
+        "Security operations.",
+        "Insider Risk workflows.",
+        "DLP investigations."
+      ],
+      "entra": {
+        "exists": true,
+        "manager": {
+          "id": "agent:alexander.meyer",
+          "displayName": "Alexander Meyer",
+          "upn": "alexander.meyer@contoso.example",
+          "jobTitle": "CEO",
+          "department": ""
+        },
+        "directReports": [
+          {
+            "id": "agent:ana.rodriguez",
+            "displayName": "Ana Rodriguez",
+            "upn": "ana.rodriguez@contoso.example",
+            "jobTitle": "Analista de TI/Seguridad",
+            "department": "Ciberseguridad"
+          }
+        ],
+        "displayName": "Marcus Olsson",
+        "jobTitle": "Gerente de Ciberseguridad",
+        "department": "Ciberseguridad"
+      }
+    },
+    {
+      "id": "agent:miguel.santos",
+      "key": "miguel.santos",
+      "displayName": "Miguel Santos",
+      "tagline": "Automation and cloud make everything scalable.",
+      "upn": "miguel.santos@contoso.example",
+      "role": "Platform Engineer",
+      "department": "Infrastructure",
+      "location": "São Paulo, Brazil",
+      "licenses": "Microsoft 365 E5",
+      "highlights": null,
+      "introduction": "Hello! I’m Miguel. I build scalable cloud solutions and automate operational tasks across the organization.",
+      "personality": [
+        "Technical",
+        "Innovative",
+        "Curious",
+        "Automation-focused"
+      ],
+      "dailyActivities": [
+        "Maintains cloud infrastructure.",
+        "Automates administrative tasks.",
+        "Supports integrations and collaboration platforms."
+      ],
+      "technologies": [
+        "Azure",
+        "PowerShell",
+        "Teams",
+        "SharePoint Online"
+      ],
+      "sensitiveDataExposure": [
+        "Infrastructure documentation",
+        "Scripts",
+        "System configurations"
+      ],
+      "areasOfExpertise": [
+        null
+      ],
+      "communityLeadership": [
+        null
+      ],
+      "personalMotto": "",
+      "demoFocus": [
+        "Endpoint risks.",
+        "Automation and governance.",
+        "Infrastructure visibility."
+      ],
+      "entra": {
+        "exists": true,
+        "manager": {
+          "id": "agent:laura.gomez",
+          "displayName": "Laura Gomez",
+          "upn": "laura.gomez@contoso.example",
+          "jobTitle": "Analista de RRHH",
+          "department": "RRHH"
+        },
+        "directReports": [],
+        "displayName": "Miguel Santos",
+        "jobTitle": "Ingeniero de Plataforma",
+        "department": "TI / Infraestructura"
+      }
+    },
+    {
+      "id": "agent:priya.sharma",
+      "key": "priya.sharma",
+      "displayName": "Priya Sharma",
+      "tagline": "AI and analytics can reveal hidden patterns.",
+      "upn": "priya.sharma@contoso.example",
+      "role": "Data Scientist",
+      "department": "Advanced Analytics",
+      "location": "Bangalore, India",
+      "licenses": "Microsoft 365 E5 + Copilot",
+      "highlights": null,
+      "introduction": "Hello! I’m Priya. I use analytics and AI to identify patterns that help improve business decisions and operational visibility.",
+      "personality": [
+        "Intelligent",
+        "Curious",
+        "Research-oriented",
+        "Analytical"
+      ],
+      "dailyActivities": [
+        "Uses Copilot extensively.",
+        "Correlates information from multiple departments.",
+        "Builds analytical and predictive models."
+      ],
+      "technologies": [
+        "Microsoft 365 Copilot",
+        "Power BI",
+        "Excel",
+        "Teams",
+        "SharePoint Online"
+      ],
+      "sensitiveDataExposure": [
+        "Business intelligence",
+        "Sales forecasting",
+        "HR trends",
+        "Overshared information"
+      ],
+      "areasOfExpertise": [
+        null
+      ],
+      "communityLeadership": [
+        null
+      ],
+      "personalMotto": "",
+      "demoFocus": [
+        "DSPM for AI.",
+        "Copilot oversharing.",
+        "Semantic indexing risks."
+      ],
+      "entra": {
+        "exists": true,
+        "manager": {
+          "id": "agent:ana.rodriguez",
+          "displayName": "Ana Rodriguez",
+          "upn": "ana.rodriguez@contoso.example",
+          "jobTitle": "Analista de TI/Seguridad",
+          "department": "Ciberseguridad"
+        },
+        "directReports": [],
+        "displayName": "Priya Sharma",
+        "jobTitle": "Cientifica de Datos",
+        "department": "Analitica Avanzada"
+      }
+    },
+    {
+      "id": "agent:sofia.lopez",
+      "key": "sofia.lopez",
+      "displayName": "Sofia Lopez",
+      "tagline": "Organization and planning drive successful projects.",
+      "upn": "sofia.lopez@contoso.example",
+      "role": "Project Manager",
+      "department": "PMO",
+      "location": "Buenos Aires, Argentina",
+      "licenses": "Microsoft 365 E5",
+      "highlights": null,
+      "introduction": "Hello! I’m Sofia. I coordinate projects and ensure teams deliver results on time and with quality.",
+      "personality": [
+        "Structured",
+        "Collaborative",
+        "Deadline-oriented",
+        "Organized"
+      ],
+      "dailyActivities": [
+        "Coordinates projects and timelines.",
+        "Shares project documentation.",
+        "Uses Teams heavily for collaboration."
+      ],
+      "technologies": [
+        "Teams",
+        "Planner",
+        "SharePoint Online",
+        "Excel"
+      ],
+      "sensitiveDataExposure": [
+        "Project budgets",
+        "Internal timelines",
+        "Vendor coordination"
+      ],
+      "areasOfExpertise": [
+        null
+      ],
+      "communityLeadership": [
+        null
+      ],
+      "personalMotto": "",
+      "demoFocus": [
+        "Project collaboration.",
+        "Document governance.",
+        "Teams and SharePoint lifecycle."
+      ],
+      "entra": {
+        "exists": true,
+        "manager": {
+          "id": "agent:diego.martinez",
+          "displayName": "Diego Martinez",
+          "upn": "diego.martinez@contoso.example",
+          "jobTitle": "Gerente Comercial",
+          "department": "Comercial"
+        },
+        "directReports": [],
+        "displayName": "Sofia Lopez",
+        "jobTitle": "L�der de Proyectos",
+        "department": "PMO"
+      }
+    },
+    {
+      "id": "agent:devon.reyes",
+      "key": "devon.reyes",
+      "displayName": "Devon Reyes",
+      "tagline": "Sometimes the biggest risks are hidden in plain sight.",
+      "upn": "devon.reyes@contoso.example",
+      "role": "Business Operations Analyst",
+      "department": "Operations Support",
+      "location": "Remote",
+      "licenses": "Microsoft 365 E5",
+      "highlights": null,
+      "introduction": "Hello! I’m Devon. I work quietly behind the scenes supporting operational reporting and internal analytics.",
+      "personality": [
+        "Reserved",
+        "Introverted",
+        "Technically skilled",
+        "Low-profile"
+      ],
+      "dailyActivities": [
+        "Extracts operational reports.",
+        "Downloads data for offline analysis.",
+        "Uses multiple collaboration and storage platforms."
+      ],
+      "technologies": [
+        "Outlook",
+        "Teams",
+        "SharePoint Online",
+        "OneDrive",
+        "Excel"
+      ],
+      "sensitiveDataExposure": [
+        "Customer data",
+        "Financial reports",
+        "Internal operational records",
+        "Strategic documents"
+      ],
+      "areasOfExpertise": [
+        null
+      ],
+      "communityLeadership": [
+        null
+      ],
+      "personalMotto": "",
+      "demoFocus": [
+        "Insider Risk scenarios.",
+        "Data exfiltration simulations.",
+        "Suspicious sharing behaviors.",
+        "Endpoint DLP events.",
+        "Shadow IT and unauthorized cloud storage."
+      ],
+      "entra": {
+        "exists": true,
+        "manager": {
+          "id": "agent:ana.rodriguez",
+          "displayName": "Ana Rodriguez",
+          "upn": "ana.rodriguez@contoso.example",
+          "jobTitle": "Analista de TI/Seguridad",
+          "department": "Ciberseguridad"
+        },
+        "directReports": [],
+        "displayName": "Devon Reyes",
+        "jobTitle": "Business Operation Analyst",
+        "department": "Operations Support"
+      }
+    },
+    {
+      "id": "agent:sebastian.zamorano",
+      "key": "sebastian.zamorano",
+      "displayName": "Sebastian “Kaz” Zamorano",
+      "tagline": "Security is not only about technology — it is about understanding how people, data, and AI interact.",
+      "upn": "sebastian.zamorano@contoso.example",
+      "role": "Director of Cybersecurity Solutions",
+      "department": "Cybersecurity & Advisory Services",
+      "location": "Colombia",
+      "licenses": "Microsoft 365 E5",
+      "highlights": "MVP & MCT",
+      "introduction": "Hello! I’m Sebastian, but most people know me as Kaz. I lead cybersecurity and data protection initiatives focused on helping organizations securely adopt Microsoft technologies, AI, and modern collaboration platforms.",
+      "personality": [
+        "Strategic",
+        "Highly technical",
+        "Storytelling-oriented",
+        "Innovation-driven",
+        "Security-focused"
+      ],
+      "dailyActivities": [
+        "Designs cybersecurity and data governance strategies.",
+        "Leads Microsoft Security and Purview workshops.",
+        "Creates executive presentations and technical demos.",
+        "Develops AI-driven demo environments and automation scenarios.",
+        "Coordinates security engagements with customers and Microsoft teams.",
+        "Uses Copilot and AI extensively for research, analysis, and content generation."
+      ],
+      "technologies": [
+        "Microsoft Purview",
+        "Microsoft Defender XDR",
+        "Microsoft Sentinel",
+        "Microsoft 365 Copilot",
+        "Azure OpenAI",
+        "Power BI",
+        "KQL / Azure Data Explorer",
+        "Teams",
+        "SharePoint Online",
+        "PowerShell"
+      ],
+      "sensitiveDataExposure": [
+        "Security investigations",
+        "Customer environments",
+        "Compliance assessments",
+        "Data classification strategies",
+        "Executive security reports",
+        "Insider Risk scenarios",
+        "AI governance discussions"
+      ],
+      "areasOfExpertise": [
+        "Data Security & Governance",
+        "Microsoft Purview",
+        "Insider Risk Management",
+        "Data Loss Prevention (DLP)",
+        "Microsoft Defender",
+        "AI Security & Governance",
+        "Compliance & Risk",
+        "Security Storytelling & Executive Advisory"
+      ],
+      "communityLeadership": [
+        "Microsoft MVP (Purview)",
+        "Microsoft Certified Trainer (MCT)",
+        "Cybersecurity speaker and content creator",
+        "Creator of security demos and educational environments",
+        "Advocate for responsible AI adoption and modern data governance"
+      ],
+      "personalMotto": "One approach is not enough.",
+      "demoFocus": [
+        "AI oversharing scenarios.",
+        "Insider Risk and behavioral analytics.",
+        "Data governance for Copilot and AI.",
+        "Microsoft Purview & Defender integrations.",
+        "Realistic security simulation environments.",
+        "Executive storytelling for cybersecurity awareness."
+      ],
+      "entra": {
+        "exists": true,
+        "manager": {
+          "id": "agent:alexander.meyer",
+          "displayName": "Alexander Meyer",
+          "upn": "alexander.meyer@contoso.example",
+          "jobTitle": "CEO",
+          "department": ""
+        },
+        "directReports": [
+          {
+            "id": "agent:karla.penzo",
+            "displayName": "Karla Penzo",
+            "upn": "karla.penzo@contoso.example",
+            "jobTitle": "Account Executive",
+            "department": "CTO"
+          },
+          {
+            "id": "agent:nabil.senoussaoui",
+            "displayName": "Nabil Senoussaoui",
+            "upn": "nabil.senoussaoui@contoso.example",
+            "jobTitle": "Engineer Support",
+            "department": "Cybersecurity"
+          }
+        ],
+        "displayName": "Sebastian Zamorano",
+        "jobTitle": "CTO",
+        "department": ""
+      }
+    },
+    {
+      "id": "agent:karla.penzo",
+      "key": "karla.penzo",
+      "displayName": "Karla Penzo",
+      "tagline": "Relationships, trust, and timing are part of every successful security story.",
+      "upn": "karla.penzo@contoso.example",
+      "role": "Account Executive",
+      "department": "Customer Strategy",
+      "location": "United States",
+      "licenses": "Microsoft 365 E5",
+      "highlights": null,
+      "introduction": "Hello! I’m Karla. I help connect customer priorities with the right Microsoft security, compliance, and AI conversations.",
+      "personality": [
+        "Relationship-driven",
+        "Strategic",
+        "Customer-focused",
+        "Outcome-oriented"
+      ],
+      "dailyActivities": [
+        "Coordinates customer meetings and follow-ups.",
+        "Works with technical teams on security and compliance opportunities.",
+        "Reviews account context, executive priorities, and engagement plans.",
+        "Shares customer-ready material through Microsoft 365 collaboration tools."
+      ],
+      "technologies": [
+        "Outlook",
+        "Teams",
+        "SharePoint Online",
+        "PowerPoint",
+        "Microsoft 365 Copilot"
+      ],
+      "sensitiveDataExposure": [
+        "Customer engagement plans",
+        "Executive contacts",
+        "Opportunity details",
+        "Commercial discussions"
+      ],
+      "areasOfExpertise": [
+        null
+      ],
+      "communityLeadership": [
+        null
+      ],
+      "personalMotto": "",
+      "demoFocus": [
+        "Customer collaboration scenarios.",
+        "Executive communication flows.",
+        "Secure sharing of customer-facing materials."
+      ],
+      "entra": {
+        "exists": true,
+        "manager": {
+          "id": "agent:sebastian.zamorano",
+          "displayName": "Sebastian Zamorano",
+          "upn": "Sebastian.Zamorano@contoso.example",
+          "jobTitle": "CTO",
+          "department": ""
+        },
+        "directReports": [],
+        "displayName": "Karla Penzo",
+        "jobTitle": "Account Executive",
+        "department": "CTO"
+      }
+    },
+    {
+      "id": "agent:nabil.senoussaoui",
+      "key": "nabil.senoussaoui",
+      "displayName": "Nabil Senoussaoui",
+      "tagline": "Behind every great demo there is a quiet architecture making the magic possible.",
+      "upn": "nabil.senoussaoui@contoso.example",
+      "role": "Mastermind",
+      "department": "Cybersecurity Engineering",
+      "location": "United States",
+      "licenses": "Microsoft 365 E5",
+      "highlights": null,
+      "introduction": "Hello! I’m Nabil. I design and support the technical backbone that makes complex cybersecurity and AI demos work reliably.",
+      "personality": [
+        "Inventive",
+        "Deeply technical",
+        "Calm under pressure",
+        "Builder-minded"
+      ],
+      "dailyActivities": [
+        "Designs demo architecture and automation patterns.",
+        "Troubleshoots Microsoft 365 and Azure integration scenarios.",
+        "Supports advanced security and AI demonstrations.",
+        "Coordinates with technical teams to keep environments stable."
+      ],
+      "technologies": [
+        "Azure",
+        "Microsoft Defender XDR",
+        "Microsoft Sentinel",
+        "Microsoft Purview",
+        "Azure Data Explorer",
+        "PowerShell",
+        "Teams",
+        "SharePoint Online"
+      ],
+      "sensitiveDataExposure": [
+        "Demo infrastructure details",
+        "Security telemetry",
+        "Automation secrets and configuration context",
+        "Investigation scenarios"
+      ],
+      "areasOfExpertise": [
+        null
+      ],
+      "communityLeadership": [
+        null
+      ],
+      "personalMotto": "",
+      "demoFocus": [
+        "Technical architecture for demos.",
+        "Security automation and data flow validation.",
+        "Defender, Sentinel, and Purview integration.",
+        "Reliable execution of complex demo environments."
+      ],
+      "entra": {
+        "exists": true,
+        "manager": {
+          "id": "agent:sebastian.zamorano",
+          "displayName": "Sebastian Zamorano",
+          "upn": "Sebastian.Zamorano@contoso.example",
+          "jobTitle": "CTO",
+          "department": ""
+        },
+        "directReports": [],
+        "displayName": "Nabil Senoussaoui",
+        "jobTitle": "Engineer Support",
+        "department": "Cybersecurity"
+      }
+    }
+  ]
+}

@@ -1,0 +1,105 @@
+{
+  "_comment": "United Kingdom locale - NINO, Sort Code+Account, UTR, NHS",
+  "country": "UK",
+  "language": "en",
+  "currency": "GBP",
+  "companyName": "CorpLab Ltd",
+  "personas": [
+    { "sam": "jthompson",  "displayName": "James Thompson",   "department": "HR",          "jobTitle": "HR Coordinator" },
+    { "sam": "ewatson",    "displayName": "Emma Watson",       "department": "Finance",     "jobTitle": "Finance Controller" },
+    { "sam": "dpatel",     "displayName": "Dev Patel",         "department": "Legal",       "jobTitle": "Legal Counsel" },
+    { "sam": "oconnor",    "displayName": "Oliver Connor",     "department": "Engineering", "jobTitle": "DevOps Engineer" },
+    { "sam": "sali",       "displayName": "Sarah Ali",         "department": "Sales",       "jobTitle": "Sales Manager" },
+    { "sam": "rjones",     "displayName": "Rachel Jones",      "department": "HR",          "jobTitle": "HR Onboarding Specialist" },
+    { "sam": "tsingh",     "displayName": "Tariq Singh",       "department": "Finance",     "jobTitle": "Budget Analyst" },
+    { "sam": "cwright",    "displayName": "Charlotte Wright",  "department": "Legal",       "jobTitle": "Contract Manager" },
+    { "sam": "akim",       "displayName": "Alexander Kim",     "department": "Engineering", "jobTitle": "Data Engineer" },
+    { "sam": "lmurphy",    "displayName": "Liam Murphy",       "department": "Sales",       "jobTitle": "Account Executive" }
+  ],
+  "sitReference": "=== MANDATORY DATA FORMAT RULES (follow EXACTLY) ===\n\nThese patterns match Microsoft Purview Sensitive Information Type (SIT) detection rules.\nFollowing them ensures HIGH CONFIDENCE (85%) detection in DLP policies and auto-labeling.\n\nU.K. NATIONAL INSURANCE NUMBER (NINO):\n- Format: 2 letters + 6 digits + 1 letter (e.g., AB 12 34 56 C)\n- First 2 letters: NOT D, F, I, Q, U, V; second letter NOT O\n- Last letter: A, B, C, or D only\n- MUST include keyword: \"national insurance\", \"NINO\", \"NI number\", \"insurance number\"\n- Examples: AB 12 34 56 C, QQ 12 34 56 A, JG 45 67 89 B\n- Generate 3-8 different NINO values per document.\n\nU.K. SORT CODE + BANK ACCOUNT:\n- Sort Code: 6 digits (XX-XX-XX)\n- Account: 8 digits\n- Include keyword: \"sort code\", \"account number\", \"bank account\"\n- Examples: Sort Code 20-00-00, Account 12345678\n\nU.K. UNIQUE TAXPAYER REFERENCE (UTR):\n- Format: 10 digits\n- Include keyword: \"UTR\", \"unique taxpayer reference\", \"tax reference\"\n- Examples: 1234567890\n\nU.K. NHS NUMBER:\n- Format: 10 digits (XXX XXX XXXX)\n- Include keyword: \"NHS\", \"NHS number\", \"health service number\"\n- Examples: 123 456 7890\n\nU.K. PASSPORT NUMBER:\n- Format: 9 digits\n- Include keyword: \"passport\", \"passport number\"\n- Examples: 123456789\n\nPHONE: 07XXX XXXXXX (mobile) or 020 XXXX XXXX (London)\nEMAIL: firstname.lastname@corplab.co.uk\nNAMES: Use realistic British names",
+  "documentTypes": {
+    "payslip": "Payslip",
+    "employeeFile": "Employee Record",
+    "onboarding": "Onboarding Checklist",
+    "absenceReport": "Absence Report",
+    "hiringDeclaration": "Starter Checklist (HMRC)",
+    "performanceReview": "Annual Appraisal",
+    "personnelRegister": "Staff Register",
+    "supplierPayment": "Supplier Payments (BACS)",
+    "financialReport": "Quarterly Financial Report",
+    "socialDeclaration": "P60 End of Year Certificate",
+    "expenseReport": "Expense Claim",
+    "budget": "Budget Forecast",
+    "invoice": "Invoice",
+    "auditReport": "ICO Compliance Audit",
+    "contract": "Employment Contract",
+    "gdprRegister": "UK GDPR Processing Register",
+    "litigation": "Litigation File",
+    "legalOpinion": "Legal Opinion"
+  },
+  "scanTemplates": {
+    "payslip": {
+      "title": "PAYSLIP",
+      "fields": ["Employee", "Department", "NI Number", "UTR", "Sort Code", "Account No", "Gross Pay", "Tax", "NI Contrib", "Net Pay"],
+      "bank": "Barclays",
+      "bic": "BARCGB22"
+    },
+    "badge": {
+      "title": "EMPLOYEE BADGE - CONFIDENTIAL",
+      "fields": ["Name", "Department", "Title", "NI Number", "UTR", "Sort Code", "Email", "Phone"]
+    },
+    "invoice": {
+      "title": "INVOICE",
+      "supplierPrefix": "Ltd",
+      "taxLabel": "VAT",
+      "taxPrefix": "GB",
+      "taxRate": 20
+    }
+  },
+  "piiGenerators": {
+    "primaryId": { "name": "NI Number", "format": "XX XX XX XX X", "prefixLetters": 2, "digits": 6, "suffixLetters": 1 },
+    "bankAccount": { "name": "Sort Code + Account", "sortCodeFormat": "XX-XX-XX", "accountDigits": 8 },
+    "taxId": { "name": "UTR", "digits": 10, "format": "XXXXXXXXXX" },
+    "phone": { "prefixes": ["07700","07800","07900"], "format": "XXXXX XXXXXX" },
+    "emailDomain": "corplab.co.uk"
+  },
+  "companyDescription": "a UK company",
+  "fileTypes": {
+    "HR": [
+      { "Type": "Payslip",              "Ext": ".csv", "Prompt": "Generate a monthly payslip CSV: Employee;NI_Number;Sort_Code;Account_No;Gross_Pay;Tax;NI_Contrib;Net_Pay;Date. Include 6-10 rows. NI Number with keyword 'national insurance number' format AB 12 34 56 C." },
+      { "Type": "Employee_Record",      "Ext": ".txt", "Prompt": "Generate a confidential employee record with full name, NI number (national insurance number AB 12 34 56 C), sort code and bank account, annual salary in GBP, UK home address, start date." },
+      { "Type": "Onboarding_Checklist", "Ext": ".txt", "Prompt": "Generate an onboarding checklist with NI number (national insurance number), sort code and account number for salary, manager name, equipment list." },
+      { "Type": "HMRC_Starter",         "Ext": ".txt", "Prompt": "Generate an HMRC Starter Checklist with employee name, NI number (national insurance number), date of birth, UK address, student loan status, previous employer details." },
+      { "Type": "P60_Certificate",      "Ext": ".csv", "Prompt": "Generate a P60 End of Year Certificate CSV: Employee;NI_Number;Tax_Code;Total_Pay;Total_Tax;NI_Contributions;UTR. Include 8-12 rows. NI with keyword 'national insurance'. UTR with keyword 'unique taxpayer reference'." },
+      { "Type": "Annual_Appraisal",     "Ext": ".txt", "Prompt": "Generate an annual appraisal document with employee name, NI number (national insurance number), objectives, salary discussion in GBP, bank details for bonus." },
+      { "Type": "Staff_Register",       "Ext": ".csv", "Prompt": "Generate a staff register CSV: Name;NI_Number;Start_Date;Title;Department;Salary;Sort_Code;Account. 8-12 rows." },
+      { "Type": "Scan_Payslip",         "Ext": ".png", "Prompt": "SCAN" },
+      { "Type": "Scan_Badge",           "Ext": ".png", "Prompt": "SCAN" }
+    ],
+    "Finance": [
+      { "Type": "Supplier_Payments",     "Ext": ".csv", "Prompt": "Generate a BACS supplier payment CSV: Supplier;Sort_Code;Account_No;Amount;Reference. Include 6-8 UK suppliers." },
+      { "Type": "Financial_Report",      "Ext": ".txt", "Prompt": "Generate a quarterly financial report with revenue, costs in GBP, treasury sort code and account, VAT registration number (GB + 9 digits)." },
+      { "Type": "P11D_Benefits",         "Ext": ".csv", "Prompt": "Generate a P11D benefits in kind CSV: Employee;NI_Number;Benefit_Type;Cash_Value;Tax_Paid. Include 5-8 rows." },
+      { "Type": "Expense_Claim",         "Ext": ".txt", "Prompt": "Generate an expense claim with employee name, reimbursement sort code and account, itemized expenses in GBP, total." },
+      { "Type": "Budget_Forecast",       "Ext": ".txt", "Prompt": "Generate a budget forecast with salary costs in GBP, treasury bank account, department breakdowns." },
+      { "Type": "Invoice",              "Ext": ".txt", "Prompt": "Generate an invoice with supplier details, sort code and account for payment, VAT registration (GB + 9 digits), line items, total excl/incl VAT in GBP." },
+      { "Type": "Scan_Invoice",          "Ext": ".png", "Prompt": "SCAN" }
+    ],
+    "Legal": [
+      { "Type": "ICO_Audit",            "Ext": ".txt", "Prompt": "Generate an ICO compliance audit report listing 4-6 persons with their NI numbers (national insurance number), findings, corrective actions." },
+      { "Type": "Employment_Contract",  "Ext": ".txt", "Prompt": "Generate a UK employment contract with employee NI number (national insurance number), sort code and account, salary in GBP, notice period, holiday entitlement." },
+      { "Type": "GDPR_Register",        "Ext": ".txt", "Prompt": "Generate a UK GDPR processing register entry for payroll: data types (NI number, sort code, UTR), legal basis, retention period." },
+      { "Type": "Litigation_File",      "Ext": ".txt", "Prompt": "Generate a litigation file summary with claimant NI number (national insurance number), claimed amount in GBP, tribunal timeline." },
+      { "Type": "Legal_Opinion",        "Ext": ".txt", "Prompt": "Generate a legal opinion about UK data protection compliance referencing NI numbers (national insurance number) found in breach." },
+      { "Type": "NDA",                  "Ext": ".txt", "Prompt": "Generate an NDA with party names, UK addresses, confidential information description, penalty amounts in GBP." }
+    ],
+    "Sales": [
+      { "Type": "Sales_Pipeline",       "Ext": ".csv", "Prompt": "Generate a sales pipeline CSV: Client;Contact;Email;Sort_Code;Account;Contract_Amount. Include 5-8 UK prospects." },
+      { "Type": "Proposal",             "Ext": ".txt", "Prompt": "Generate a commercial proposal with client details, payment sort code and account, quote amount in GBP excl/incl VAT." },
+      { "Type": "Commission_Report",    "Ext": ".csv", "Prompt": "Generate a commission report CSV: Sales_Rep;Client;Revenue;Commission;Sort_Code;Account. 4-6 rows." },
+      { "Type": "Meeting_Notes",        "Ext": ".txt", "Prompt": "Generate client meeting notes with attendees, budget in GBP, next steps, bank details for advance payment." },
+      { "Type": "Prospect_List",        "Ext": ".txt", "Prompt": "Generate a prospect list with UK company names, contact person, email, phone 07XXX XXXXXX, estimated contract value in GBP." },
+      { "Type": "RFP_Response",         "Ext": ".txt", "Prompt": "Generate an RFP response with company credentials, pricing in GBP, bank details (sort code + account), references." }
+    ]
+  }
+}

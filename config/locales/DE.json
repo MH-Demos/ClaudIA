@@ -1,0 +1,105 @@
+{
+  "_comment": "Germany locale - Steuer-ID, IBAN DE, Personalausweis, Sozialversicherungsnummer",
+  "country": "DE",
+  "language": "de",
+  "currency": "EUR",
+  "companyName": "CorpLab GmbH",
+  "personas": [
+    { "sam": "mmueller",   "displayName": "Max Mueller",       "department": "HR",          "jobTitle": "Personalreferent" },
+    { "sam": "aschmidt",   "displayName": "Anna Schmidt",      "department": "Finance",     "jobTitle": "Finanzbuchhalterin" },
+    { "sam": "tweber",     "displayName": "Thomas Weber",      "department": "Legal",       "jobTitle": "Rechtsberater" },
+    { "sam": "lfischer",   "displayName": "Lisa Fischer",      "department": "Engineering", "jobTitle": "DevOps-Ingenieurin" },
+    { "sam": "jschneider", "displayName": "Jan Schneider",     "department": "Sales",       "jobTitle": "Vertriebsleiter" },
+    { "sam": "kbecker",    "displayName": "Katharina Becker",  "department": "HR",          "jobTitle": "Personalentwicklerin" },
+    { "sam": "prichter",   "displayName": "Paul Richter",      "department": "Finance",     "jobTitle": "Controller" },
+    { "sam": "shuber",     "displayName": "Sophie Huber",      "department": "Legal",       "jobTitle": "Vertragsmanagerin" },
+    { "sam": "dwolf",      "displayName": "Daniel Wolf",       "department": "Engineering", "jobTitle": "Dateningenieur" },
+    { "sam": "mbraun",     "displayName": "Maria Braun",       "department": "Sales",       "jobTitle": "Key Account Managerin" }
+  ],
+  "sitReference": "=== MANDATORY DATA FORMAT RULES (follow EXACTLY) ===\n\nThese patterns match Microsoft Purview Sensitive Information Type (SIT) detection rules.\nFollowing them ensures HIGH CONFIDENCE (85%) detection in DLP policies and auto-labeling.\n\nGERMAN TAX IDENTIFICATION NUMBER (Steuerliche Identifikationsnummer):\n- Format: 11 digits\n- MUST include keyword: \"Steuerliche Identifikationsnummer\", \"Steuer-ID\", \"IdNr\", \"tax identification number\"\n- Examples: 12345678901, 98765432109\n- Generate 3-8 different values per document.\n\nGERMAN IBAN:\n- Format: DE + 2 check digits + 18 digits (total 22 chars)\n- No keyword needed (detected by pattern)\n- Examples: DE89 3704 0044 0532 0130 00, DE12 5001 0517 0648 4898 90\n- Always start with DE.\n\nGERMAN IDENTITY CARD (Personalausweis):\n- Format: 9 characters (letters and digits)\n- Include keyword: \"Personalausweis\", \"Ausweisnummer\", \"identity card\"\n- Examples: T22000129, L01X00T47\n\nGERMAN SOCIAL INSURANCE NUMBER (Sozialversicherungsnummer):\n- Format: 12 characters (area + birth date + initial + serial + check)\n- Include keyword: \"Sozialversicherungsnummer\", \"SV-Nummer\", \"Versicherungsnummer\"\n- Examples: 12 010190 M 012 3\n\nGERMAN DRIVER'S LICENSE:\n- Include keyword: \"Fuehrerschein\", \"Fuehrerscheinnummer\"\n\nPHONE: 0XXX XXXXXXX (landline) or 01XX XXXXXXXX (mobile)\nEMAIL: vorname.nachname@corplab.de\nNAMES: Use realistic German names",
+  "documentTypes": {
+    "payslip": "Lohnabrechnung",
+    "employeeFile": "Personalakte",
+    "onboarding": "Einarbeitungsplan",
+    "absenceReport": "Abwesenheitsbericht",
+    "hiringDeclaration": "Anmeldung zur Sozialversicherung",
+    "performanceReview": "Jahresgespraech",
+    "personnelRegister": "Personalregister",
+    "supplierPayment": "Lieferantenzahlungen",
+    "financialReport": "Quartalsbericht",
+    "socialDeclaration": "Lohnsteuerbescheinigung",
+    "expenseReport": "Reisekostenabrechnung",
+    "budget": "Budgetplanung",
+    "invoice": "Rechnung",
+    "auditReport": "Datenschutz-Audit",
+    "contract": "Arbeitsvertrag",
+    "gdprRegister": "DSGVO-Verarbeitungsverzeichnis",
+    "litigation": "Rechtsstreit",
+    "legalOpinion": "Rechtsgutachten"
+  },
+  "scanTemplates": {
+    "payslip": {
+      "title": "LOHNABRECHNUNG",
+      "fields": ["Name", "Abteilung", "Steuer-ID", "SV-Nummer", "IBAN", "Bruttolohn", "Lohnsteuer", "Sozialabgaben", "Nettolohn"],
+      "bank": "Deutsche Bank",
+      "bic": "DEUTDEFF"
+    },
+    "badge": {
+      "title": "MITARBEITERAUSWEIS - VERTRAULICH",
+      "fields": ["Name", "Abteilung", "Position", "Steuer-ID", "SV-Nummer", "IBAN", "E-Mail", "Telefon"]
+    },
+    "invoice": {
+      "title": "RECHNUNG",
+      "supplierPrefix": "GmbH",
+      "taxLabel": "MwSt",
+      "taxPrefix": "DE",
+      "taxRate": 19
+    }
+  },
+  "piiGenerators": {
+    "primaryId": { "name": "Steuer-ID", "digits": 11, "format": "XXXXXXXXXXX" },
+    "bankAccount": { "name": "IBAN", "prefix": "DE", "totalLength": 22, "format": "DEXX XXXX XXXX XXXX XXXX XX" },
+    "taxId": { "name": "SV-Nummer", "digits": 12, "format": "XX XXXXXX X XXX X" },
+    "phone": { "prefixes": ["0151","0160","0170","0172"], "format": "XXXX XXXXXXX" },
+    "emailDomain": "corplab.de"
+  },
+  "companyDescription": "a German company",
+  "fileTypes": {
+    "HR": [
+      { "Type": "Lohnabrechnung",       "Ext": ".csv", "Prompt": "Generate a monthly payroll CSV with semicolons: Mitarbeiter;Steuer_ID;IBAN;Bruttolohn;Nettolohn;Datum. Include 6-10 rows. Steuer-ID (Steuerliche Identifikationsnummer) is 11 digits. IBAN starts with DE." },
+      { "Type": "Personalakte",         "Ext": ".txt", "Prompt": "Generate a confidential employee file in German with name, Steuerliche Identifikationsnummer (11 digits), IBAN DE, Sozialversicherungsnummer, annual salary in EUR, German address, start date." },
+      { "Type": "Einarbeitungsplan",    "Ext": ".txt", "Prompt": "Generate an onboarding plan in German with Steuer-ID (Steuerliche Identifikationsnummer), IBAN DE for salary, Sozialversicherungsnummer, manager name, equipment list." },
+      { "Type": "SV_Anmeldung",         "Ext": ".txt", "Prompt": "Generate a social insurance registration (Anmeldung zur Sozialversicherung) in German with employee Sozialversicherungsnummer, Steuer-ID, IBAN DE, employment start date, insurance type." },
+      { "Type": "Lohnsteuerbescheinigung", "Ext": ".csv", "Prompt": "Generate a Lohnsteuerbescheinigung CSV: Mitarbeiter;Steuer_ID;SV_Nummer;Bruttolohn;Lohnsteuer;Solidaritaetszuschlag;Kirchensteuer;IBAN. Include 8-12 rows." },
+      { "Type": "Jahresgespraech",      "Ext": ".txt", "Prompt": "Generate an annual review document in German with employee name, Steuerliche Identifikationsnummer, objectives, salary discussion in EUR, IBAN DE for bonus." },
+      { "Type": "Personalregister",     "Ext": ".csv", "Prompt": "Generate a personnel register CSV: Name;Steuer_ID;Eintrittsdatum;Position;Abteilung;Gehalt;IBAN. 8-12 rows." },
+      { "Type": "Scan_Lohnabrechnung",  "Ext": ".png", "Prompt": "SCAN" },
+      { "Type": "Scan_Mitarbeiterausweis", "Ext": ".png", "Prompt": "SCAN" }
+    ],
+    "Finance": [
+      { "Type": "Lieferantenzahlungen",  "Ext": ".csv", "Prompt": "Generate a supplier payment CSV: Lieferant;IBAN;Betrag;Waehrung;Referenz. Include 6-8 German suppliers with IBAN DE." },
+      { "Type": "Quartalsbericht",       "Ext": ".txt", "Prompt": "Generate a quarterly financial report in German with revenue, costs in EUR, treasury IBAN DE, USt-IdNr (DE + 9 digits)." },
+      { "Type": "Umsatzsteuervoranmeldung", "Ext": ".csv", "Prompt": "Generate a VAT return CSV: Zeitraum;Umsatz;Vorsteuer;USt_Zahllast;IBAN_Finanzamt. Include quarterly data." },
+      { "Type": "Reisekostenabrechnung", "Ext": ".txt", "Prompt": "Generate a travel expense report in German with employee name, IBAN DE for reimbursement, itemized expenses in EUR." },
+      { "Type": "Budgetplanung",         "Ext": ".txt", "Prompt": "Generate a budget plan in German with salary costs, treasury IBAN DE, department breakdowns in EUR." },
+      { "Type": "Rechnung",             "Ext": ".txt", "Prompt": "Generate an invoice (Rechnung) in German with supplier details, IBAN DE, USt-IdNr (DE + 9 digits), line items, Netto/MwSt/Brutto." },
+      { "Type": "Scan_Rechnung",         "Ext": ".png", "Prompt": "SCAN" }
+    ],
+    "Legal": [
+      { "Type": "Datenschutz_Audit",    "Ext": ".txt", "Prompt": "Generate a data protection audit report in German listing 4-6 persons with Steuerliche Identifikationsnummer, findings, corrective actions." },
+      { "Type": "Arbeitsvertrag",       "Ext": ".txt", "Prompt": "Generate a German employment contract (Arbeitsvertrag) with Steuer-ID, Sozialversicherungsnummer, IBAN DE, salary in EUR, Probezeit, Kuendigungsfrist." },
+      { "Type": "DSGVO_Verzeichnis",    "Ext": ".txt", "Prompt": "Generate a DSGVO processing register entry for payroll: data types (Steuer-ID, IBAN, SV-Nummer), Rechtsgrundlage, Aufbewahrungsfrist." },
+      { "Type": "Rechtsstreit",         "Ext": ".txt", "Prompt": "Generate a litigation file in German with plaintiff Steuerliche Identifikationsnummer, claimed amount in EUR, Arbeitsgericht timeline." },
+      { "Type": "Rechtsgutachten",      "Ext": ".txt", "Prompt": "Generate a legal opinion in German about DSGVO compliance referencing Steuerliche Identifikationsnummer found in breach." },
+      { "Type": "Geheimhaltungsvertrag", "Ext": ".txt", "Prompt": "Generate an NDA (Geheimhaltungsvertrag) in German with party names, German addresses, Vertragsstrafe in EUR." }
+    ],
+    "Sales": [
+      { "Type": "Vertriebspipeline",    "Ext": ".csv", "Prompt": "Generate a sales pipeline CSV: Kunde;Kontakt;Email;IBAN;Vertragssumme. Include 5-8 German prospects with IBAN DE." },
+      { "Type": "Angebot",              "Ext": ".txt", "Prompt": "Generate a commercial proposal (Angebot) in German with client details, IBAN DE for payment, Netto/MwSt/Brutto in EUR." },
+      { "Type": "Provisionsbericht",    "Ext": ".csv", "Prompt": "Generate a commission report CSV: Vertriebsmitarbeiter;Kunde;Umsatz;Provision;IBAN. 4-6 rows." },
+      { "Type": "Protokoll_Kundengespraech", "Ext": ".txt", "Prompt": "Generate client meeting notes in German with attendees, budget in EUR, next steps, IBAN DE for advance." },
+      { "Type": "Interessentenliste",   "Ext": ".txt", "Prompt": "Generate a prospect list in German with company names, Ansprechpartner, email, phone 0XXX XXXXXXX, estimated value in EUR." },
+      { "Type": "Angebotsantwort",      "Ext": ".txt", "Prompt": "Generate an RFP response in German with Firmenprofil, pricing in EUR, IBAN DE, Referenzen." }
+    ]
+  }
+}

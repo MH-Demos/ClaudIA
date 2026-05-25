@@ -1,0 +1,105 @@
+{
+  "_comment": "United States locale - SSN, Bank Routing+Account, ITIN, EIN",
+  "country": "US",
+  "language": "en",
+  "currency": "USD",
+  "companyName": "CorpLab Inc.",
+  "personas": [
+    { "sam": "jsmith",     "displayName": "John Smith",       "department": "HR",          "jobTitle": "HR Coordinator" },
+    { "sam": "sjohnson",   "displayName": "Sarah Johnson",    "department": "Finance",     "jobTitle": "Finance Controller" },
+    { "sam": "mwilliams",  "displayName": "Michael Williams", "department": "Legal",       "jobTitle": "Legal Counsel" },
+    { "sam": "echen",      "displayName": "Emily Chen",       "department": "Engineering", "jobTitle": "DevOps Engineer" },
+    { "sam": "dgarcia",    "displayName": "David Garcia",     "department": "Sales",       "jobTitle": "Sales Manager" },
+    { "sam": "lmartinez",  "displayName": "Laura Martinez",   "department": "HR",          "jobTitle": "HR Onboarding Specialist" },
+    { "sam": "rbrown",     "displayName": "Robert Brown",     "department": "Finance",     "jobTitle": "Budget Analyst" },
+    { "sam": "apatel",     "displayName": "Anita Patel",      "department": "Legal",       "jobTitle": "Contract Manager" },
+    { "sam": "jlee",       "displayName": "James Lee",        "department": "Engineering", "jobTitle": "Data Engineer" },
+    { "sam": "kwilson",    "displayName": "Karen Wilson",     "department": "Sales",       "jobTitle": "Account Executive" }
+  ],
+  "sitReference": "=== MANDATORY DATA FORMAT RULES (follow EXACTLY) ===\n\nThese patterns match Microsoft Purview Sensitive Information Type (SIT) detection rules.\nFollowing them ensures HIGH CONFIDENCE (85%) detection in DLP policies and auto-labeling.\n\nU.S. SOCIAL SECURITY NUMBER (SSN):\n- Format: exactly 9 digits, pattern AAA-BB-CCCC\n- Area (AAA): 001-899 (exclude 666)\n- MUST include keyword within 300 chars: \"social security\", \"SSN\", \"social security number\", \"SS#\"\n- Examples: 123-45-6789, 234-56-7890, 345-67-8901\n- Generate 3-8 different SSN values per document. Vary the numbers.\n\nU.S. BANK ACCOUNT NUMBER:\n- Routing: 9 digits (ABA routing transit number)\n- Account: 6-17 digits\n- Include keyword: \"routing number\", \"account number\", \"bank account\", \"ABA\"\n- Examples: Routing 021000021, Account 1234567890\n\nU.S. INDIVIDUAL TAXPAYER IDENTIFICATION NUMBER (ITIN):\n- Format: 9 digits, pattern 9XX-XX-XXXX (starts with 9)\n- MUST include keyword: \"ITIN\", \"individual taxpayer\", \"tax identification\"\n- Examples: 912-34-5678, 923-45-6789\n\nU.S. EMPLOYER IDENTIFICATION NUMBER (EIN):\n- Format: XX-XXXXXXX (2 digits, dash, 7 digits)\n- Include keyword: \"EIN\", \"employer identification\", \"federal tax id\"\n- Examples: 12-3456789, 98-7654321\n\nU.S. DRIVER'S LICENSE:\n- Format varies by state. Use generic: 1 letter + 7-12 digits\n- Include keyword: \"driver's license\", \"DL\", \"license number\"\n- Examples: D12345678, A1234567890\n\nU.S. PASSPORT NUMBER:\n- Format: 1 letter + 8 digits OR 9 digits\n- Include keyword: \"passport\", \"passport number\"\n- Examples: C12345678, 123456789\n\nCREDIT CARD NUMBER:\n- Format: 16 digits (groups of 4), Visa starts 4, MC starts 5, Amex 3\n- Include keyword: \"credit card\", \"card number\", \"CC#\"\n- Examples: 4532 0123 4567 8901\n\nPHONE: (XXX) XXX-XXXX\nEMAIL: firstname.lastname@corplab.com\nNAMES: Use realistic American names",
+  "documentTypes": {
+    "payslip": "Pay Stub",
+    "employeeFile": "Employee Record",
+    "onboarding": "Onboarding Checklist",
+    "absenceReport": "Absence Report",
+    "hiringDeclaration": "I-9 Employment Eligibility",
+    "performanceReview": "Annual Performance Review",
+    "personnelRegister": "Employee Roster",
+    "supplierPayment": "Vendor Payments",
+    "financialReport": "Quarterly Financial Report",
+    "socialDeclaration": "W-2 Wage Statement",
+    "expenseReport": "Expense Report",
+    "budget": "Budget Forecast",
+    "invoice": "Invoice",
+    "auditReport": "Compliance Audit",
+    "contract": "Employment Agreement",
+    "gdprRegister": "Data Privacy Register",
+    "litigation": "Litigation File",
+    "legalOpinion": "Legal Memorandum"
+  },
+  "scanTemplates": {
+    "payslip": {
+      "title": "PAY STUB",
+      "fields": ["Employee", "Department", "SSN", "Bank Routing", "Bank Account", "Gross Pay", "Federal Tax", "State Tax", "Net Pay"],
+      "bank": "Chase Bank",
+      "bic": "CHASUS33"
+    },
+    "badge": {
+      "title": "EMPLOYEE BADGE - CONFIDENTIAL",
+      "fields": ["Name", "Department", "Title", "SSN", "EIN", "Bank Account", "Email", "Phone"]
+    },
+    "invoice": {
+      "title": "INVOICE",
+      "supplierPrefix": "LLC",
+      "taxLabel": "Sales Tax",
+      "taxPrefix": "EIN",
+      "taxRate": 8.875
+    }
+  },
+  "piiGenerators": {
+    "primaryId": { "name": "SSN", "format": "XXX-XX-XXXX", "sections": [3,2,4], "separator": "-" },
+    "bankAccount": { "name": "Bank Account", "routingDigits": 9, "accountDigits": 10, "format": "Routing: XXXXXXXXX Account: XXXXXXXXXX" },
+    "taxId": { "name": "EIN", "format": "XX-XXXXXXX", "sections": [2,7], "separator": "-" },
+    "phone": { "prefixes": ["212","310","415","312","713"], "format": "(XXX) XXX-XXXX" },
+    "emailDomain": "corplab.com"
+  },
+  "companyDescription": "a US company",
+  "fileTypes": {
+    "HR": [
+      { "Type": "Pay_Stub",             "Ext": ".csv", "Prompt": "Generate a monthly pay stub CSV: Employee;SSN;Bank_Routing;Bank_Account;Gross_Pay;Net_Pay;Date. Include 6-10 rows of US employees. SSN format XXX-XX-XXXX with keyword 'social security number'." },
+      { "Type": "Employee_Record",      "Ext": ".txt", "Prompt": "Generate a confidential employee record with full name, SSN (social security number XXX-XX-XXXX), bank routing number, bank account number, annual salary in USD, home address in US, start date." },
+      { "Type": "Onboarding_Checklist", "Ext": ".txt", "Prompt": "Generate an onboarding checklist for a new US employee with their SSN (social security number), bank routing and account numbers for direct deposit, manager name, equipment list." },
+      { "Type": "I9_Verification",      "Ext": ".txt", "Prompt": "Generate an I-9 Employment Eligibility Verification form with employee name, SSN (social security number), date of birth, US address, citizenship status, document list (passport, driver's license numbers)." },
+      { "Type": "W2_Statement",         "Ext": ".csv", "Prompt": "Generate a W-2 Wage and Tax Statement CSV: Employee;SSN;Employer_EIN;Wages;Federal_Tax;State_Tax;Social_Security_Wages. Include 8-12 rows. SSN with keyword 'social security number'. EIN with keyword 'employer identification number'." },
+      { "Type": "Annual_Review",        "Ext": ".txt", "Prompt": "Generate an annual performance review with employee name, SSN (social security number), objectives, salary discussion in USD, bank account for bonus." },
+      { "Type": "Employee_Roster",      "Ext": ".csv", "Prompt": "Generate an employee roster CSV: Name;SSN;Hire_Date;Title;Department;Salary;Bank_Routing;Bank_Account. 8-12 rows." },
+      { "Type": "Scan_Pay_Stub",        "Ext": ".png", "Prompt": "SCAN" },
+      { "Type": "Scan_Employee_Badge",  "Ext": ".png", "Prompt": "SCAN" }
+    ],
+    "Finance": [
+      { "Type": "Vendor_Payments",       "Ext": ".csv", "Prompt": "Generate a vendor payment CSV: Vendor;EIN;Bank_Routing;Bank_Account;Amount;Currency;Reference. Include 6-8 US vendors. EIN with keyword 'employer identification number'." },
+      { "Type": "Financial_Report",      "Ext": ".txt", "Prompt": "Generate a quarterly financial report with revenue, costs, treasury bank routing and account numbers, EIN (employer identification number)." },
+      { "Type": "Form_1099",            "Ext": ".csv", "Prompt": "Generate a 1099-NEC CSV: Contractor;SSN_or_EIN;Nonemployee_Compensation;Federal_Tax_Withheld;State. Include 5-8 rows. Use SSN (social security number) for individuals, EIN for companies." },
+      { "Type": "Expense_Report",        "Ext": ".txt", "Prompt": "Generate an expense report with employee name, reimbursement bank routing and account number, itemized expenses in USD, total." },
+      { "Type": "Budget_Forecast",       "Ext": ".txt", "Prompt": "Generate a budget forecast with salary costs, treasury bank account, department breakdowns, total amounts in USD." },
+      { "Type": "Invoice",              "Ext": ".txt", "Prompt": "Generate an invoice with vendor details, EIN (employer identification number), bank routing and account for payment, line items, total amount in USD." },
+      { "Type": "Scan_Invoice",          "Ext": ".png", "Prompt": "SCAN" }
+    ],
+    "Legal": [
+      { "Type": "Compliance_Audit",     "Ext": ".txt", "Prompt": "Generate a compliance audit report listing 4-6 persons with their SSN (social security number), findings on data handling violations, and corrective actions." },
+      { "Type": "Employment_Agreement", "Ext": ".txt", "Prompt": "Generate an at-will employment agreement with employee SSN (social security number), bank routing and account for direct deposit, salary in USD, benefits, non-compete clause." },
+      { "Type": "Privacy_Register",     "Ext": ".txt", "Prompt": "Generate a CCPA/privacy processing register entry for payroll: data types (SSN, bank account, EIN), legal basis, retention period." },
+      { "Type": "Litigation_File",      "Ext": ".txt", "Prompt": "Generate a litigation file summary with plaintiff SSN (social security number), claimed amount in USD, case timeline, settlement bank details." },
+      { "Type": "Legal_Memo",           "Ext": ".txt", "Prompt": "Generate a legal memorandum about data privacy compliance referencing specific employee SSN (social security number) found in breach." },
+      { "Type": "NDA",                  "Ext": ".txt", "Prompt": "Generate an NDA document with party names, US addresses, confidential information description, penalty amounts in USD." }
+    ],
+    "Sales": [
+      { "Type": "Sales_Pipeline",       "Ext": ".csv", "Prompt": "Generate a sales pipeline CSV: Client;Contact;Email;EIN;Contract_Amount. Include 5-8 US prospects." },
+      { "Type": "Proposal",             "Ext": ".txt", "Prompt": "Generate a commercial proposal with client details, contact email, payment bank routing and account, quote amount in USD." },
+      { "Type": "Commission_Report",    "Ext": ".csv", "Prompt": "Generate a commission report CSV: Sales_Rep;Client;Revenue;Commission;Bank_Routing;Bank_Account. 4-6 rows." },
+      { "Type": "Meeting_Notes",        "Ext": ".txt", "Prompt": "Generate client meeting notes with attendees, client budget in USD, next steps, bank details for advance payment." },
+      { "Type": "Prospect_List",        "Ext": ".txt", "Prompt": "Generate a prospect list with US company names, contact person, email, phone (XXX) XXX-XXXX, estimated contract value in USD." },
+      { "Type": "RFP_Response",         "Ext": ".txt", "Prompt": "Generate an RFP response with company credentials, proposed pricing in USD, bank details (routing + account), references." }
+    ]
+  }
+}

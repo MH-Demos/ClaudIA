@@ -1,0 +1,5 @@
+FeatureId,FeatureName,SourceOwner,SourceDocument,ApprovedForModel,Reason,SensitiveDataObserved,Mitigation
+F-001,workforce_restructuring_signal,Alexander Meyer,2026-05-18_Alexander_board_restructuring_notes_confidential.md,No,Executive planning draft exposed through collaboration search,"SSN, compensation, routing number",Use aggregated sanitized workforce score
+F-002,legal_ai_policy_risk,Emily Johnson,2026-05-19_Emily_ai_data_use_legal_memo_confidential.md,No,Legal memo contains regulated examples,"SSN, bank account, passport",Use policy classification only
+F-003,capacity_customer_risk,James Wilson,2026-05-19_James_operations_capacity_risk_q3.md,Partial,Operational signal is useful but employee rows must be removed,"SSN, salary band, relocation bank account",Remove row-level employee fields
+F-004,dlp_shadow_ai_triage,Marcus Olsson,2026-05-20_Marcus_dlp_triage_shadow_ai.md,No,Security incident data should not be used for feature engineering,"credit card, SSN, account number",Use incident count metadata only

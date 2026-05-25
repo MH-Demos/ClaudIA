@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Activity Story Map</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="./images/branding/Fav_Icons.png?v=20260524-11">
+  <link rel="apple-touch-icon" href="./images/branding/Fav_Icons.png?v=20260524-11">
+  <link rel="stylesheet" href="./styles.css?v=20260524-12">
+  <script src="https://cdn.jsdelivr.net/npm/cytoscape@3.30.3/dist/cytoscape.min.js"></script>
+  <script src="./config.js?v=20260520-7"></script>
+</head>
+<body>
+  <section id="welcomeScreen" class="welcome-screen" aria-label="Welcome">
+    <img src="./images/branding/MH%20Demos%20Cybersecurity.png" alt="" class="welcome-image">
+    <div class="welcome-content">
+      <span class="welcome-kicker">MH Demos Cybersecurity</span>
+      <h1>Activity Story Map</h1>
+      <p>
+        Explore how simulated users, Microsoft 365 services, Azure resources, and AI-driven activities connect into a security story.
+      </p>
+      <button id="startButton" class="start-button" type="button">Start</button>
+    </div>
+  </section>
+
+  <main id="appShell" class="shell app-hidden">
+    <aside class="panel">
+      <div class="brand">
+        <img src="./images/branding/ClaudIA Demo%20-%20White%20with%20text.png?v=20260524-11" alt="ClaudIA Demo" class="brand-logo">
+        <div>
+          <h1>Activity Story Map</h1>
+          <p id="subtitle">Loading ADX activity...</p>
+        </div>
+      </div>
+
+      <nav class="mode-switch" aria-label="Map selection">
+        <button id="activityModeButton" class="active" type="button">Activity map</button>
+        <button id="solutionModeButton" type="button">Solution map</button>
+        <button id="charactersModeButton" type="button">Know your characters</button>
+        <button id="journeyModeButton" type="button">Learning journey</button>
+        <button id="componentsModeButton" type="button">Detailed components</button>
+      </nav>
+      <label class="mode-select-label">
+        View
+        <select id="modeSelect" class="mode-select">
+          <option value="activity">Activity map</option>
+          <option value="solution">Solution map</option>
+          <option value="characters">Know your characters</option>
+          <option value="journey">Learning journey</option>
+          <option value="components">Detailed components</option>
+        </select>
+      </label>
+
+      <section id="activityControls" class="controls" aria-label="Filters">
+        <label>
+          Users
+          <select id="actorSelect" multiple size="6">
+          </select>
+          <small class="hint">Select one or more users. Empty means all users.</small>
+        </label>
+        <label>
+          Lookback
+          <select id="hoursSelect">
+            <option value="8">8 hours</option>
+            <option value="24" selected>24 hours</option>
+            <option value="72">72 hours</option>
+            <option value="168">7 days</option>
+          </select>
+        </label>
+        <label>
+          Activity
+          <select id="activitySelect">
+            <option value="">All activities</option>
+          </select>
+        </label>
+        <label>
+          View
+          <select id="viewSelect">
+            <option value="summary" selected>Story summary</option>
+            <option value="detail">Target detail</option>
+          </select>
+        </label>
+        <button id="refreshButton" type="button">Refresh</button>
+      </section>
+
+      <section id="solutionControls" class="controls" aria-label="Solution map filters" hidden>
+        <label id="solutionScopeLabel">
+          <span>Scope</span>
+          <select id="solutionScopeSelect">
+            <option value="core" selected>Core architecture</option>
+            <option value="full">Full solution</option>
+            <option value="characters">Characters only</option>
+            <option value="data">Data pipeline</option>
+            <option value="m365">Microsoft 365 services</option>
+          </select>
+        </label>
+        <label id="solutionCharacterLabel">
+          <span id="solutionCharacterLabelText">Character</span>
+          <select id="solutionCharacterSelect">
+            <option value="">All characters</option>
+          </select>
+        </label>
+      </section>
+
+      <section id="journeyControls" class="controls" aria-label="Agent journey controls" hidden>
+        <label>
+          Learning path
+          <select id="journeyScenarioSelect"></select>
+        </label>
+        <label>
+          Speed
+          <select id="journeySpeedSelect">
+            <option value="1800">Calm</option>
+            <option value="1100" selected>Demo pace</option>
+            <option value="650">Fast</option>
+          </select>
+        </label>
+        <button id="journeyReplayButton" type="button">Replay journey</button>
+      </section>
+
+      <section id="componentControls" class="controls" aria-label="Detailed component filters" hidden>
+        <label>
+          Component scope
+          <select id="componentScopeSelect">
+            <option value="all">All components</option>
+            <option value="azure">Azure environment</option>
+            <option value="portal">Portal front end and API</option>
+            <option value="automation">Automation and agents</option>
+            <option value="m365">Microsoft 365</option>
+            <option value="observability">Telemetry and observability</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="summary" aria-label="Summary">
+        <div><strong id="eventCount">0</strong><span id="eventMetricLabel">events</span></div>
+        <div><strong id="nodeCount">0</strong><span>nodes</span></div>
+        <div><strong id="edgeCount">0</strong><span>links</span></div>
+      </section>
+
+      <section class="story">
+        <h2 id="storyTitle">Storyline</h2>
+        <ol id="timeline"></ol>
+      </section>
+
+      <section id="journeyComponentSection" class="journey-components" hidden>
+        <h2>Component guide</h2>
+        <p id="journeyComponentSummary"></p>
+        <div class="component-table-wrap">
+          <table id="journeyComponentTable">
+            <thead>
+              <tr>
+                <th>Component</th>
+                <th>Role</th>
+                <th>Why it matters</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="componentCatalogSection" class="journey-components" hidden>
+        <h2>Detailed components</h2>
+        <p id="componentCatalogSummary"></p>
+        <div class="component-table-wrap">
+          <table id="componentCatalogTable">
+            <thead>
+              <tr>
+                <th>Component</th>
+                <th>Use</th>
+                <th>Used by</th>
+                <th>Required permissions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </aside>
+
+    <section class="canvas">
+      <div class="toolbar">
+        <div id="status">Connecting to Azure Data Explorer</div>
+        <button id="helpButton" type="button">Help</button>
+        <button id="fitButton" type="button">Fit</button>
+      </div>
+      <div id="notice" class="notice" hidden></div>
+      <div id="graph"></div>
+      <article id="journeyNarrative" class="journey-narrative" hidden></article>
+      <div id="portalStatus" class="portal-status">Last data refresh: -- | Visits: -- | Unique: --</div>
+      <article id="details" class="details" hidden></article>
+    </section>
+  </main>
+  <div id="guideOverlay" class="guide-overlay" hidden>
+    <article class="guide-card">
+      <span id="guideStepLabel"></span>
+      <h2 id="guideTitle"></h2>
+      <p id="guideBody"></p>
+      <div class="guide-actions">
+        <button id="guideSkipButton" type="button">Skip</button>
+        <button id="guideNextButton" type="button">Next</button>
+      </div>
+    </article>
+  </div>
+  <script src="./app.js?v=20260524-12"></script>
+</body>
+</html>
