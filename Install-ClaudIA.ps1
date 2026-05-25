@@ -1146,10 +1146,12 @@ if (-not $DryRun -and $domain -notmatch 'REPLACE_WITH') {
 # ============================================================================
 if ((Test-AAInstallStep '0') -and -not $SkipPrerequisites) {
     Write-Host "=== Step 0: Checking prerequisites ===" -ForegroundColor Cyan
-    $prereqArgs = @('-ConfigPath', $ConfigPath)
-    if ($RegisterProviders) { $prereqArgs += '-RegisterProviders' }
-    if ($script:AAM365AzConfigDir) { $prereqArgs += @('-M365AzureConfigDir', $script:AAM365AzConfigDir) }
-    $prereq = & (Join-Path $PSScriptRoot 'prerequisites\Test-Prerequisites.ps1') @prereqArgs
+    $prereqParams = @{
+        ConfigPath = $ConfigPath
+    }
+    if ($RegisterProviders) { $prereqParams.RegisterProviders = $true }
+    if ($script:AAM365AzConfigDir) { $prereqParams.M365AzureConfigDir = $script:AAM365AzConfigDir }
+    $prereq = & (Join-Path $PSScriptRoot 'prerequisites\Test-Prerequisites.ps1') @prereqParams
     if (-not $prereq.AllPassed) {
         Show-AAPrerequisiteGuidance -PrerequisiteResult $prereq
         Write-Host ""
