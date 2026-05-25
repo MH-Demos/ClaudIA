@@ -32,7 +32,7 @@ It is not normally executed directly.
 
 ## Installer Integration
 
-Dot-sourced by `Install-AutonomousAgents.ps1` and by many supporting scripts.
+Dot-sourced by `Install-ClaudIA.ps1` and by many supporting scripts.
 
 ## Variables and State
 

@@ -2,7 +2,7 @@
 .SYNOPSIS
     Export BrowserAgent ADX telemetry as an MDCA Cloud Discovery test log.
 .DESCRIPTION
-    Queries CLAUDIA_AgentActivity and writes a Generic CEF-style traffic log.
+    Queries CLAUDIA_Activity and writes a Generic CEF-style traffic log.
     The output is intended for a controlled Cloud Discovery API/snapshot pilot.
 .EXAMPLE
     .\tools\Export-MdcaDiscoveryLogFromAdx.ps1 -SinceMinutes 1440 -Top 100

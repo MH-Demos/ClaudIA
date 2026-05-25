@@ -1,4 +1,4 @@
-# MH Demos – User Profiles
+# ClaudIA - User Profiles
 
 ## Alexander Meyer
 - **UPN:** alexander.meyer@contoso.example

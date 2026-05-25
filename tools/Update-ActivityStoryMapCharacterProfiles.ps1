@@ -51,7 +51,7 @@ if (-not (Test-Path -LiteralPath $StorylinePath)) {
 }
 
 $markdown = Get-Content -LiteralPath $StorylinePath -Raw -Encoding utf8
-$matches = [regex]::Matches($markdown, '(?ms)^# (?!MH Demos)(.+?)\r?\n(.*?)(?=^# (?!MH Demos)|\z)')
+$matches = [regex]::Matches($markdown, '(?ms)^# (?!ClaudIA)(.+?)\r?\n(.*?)(?=^# (?!ClaudIA)|\z)')
 $profiles = @()
 
 foreach ($match in $matches) {

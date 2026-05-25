@@ -18,7 +18,7 @@
     === MANUAL PORTAL STEPS (printed after deployment) ===
 
     - IRM > Settings > Policy indicators > Enable 'Generative AI apps'
-    - IRM > Priority User Groups > Create 'Autonomous Agents' with agent UPNs
+    - IRM > Priority User Groups > Create 'ClaudIA Agents' with agent UPNs
     - DSPM for AI > Get started (if not already enabled)
 
     -> Prerequisite: Configure-CoreDLP.ps1 must have run first (DLP policies must exist).
@@ -199,7 +199,7 @@ Write-Host ""
 Write-Host "  MANUAL PORTAL STEPS:" -ForegroundColor Yellow
 Write-Host "    1. IRM > Settings > Policy indicators > Enable Office, Exfiltration, Obfuscation, Label downgrade/removal, and Generative AI indicators." -ForegroundColor Yellow
 Write-Host "    2. IRM > Policies > Edit each lab policy > Users and groups > confirm 'Include all users and groups'." -ForegroundColor Yellow
-Write-Host "    3. IRM > Priority User Groups > Create 'Autonomous Agents':" -ForegroundColor Yellow
+Write-Host "    3. IRM > Priority User Groups > Create 'ClaudIA Agents':" -ForegroundColor Yellow
 foreach ($upn in $agentUpns) {
     Write-Host "       - $upn" -ForegroundColor Gray
 }

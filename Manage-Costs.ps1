@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Cost management utilities for the Autonomous Agents lab.
+    Cost management utilities for the ClaudIA lab.
 .DESCRIPTION
     Check current Azure spend, estimate monthly costs, pause/resume Fabric,
     adjust schedules, and get optimization recommendations.

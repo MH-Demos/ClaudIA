@@ -57,6 +57,8 @@ Minimum cloud requirements:
 
 For a completely new tenant, also validate Security Defaults, Conditional Access, audit ingestion, user creation, persona photos, and the optional Activity Portal before running the full installer.
 
+A new Azure subscription can start completely empty. You do not need to create a resource group manually before running ClaudIA. During setup, choose a resource group name such as `rg-claudia-lab`; Step 4 creates it if it does not already exist. If your organization requires pre-created resource groups, create it first and enter that name in the wizard.
+
 Register providers before deployment:
 
 ```powershell
@@ -71,14 +73,23 @@ az provider register -n Microsoft.Storage --wait
 
 ## 3. Clone And Prepare
 
+Preferred source:
+
 ```powershell
-git clone https://github.com/MH-Demos/CaludIA.git ClaudIA
+git clone https://github.com/MH-Demos/ClaudIA.git ClaudIA
 cd ClaudIA
 
 Get-ChildItem -Recurse -Filter *.ps1 | Unblock-File
 ```
 
-If the repository remote is renamed to `ClaudIA`, update the clone URL accordingly.
+If the GitHub repository is private or not accessible yet, use the local synchronized folder provided by the project owner:
+
+```powershell
+cd C:\MyDev\ClaudIA
+Get-ChildItem -Recurse -Filter *.ps1 | Unblock-File
+```
+
+Do not run validation from an older working copy such as `purview-autonomous-agents-master\M365-Autonomous-IA` unless you intentionally want to validate that legacy version.
 
 ## 4. Configure The Lab
 
@@ -123,7 +134,7 @@ Fix all prerequisite failures before running the installer.
 Run the wizard:
 
 ```powershell
-.\Install-AutonomousAgents.ps1
+.\Install-ClaudIA.ps1
 ```
 
 Expected deployment areas:
@@ -139,7 +150,7 @@ Expected deployment areas:
 The wizard is designed to be re-run safely. Use dry run mode before changes when needed:
 
 ```powershell
-.\Install-AutonomousAgents.ps1 -DryRun
+.\Install-ClaudIA.ps1 -DryRun
 ```
 
 ## 7. Run A Smoke Test

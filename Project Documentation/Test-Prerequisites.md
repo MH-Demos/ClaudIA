@@ -17,7 +17,7 @@ Validates local and cloud prerequisites before deployment.
 
 ## Installer Integration
 
-Called by `Install-AutonomousAgents.ps1` in Step `0`.
+Called by `Install-ClaudIA.ps1` in Step `0`.
 
 ## Alternatives
 

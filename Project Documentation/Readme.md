@@ -1,8 +1,8 @@
-# M365 Autonomous IA - Project Summary
+# ClaudIA - Project Summary
 
 This project deploys a Microsoft 365 and Microsoft Purview lab that uses autonomous AI agents to generate realistic corporate activity for data protection, DLP, Insider Risk Management, DSPM for AI, sensitivity labeling, audit, and monitoring demonstrations.
 
-The main entry point is `Install-AutonomousAgents.ps1`. It reads `config/agents.json`, optionally merges installation-specific state from `config/Installation_definitions.json`, provisions Microsoft 365/Azure resources, deploys the Azure Automation runbook `modules/Invoke-AgentRunbook.ps1`, and configures monitoring assets such as ADX telemetry, Azure Monitor Workbook, and the Activity Story Map.
+The main entry point is `Install-ClaudIA.ps1`. It reads `config/agents.json`, optionally merges installation-specific state from `config/Installation_definitions.json`, provisions Microsoft 365/Azure resources, deploys the Azure Automation runbook `modules/Invoke-AgentRunbook.ps1`, and configures monitoring assets such as ADX telemetry, Azure Monitor Workbook, and the Activity Story Map.
 
 ## Current Environment Snapshot
 
@@ -18,7 +18,7 @@ The main entry point is `Install-AutonomousAgents.ps1`. It reads `config/agents.
 - Fabric: disabled in the current configuration
 - ADX cluster: `adx-claudia-lab`
 - ADX database: `ADX-CLAUDIA`
-- ADX table: `CLAUDIA_AgentActivity`
+- ADX table: `CLAUDIA_Activity`
 - Activity Story Map URL: `https://stclaudiamap.z22.web.core.windows.net/?api=https://func-claudia-story.azurewebsites.net`
 
 ## Minimum Execution Commands
@@ -38,21 +38,21 @@ Validate prerequisites:
 Run full interactive deployment:
 
 ```powershell
-.\Install-AutonomousAgents.ps1
+.\Install-ClaudIA.ps1
 ```
 
 Run full deployment using existing users and automation-friendly defaults:
 
 ```powershell
-.\Install-AutonomousAgents.ps1 -UseExistingUsers -Auto
+.\Install-ClaudIA.ps1 -UseExistingUsers -Auto
 ```
 
 Resume or run only one installer step:
 
 ```powershell
-.\Install-AutonomousAgents.ps1 -Step 4 -SkipPrerequisites -UseInstallationDefinitions
-.\Install-AutonomousAgents.ps1 -Step 5 -SkipPrerequisites -UseInstallationDefinitions
-.\Install-AutonomousAgents.ps1 -Step 6 -SkipPrerequisites -UseInstallationDefinitions
+.\Install-ClaudIA.ps1 -Step 4 -SkipPrerequisites -UseInstallationDefinitions
+.\Install-ClaudIA.ps1 -Step 5 -SkipPrerequisites -UseInstallationDefinitions
+.\Install-ClaudIA.ps1 -Step 6 -SkipPrerequisites -UseInstallationDefinitions
 ```
 
 Publish only runbook code after a local runbook change:
@@ -89,7 +89,7 @@ Refresh Activity Story Map data:
 
 - `Architecture.md`: components, current configuration, and where variables are stored.
 - `ChangeHistory.md`: changes made compared with the original project folder.
-- `ScriptIndex.md`: quick index of all scripts and whether they are called by `Install-AutonomousAgents.ps1`.
+- `ScriptIndex.md`: quick index of all scripts and whether they are called by `Install-ClaudIA.ps1`.
 - `Standalone-Scripts-Reference.md`: direct-run script reference with base commands and parameter tables.
 - `ScriptDetails.md`: dependencies, side effects, order, risks, and a matrix for all scripts.
 - `ConfigurationReference.md`: definitions for config files, Automation variables, Key Vault secrets, ADX events, and Story Map settings.

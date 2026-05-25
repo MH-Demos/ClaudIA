@@ -4,7 +4,7 @@
   "createdAt": "2026-05-19T11:55:23.0423841-05:00",
   "updatedAt": "2026-05-20T18:54:16.7924186-05:00",
   "sourceConfigPath": "C:\\MyDev\\Nabil\\ClaudIA-master\\ClaudIA\\config\\agents.json",
-  "runLogPath": "C:\\MyDev\\Nabil\\ClaudIA-master\\ClaudIA\\logs\\Install-AutonomousAgents-20260520-185156.log",
+  "runLogPath": "C:\\MyDev\\Nabil\\ClaudIA-master\\ClaudIA\\logs\\Install-ClaudIA-20260520-185156.log",
   "tenant": {
     "domain": "contoso.example",
     "tenantId": "00000000-0000-0000-0000-000000000000",
@@ -1020,7 +1020,7 @@
       "activity": "Licenses and MFA exclusion",
       "completedAt": "2026-05-19T11:59:58.3032184-05:00",
       "dryRun": false,
-      "mfaExclusionGroup": "grp-agent-mfa-exclusion",
+      "mfaExclusionGroup": "grp-claudia-agent-mfa-exclusion",
       "mfaExclusionGroupId": "70578f1f-4e11-4827-9627-f41e9d9f0615",
       "selectedLicenseSku": "Microsoft_365_E5_(no_Teams)",
       "copilotSku": "Microsoft_365_Copilot",
@@ -1038,10 +1038,10 @@
       ]
     },
     "3": {
-      "activity": "Register app-dataagent",
+      "activity": "Register app-claudia-dataagent",
       "completedAt": "2026-05-19T12:00:27.0788954-05:00",
       "dryRun": false,
-      "appName": "app-dataagent",
+      "appName": "app-claudia-dataagent",
       "appId": "22222222-2222-2222-2222-222222222222"
     },
     "4": {
@@ -1074,8 +1074,8 @@
         "ingestBaseUri": "https://adx-claudia-lab.westus.kusto.windows.net",
         "queryBaseUri": "https://adx-claudia-lab.westus.kusto.windows.net",
         "databaseName": "ADX-CLAUDIA",
-        "tableName": "CLAUDIA_AgentActivity",
-        "mappingName": "CLAUDIA_AgentActivity_mapping",
+        "tableName": "CLAUDIA_Activity",
+        "mappingName": "CLAUDIA_Activity_mapping",
         "retentionInDays": 365,
         "ingestorPrincipalId": "22222222-2222-2222-2222-222222222222",
         "ingestorPrincipalType": "App",
@@ -1216,11 +1216,11 @@
       ]
     },
     "7": {
-      "activity": "Agent Activity Monitor workbook",
+      "activity": "ClaudIA Activity Monitor workbook",
       "completedAt": "2026-05-19T16:27:48.5459515-05:00",
       "dryRun": false,
       "requested": true,
-      "workbookName": "Agent Activity Monitor",
+      "workbookName": "ClaudIA Activity Monitor",
       "logAnalyticsName": "la-claudia-lab"
     },
     "8": {
@@ -1255,7 +1255,7 @@
       "policies": [
         "DLP-CopilotStudio-PII-Monitor",
         "DSPM-AI-Labels-Restrict",
-        "DSPM-AI-AgentActivity-Audit"
+        "DSPM-AI-ClaudIAActivity-Audit"
       ],
       "agentUpns": [
         "ana.rodriguez@contoso.example",
@@ -1282,7 +1282,7 @@
         "IRM-DataLeaks-Lab",
         "IRM-RiskyAI-Lab"
       ],
-      "priorityUserGroup": "Autonomous Agents",
+      "priorityUserGroup": "ClaudIA Agents",
       "agentUpns": [
         "ana.rodriguez@contoso.example",
         "carlos.delgado@contoso.example",
@@ -1331,7 +1331,7 @@
     },
     {
       "Step": "3",
-      "Main Activity": "Register app-dataagent",
+      "Main Activity": "Register app-claudia-dataagent",
       "Status": "skipped",
       "Comments": "Skipped by targeted step selection."
     },
@@ -1385,7 +1385,7 @@
     },
     {
       "Step": "7",
-      "Main Activity": "Agent Activity Monitor workbook",
+      "Main Activity": "ClaudIA Activity Monitor workbook",
       "Status": "skipped",
       "Comments": "Skipped by targeted step selection."
     },
@@ -1415,8 +1415,8 @@
     "ingestBaseUri": "https://adx-claudia-lab.westus.kusto.windows.net",
     "queryBaseUri": "https://adx-claudia-lab.westus.kusto.windows.net",
     "databaseName": "ADX-CLAUDIA",
-    "tableName": "CLAUDIA_AgentActivity",
-    "mappingName": "CLAUDIA_AgentActivity_mapping",
+    "tableName": "CLAUDIA_Activity",
+    "mappingName": "CLAUDIA_Activity_mapping",
     "retentionInDays": 365,
     "ingestorPrincipalId": "22222222-2222-2222-2222-222222222222",
     "ingestorPrincipalType": "App",

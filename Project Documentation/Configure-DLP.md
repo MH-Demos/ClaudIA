@@ -13,7 +13,7 @@ Configures DSPM for AI-oriented DLP policies in Purview. These policies focus on
 Normally run by:
 
 ```powershell
-.\Install-AutonomousAgents.ps1 -Step 6 -SkipPrerequisites -UseInstallationDefinitions
+.\Install-ClaudIA.ps1 -Step 6 -SkipPrerequisites -UseInstallationDefinitions
 ```
 
 ## Parameters
@@ -23,13 +23,13 @@ Normally run by:
 
 ## Installer Integration
 
-Called by `Install-AutonomousAgents.ps1` in Step `6b`.
+Called by `Install-ClaudIA.ps1` in Step `6b`.
 
 ## Policies Created
 
 - `DLP-CopilotStudio-PII-Monitor`
 - `DSPM-AI-Labels-Restrict`
-- `DSPM-AI-AgentActivity-Audit`
+- `DSPM-AI-ClaudIAActivity-Audit`
 
 ## Categorization Context
 

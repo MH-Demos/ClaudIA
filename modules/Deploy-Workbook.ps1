@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Deploy the Agent Activity Monitor workbook backed by Azure Data Explorer.
+    Deploy the ClaudIA Activity Monitor workbook backed by Azure Data Explorer.
 .DESCRIPTION
     Creates an Azure Monitor Workbook with KQL query sections that visualize
     agent telemetry from the ADX table configured in config/Installation_definitions.json.
@@ -96,7 +96,7 @@ $items = @(
     [ordered]@{
         type = 1
         content = [ordered]@{
-            json = "# Agent Activity Monitor`nSource: **Azure Data Explorer** cluster `$clusterName`, database `$databaseName`, table `$tableName`. Each row stores `TimeGenerated` plus dynamic `Event` telemetry."
+            json = "# ClaudIA Activity Monitor`nSource: **Azure Data Explorer** cluster `$clusterName`, database `$databaseName`, table `$tableName`. Each row stores `TimeGenerated` plus dynamic `Event` telemetry."
         }
         name = 'header'
     }
@@ -171,18 +171,18 @@ $wbContent = [ordered]@{
 $wbSeed = "$rg-Agent-Activity-Monitor-ADX"
 $wbId = [guid]::new([System.Security.Cryptography.MD5]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes($wbSeed))).ToString()
 $existingWorkbookId = az resource list -g $rg --resource-type "Microsoft.Insights/workbooks" `
-    --query "[?tags.\"hidden-title\"=='Agent Activity Monitor'].name | [0]" -o tsv 2>$null
+    --query "[?tags.\"hidden-title\"=='ClaudIA Activity Monitor'].name | [0]" -o tsv 2>$null
 if ($existingWorkbookId) { $wbId = $existingWorkbookId }
 
 $body = [ordered]@{
     location = $loc
     tags = [ordered]@{
-        'hidden-title' = 'Agent Activity Monitor'
+        'hidden-title' = 'ClaudIA Activity Monitor'
         'telemetry-source' = 'ADX'
     }
     kind = 'shared'
     properties = [ordered]@{
-        displayName = 'Agent Activity Monitor'
+        displayName = 'ClaudIA Activity Monitor'
         serializedData = $wbContent
         version = '2.0'
         sourceId = $clusterResourceId

@@ -25,7 +25,7 @@
        - Topics: auto-assigned per department
        - existingUser: true (flag for the runbook to skip password generation)
 
-    5. SAVE: Caller (Install-AutonomousAgents.ps1) writes the result to agents.json.
+    5. SAVE: Caller (Install-ClaudIA.ps1) writes the result to agents.json.
 
     -> Customize: Edit $departments array to support additional departments.
     -> Customize: Edit $defaultTopics to change what each department generates.

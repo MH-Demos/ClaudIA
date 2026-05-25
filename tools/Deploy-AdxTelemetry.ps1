@@ -554,7 +554,7 @@ if ($ClientSecret) {
         Write-Host "ADX client secret already exists in Key Vault." -ForegroundColor Green
     } else {
         Write-Host "  [WARN] Client secret '$ClientSecretName' was not found in Key Vault '$keyVaultName'." -ForegroundColor Yellow
-        Write-Host "         ADX resources were provisioned. Step 5 stores 'agent-client-secret' for app-dataagent, which ADX can reuse." -ForegroundColor Yellow
+        Write-Host "         ADX resources were provisioned. Step 5 stores 'agent-client-secret' for app-claudia-dataagent, which ADX can reuse." -ForegroundColor Yellow
     }
 }
 

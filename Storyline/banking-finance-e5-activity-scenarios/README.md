@@ -54,7 +54,7 @@ A missing profile was also added for scenario design:
 
 ## Story Context
 
-The fictional organization is called **MH Demos Financial Group**. It operates a banking-style Microsoft 365 E5 tenant with employees distributed across LATAM, North America, Europe, and India.
+The fictional organization is called **ClaudIA Financial Group**. It operates a banking-style Microsoft 365 E5 tenant with employees distributed across LATAM, North America, Europe, and India.
 
 The organization handles synthetic but realistic banking data such as:
 

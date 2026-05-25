@@ -6,7 +6,7 @@ This document complements the individual script documentation. Its purpose is to
 
 The project has three script types:
 
-- Orchestrators: run several steps and modify multiple components. Examples: `Install-AutonomousAgents.ps1`, `tools/Install-CleanAdxLab.ps1`.
+- Orchestrators: run several steps and modify multiple components. Examples: `Install-ClaudIA.ps1`, `tools/Install-CleanAdxLab.ps1`.
 - Deployment modules: called by the installer and provision a specific slice of the system. Examples: `modules/Deploy-Runbook.ps1`, `modules/Configure-CoreDLP.ps1`.
 - Operational tools and tests: used after installation to validate, repair, or refresh data. Examples: `tests/Test-FullRun.ps1`, `tools/Get-RunbookStatus.ps1`, `tools/Reset-AgentPasswords.ps1`.
 
@@ -15,17 +15,17 @@ The project has three script types:
 Full installation:
 
 ```powershell
-.\Install-AutonomousAgents.ps1 -UseExistingUsers -Auto
+.\Install-ClaudIA.ps1 -UseExistingUsers -Auto
 ```
 
 Safe resume with existing state:
 
 ```powershell
-.\Install-AutonomousAgents.ps1 -UseInstallationDefinitions -Step 4 -SkipPrerequisites
-.\Install-AutonomousAgents.ps1 -UseInstallationDefinitions -Step 5 -SkipPrerequisites
-.\Install-AutonomousAgents.ps1 -UseInstallationDefinitions -Step 6 -SkipPrerequisites
-.\Install-AutonomousAgents.ps1 -UseInstallationDefinitions -Step 7 -SkipPrerequisites
-.\Install-AutonomousAgents.ps1 -UseInstallationDefinitions -Step 8 -SkipPrerequisites
+.\Install-ClaudIA.ps1 -UseInstallationDefinitions -Step 4 -SkipPrerequisites
+.\Install-ClaudIA.ps1 -UseInstallationDefinitions -Step 5 -SkipPrerequisites
+.\Install-ClaudIA.ps1 -UseInstallationDefinitions -Step 6 -SkipPrerequisites
+.\Install-ClaudIA.ps1 -UseInstallationDefinitions -Step 7 -SkipPrerequisites
+.\Install-ClaudIA.ps1 -UseInstallationDefinitions -Step 8 -SkipPrerequisites
 ```
 
 Post-install validation:
@@ -54,7 +54,7 @@ Most scripts assume:
 
 - `config/agents.json`: editable source configuration.
 - `config/Installation_definitions.json`: generated real installation state. Treat it as the operational reference after the first deployment.
-- `logs/Install-AutonomousAgents-*.log`: installer execution history.
+- `logs/Install-ClaudIA-*.log`: installer execution history.
 - `activity-story-map/web/images/manifest.json`: visual manifest for characters and services.
 
 ## Secret Model
@@ -75,7 +75,7 @@ Do not manually edit an Automation password variable to store a plaintext secret
 
 | Script | Reads | Writes / Changes | Main Dependencies | Notes |
 | --- | --- | --- | --- | --- |
-| `Install-AutonomousAgents.ps1` | `agents.json`, `Installation_definitions.json` | Users, groups, licenses, app, Azure resources, definitions, logs | Azure CLI, Graph, Exchange, modules | Main entry point. Use `-UseInstallationDefinitions` for resume. |
+| `Install-ClaudIA.ps1` | `agents.json`, `Installation_definitions.json` | Users, groups, licenses, app, Azure resources, definitions, logs | Azure CLI, Graph, Exchange, modules | Main entry point. Use `-UseInstallationDefinitions` for resume. |
 | `Manage-Costs.ps1` | `agents.json` | Automation schedules, Fabric state | Azure CLI, ARM Cost API | Requires Cost Management Reader for live spend. |
 | `modules/Common.ps1` | Config files | Installation definitions and shared state | Graph, Azure CLI | Dot-sourced helper, not a direct entry point. |
 | `modules/Register-AgentApp.ps1` | Tenant/domain | App registration and permissions | Azure CLI, Graph | Step `3`; consent may need privileged admin. |
@@ -125,7 +125,7 @@ Do not manually edit an Automation password variable to store a plaintext secret
 
 Some actions are intentionally printed as manual reminders because tenants differ:
 
-- Conditional Access MFA exclusion for `grp-agent-mfa-exclusion`.
+- Conditional Access MFA exclusion for `grp-claudia-agent-mfa-exclusion`.
 - Purview DSPM for AI enablement.
 - IRM policy indicators for Generative AI apps.
 - IRM Priority User Group validation.
@@ -133,7 +133,7 @@ Some actions are intentionally printed as manual reminders because tenants diffe
 
 ## When To Use Which Script
 
-- Need a full install: `Install-AutonomousAgents.ps1`.
+- Need a full install: `Install-ClaudIA.ps1`.
 - Need a clean ADX lab build with automation defaults: `tools/Install-CleanAdxLab.ps1`.
 - Need to update runbook code only: `tools/Publish-RunbookOnly.ps1`.
 - Need to test one user: `tests/Test-SingleAgent.ps1`.

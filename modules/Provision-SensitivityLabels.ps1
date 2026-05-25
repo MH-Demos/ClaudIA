@@ -58,7 +58,7 @@ try {
             Write-Host "    [OK] Connected" -ForegroundColor Green
         } catch {
             Write-Host "    [FAIL] $($_.Exception.Message)" -ForegroundColor Red
-            Write-Host "    Connect manually and re-run: .\Install-AutonomousAgents.ps1 -Step 4" -ForegroundColor Yellow
+            Write-Host "    Connect manually and re-run: .\Install-ClaudIA.ps1 -Step 4" -ForegroundColor Yellow
             return
         }
     } else {

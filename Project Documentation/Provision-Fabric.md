@@ -14,7 +14,7 @@ Provisions or connects to Fabric resources used by the lab when Fabric is enable
 Normally run by:
 
 ```powershell
-.\Install-AutonomousAgents.ps1 -Step 4 -SkipPrerequisites -UseInstallationDefinitions
+.\Install-ClaudIA.ps1 -Step 4 -SkipPrerequisites -UseInstallationDefinitions
 ```
 
 ## Parameters
@@ -24,7 +24,7 @@ Normally run by:
 
 ## Installer Integration
 
-Called by `Install-AutonomousAgents.ps1` in Step `4c`.
+Called by `Install-ClaudIA.ps1` in Step `4c`.
 
 ## Current Configuration
 

@@ -12,7 +12,7 @@ POST /sites/{site-id}/drive/items/{item-id}/assignSensitivityLabel
 
 That endpoint is the SharePoint and OneDrive for Business `assignSensitivityLabel` API. Microsoft documents it as a protected, metered Microsoft Graph API. The app registration that calls it must be associated with an Azure subscription through a `Microsoft.GraphServices/accounts` resource before the API can be used.
 
-In this lab, the calling app is `app-dataagent`, stored in config as:
+In this lab, the calling app is `app-claudia-dataagent`, stored in config as:
 
 ```json
 adx.clientId
@@ -30,7 +30,7 @@ Current lab billing resource:
 | --- | --- |
 | Subscription | `ab97362c-5d5f-49a5-bf87-c8480e54e062` |
 | Resource group | `MH-Agents-PAYG` |
-| Resource name | `graph-metered-app-dataagent` |
+| Resource name | `graph-metered-app-claudia-dataagent` |
 | Resource type | `Microsoft.GraphServices/accounts` |
 | Location | `global` |
 | App ID | `22222222-2222-2222-2222-222222222222` |
@@ -41,7 +41,7 @@ Current lab billing resource:
 
 | Service | Why We Use It | Billing Model | Current Status | Notes |
 | --- | --- | --- | --- | --- |
-| Microsoft Graph metered APIs: SharePoint/OneDrive `assignSensitivityLabel` | Applies sensitivity labels to files at rest from the runbook | Metered per API call | Required for automatic label application through Graph | Enable by creating `Microsoft.GraphServices/accounts` linked to `app-dataagent` |
+| Microsoft Graph metered APIs: SharePoint/OneDrive `assignSensitivityLabel` | Applies sensitivity labels to files at rest from the runbook | Metered per API call | Required for automatic label application through Graph | Enable by creating `Microsoft.GraphServices/accounts` linked to `app-claudia-dataagent` |
 | Azure OpenAI | Generates realistic business documents, emails, and prompts | Token/model usage | Required | Cost depends on selected model, region, and quota |
 | Azure AI Foundry model deployments | Optional external AI simulation with non-Copilot model families | Token/model usage | Optional | Used by expansion scenarios such as ExternalAI |
 | Azure Data Explorer | Stores lab telemetry from the runbook and story map | Cluster/runtime + storage | Required for current telemetry architecture | Dev/Test SKU can reduce cost; streaming ingestion is enabled |
@@ -73,7 +73,7 @@ Current lab billing resource:
 
 ## Enable Graph Metered API Billing
 
-Use an Azure subscription in the same tenant as the `app-dataagent` application registration.
+Use an Azure subscription in the same tenant as the `app-claudia-dataagent` application registration.
 
 The project includes an automation helper:
 
@@ -83,15 +83,15 @@ The project includes an automation helper:
   -ResourceGroup '<resource-group>'
 ```
 
-The script resolves the `app-dataagent` AppId from configuration, creates or reuses the resource group, registers `Microsoft.GraphServices`, creates the `Microsoft.GraphServices/accounts` resource, waits for provider registration, and validates the linked app id.
+The script resolves the `app-claudia-dataagent` AppId from configuration, creates or reuses the resource group, registers `Microsoft.GraphServices`, creates the `Microsoft.GraphServices/accounts` resource, waits for provider registration, and validates the linked app id.
 
 Manual equivalent:
 
 ```powershell
 $subscriptionId = '<subscription-id>'
 $resourceGroup = '<resource-group>'
-$appId = '<app-dataagent-client-id>'
-$billingResourceName = 'graph-metered-app-dataagent'
+$appId = '<app-claudia-dataagent-client-id>'
+$billingResourceName = 'graph-metered-app-claudia-dataagent'
 
 az account set --subscription $subscriptionId
 az provider register --namespace Microsoft.GraphServices

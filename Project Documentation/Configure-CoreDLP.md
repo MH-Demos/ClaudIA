@@ -14,7 +14,7 @@ Deploys category-based core Microsoft Purview DLP policies across Exchange, Shar
 Normally run by:
 
 ```powershell
-.\Install-AutonomousAgents.ps1 -Step 6 -SkipPrerequisites -UseInstallationDefinitions
+.\Install-ClaudIA.ps1 -Step 6 -SkipPrerequisites -UseInstallationDefinitions
 ```
 
 ## Parameters
@@ -25,7 +25,7 @@ Normally run by:
 
 ## Installer Integration
 
-Called by `Install-AutonomousAgents.ps1` in Step `6a`.
+Called by `Install-ClaudIA.ps1` in Step `6a`.
 
 ## DLP Categorization
 

@@ -1,16 +1,16 @@
-# Install-AutonomousAgents.ps1
+# Install-ClaudIA.ps1
 
 ## Purpose
 
-Main deployment wizard for the lab. It deploys or resumes the full Microsoft 365 Autonomous IA environment: users, licenses, app registration, Azure infrastructure, collaboration spaces, sensitivity labels, runbook, DLP/IRM policies, workbook, and Activity Story Map.
+Main deployment wizard for the lab. It deploys or resumes the full ClaudIA environment: users, licenses, app registration, Azure infrastructure, collaboration spaces, sensitivity labels, runbook, DLP/IRM policies, workbook, and Activity Story Map.
 
 ## Execution
 
 ```powershell
-.\Install-AutonomousAgents.ps1
-.\Install-AutonomousAgents.ps1 -UseExistingUsers -Auto
-.\Install-AutonomousAgents.ps1 -Step 6 -SkipPrerequisites -UseInstallationDefinitions
-.\Install-AutonomousAgents.ps1 -DryRun
+.\Install-ClaudIA.ps1
+.\Install-ClaudIA.ps1 -UseExistingUsers -Auto
+.\Install-ClaudIA.ps1 -Step 6 -SkipPrerequisites -UseInstallationDefinitions
+.\Install-ClaudIA.ps1 -DryRun
 ```
 
 ## Parameters

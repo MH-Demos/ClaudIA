@@ -36,7 +36,7 @@
 
 ### Step 1 : Create Agent Accounts
 
-| Commande | `.\Install-AutonomousAgents.ps1` (wizard interactif) |
+| Commande | `.\Install-ClaudIA.ps1` (wizard interactif) |
 |----------|------|
 | Config | Tenant: MngEnvMCAP437602.onmicrosoft.com, Sub: bb6dc1c7-..., Region: eastus2, Country: FR |
 | 10 users | Tous `[EXISTS]` |
@@ -48,7 +48,7 @@
 |--------|----------|
 | License SKU detecte | TEST_SPE_E7 (0 available) |
 | Assignation | Tous "no seats left (tenant-wide)" |
-| Groupe MFA | `[OK]` grp-agent-mfa-exclusion (4a82a554-...) |
+| Groupe MFA | `[OK]` grp-claudia-agent-mfa-exclusion (4a82a554-...) |
 | Ajout membres | "All agents added" |
 | **Pause manuelle** | "Press Enter when done" (CA exclusion) |
 
@@ -56,16 +56,16 @@
 
 | Action | Resultat |
 |--------|----------|
-| app-dataagent | `[EXISTS]` AppId: ee3f2822-a3dc-4be8-80e4-a84a9571fb6f |
+| app-claudia-dataagent | `[EXISTS]` AppId: ee3f2822-a3dc-4be8-80e4-a84a9571fb6f |
 
 ### Step 4 : Deploy Azure Infrastructure
 
 | Ressource | Resultat |
 |-----------|----------|
-| Resource Group rg-agents-lab | `[OK]` |
-| Azure OpenAI oai-agents | `[EXISTS]` |
+| Resource Group rg-claudia-lab | `[OK]` |
+| Azure OpenAI oai-claudia-lab | `[EXISTS]` |
 | Deploy gpt-4o (TPM=30) | `[OK]` |
-| Automation Account aa-agents | `[EXISTS]` |
+| Automation Account aa-claudia-lab | `[EXISTS]` |
 | OpenAI RBAC -> MI | `[OK]` |
 | Log Analytics la-agents | `[OK]` (long ~60s) |
 | OpenAI diagnostics | `[OK]` |
@@ -178,7 +178,7 @@ Pre-requis : `Connect-IPPSSession` execute manuellement avant le wizard.
 
 | Action | Resultat |
 |--------|----------|
-| Deploy workbook | `[OK]` Agent Activity Monitor |
+| Deploy workbook | `[OK]` ClaudIA Activity Monitor |
 | Portal URL | `https://portal.azure.com/#resource/.../069c67a9-a534-4212-bca0-f392069db650/workbook` |
 
 ### Wizard final
@@ -206,7 +206,7 @@ Pre-requis : `Connect-IPPSSession` execute manuellement avant le wizard.
 - **Contexte** : Step 1, tous users `[EXISTS]`
 - **Message** : "Password for all agents: JAhPqMoFwGQHtK1a / SAVE THIS PASSWORD"
 - **Impact** : **CRITIQUE** — Le password affiche ne correspond a AUCUN user (les existants gardent leur ancien password). L'end user va l'entrer au Step 5 pensant que c'est le bon. Le runbook ROPC echouera systematiquement.
-- **Fichier** : `Install-AutonomousAgents.ps1` ligne ~578
+- **Fichier** : `Install-ClaudIA.ps1` ligne ~578
 
 ### ERR-003 : Label Policy creation failure
 - **Contexte** : Step 4b, `Provision-SensitivityLabels.ps1`
@@ -289,7 +289,7 @@ Pre-requis : `Connect-IPPSSession` execute manuellement avant le wizard.
 ## 4. BUGS ET DEFAUTS IDENTIFIES
 
 ### BUG-001 : Password inutile genere sur re-run (CRITIQUE)
-- **Script** : `Install-AutonomousAgents.ps1` ligne ~578
+- **Script** : `Install-ClaudIA.ps1` ligne ~578
 - **Description** : Quand tous les users sont `[EXISTS]`, le script genere quand meme un nouveau password et dit "SAVE THIS". Ce password n'est jamais applique aux users existants. L'utilisateur va l'entrer au Step 5 → les AA variables contiendront un mauvais password → le runbook ROPC echouera.
 - **Fix suggere** : Si tous les users existent, demander le password actuel au lieu d'en generer un nouveau.
 
@@ -304,7 +304,7 @@ Pre-requis : `Connect-IPPSSession` execute manuellement avant le wizard.
 - **Fix suggere** : Verifier si une session IPPS est deja active avant de tenter Connect-IPPSSession. Utiliser `Get-PSSession` ou tester avec `Get-DlpCompliancePolicy` avant de reconnecter.
 
 ### BUG-004 : Wizard dit "9 steps" mais execute 12+ etapes
-- **Script** : `Install-AutonomousAgents.ps1`
+- **Script** : `Install-ClaudIA.ps1`
 - **Description** : L'en-tete dit "Step X/9" mais il y a en realite Steps 0, 1, 2, 3, 4, 4a, 4b, 4c, 5, 6a, 6b, 6c, 7 = 13 etapes. Le denominateur "/9" est trompeur.
 - **Fix suggere** : Mettre a jour la numerotation ou utiliser un denominateur correct.
 
@@ -319,7 +319,7 @@ Pre-requis : `Connect-IPPSSession` execute manuellement avant le wizard.
 - **Fix suggere** : Afficher le message d'erreur catch apres `[WARN]`.
 
 ### BUG-007 : agents.json ecrase avec "REPLACE_WITH" detecte meme apres config
-- **Script** : `Install-AutonomousAgents.ps1`
+- **Script** : `Install-ClaudIA.ps1`
 - **Description** : A chaque run, le script detecte `REPLACE_WITH` dans agents.json et lance la config interactive. Mais il a deja sauvegarde la config precedente. C'est parce que la sauvegarde initiale remplace les placeholders — ce bug ne se produit qu'au 1er run. Confirme : pas de bug ici en re-run (la config est correcte).
 
 ### BUG-008 : Workbook creates duplicates on re-run
@@ -348,7 +348,7 @@ Pre-requis : `Connect-IPPSSession` execute manuellement avant le wizard.
 - **Fix suggere** : Utiliser `Get-PSSession | Where-Object { $_.ComputerName -match 'compliance' -and $_.State -eq 'Opened' }` pour detecter la session existante, ou tester directement avec `Get-DlpCompliancePolicy -ErrorAction SilentlyContinue`.
 
 ### BUG-013 : `-Step 6` re-execute aussi Step 7 (Workbook duplique)
-- **Script** : `Install-AutonomousAgents.ps1`
+- **Script** : `Install-ClaudIA.ps1`
 - **Description** : La logique `if ($Step -le 7)` fait que `-Step 6` execute aussi Step 7. Le workbook est cree avec un nouveau GUID a chaque run, produisant des doublons.
 - **Fix suggere** : Pour le workbook, utiliser un GUID deterministe ou verifier l'existence avant creation.
 

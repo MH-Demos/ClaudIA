@@ -22,5 +22,5 @@ Runs agent activity jobs so the Activity Story Map has fresh data in ADX. The ma
 
 ## Installer Integration
 
-Not called by `Install-AutonomousAgents.ps1`. It wraps `tests\Test-FullRun.ps1`.
+Not called by `Install-ClaudIA.ps1`. It wraps `tests\Test-FullRun.ps1`.
 

@@ -14,7 +14,7 @@ ClaudIA brings together four layers:
 
 | Layer | Purpose |
 | --- | --- |
-| Autonomous agents | Simulated employees that create Microsoft 365 activity across SharePoint, OneDrive, Outlook, Teams, Fabric, Copilot, and browser-based workflows. |
+| ClaudIA agents | Simulated employees that create Microsoft 365 activity across SharePoint, OneDrive, Outlook, Teams, Fabric, Copilot, and browser-based workflows. |
 | Data protection scenarios | Synthetic DLP, sensitivity labeling, Insider Risk, DSPM for AI, Defender, Sentinel, ADX, and MDCA scenarios. |
 | Storyline assets | Personas, character images, scenario packs, demo scripts, KQL samples, timelines, and presentation-ready narratives. |
 | Portal and activity map | A static web experience and API layer that can explain the architecture, show the storyline, and surface generated activity. |
@@ -70,7 +70,7 @@ az login --tenant contoso.onmicrosoft.com
 az account set --subscription 11111111-1111-1111-1111-111111111111
 
 .\prerequisites\Test-Prerequisites.ps1
-.\Install-AutonomousAgents.ps1
+.\Install-ClaudIA.ps1
 ```
 
 For the complete setup path, including local tools, Azure subscription requirements, Microsoft 365 licensing, Key Vault usage, browser agents, images, and storyline replication, use [How to Start.md](How%20to%20Start.md). If the tenant is brand new, start with [If Your Tenant Is Completely New.md](If%20Your%20Tenant%20Is%20Completely%20New.md).

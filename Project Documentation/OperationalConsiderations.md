@@ -8,7 +8,7 @@ Before operating the lab:
 
 - Confirm that the tenant is a lab or demo tenant.
 - Confirm that agent accounts can be excluded from MFA.
-- Confirm that the `grp-agent-mfa-exclusion` group is covered by Conditional Access policy.
+- Confirm that the `grp-claudia-agent-mfa-exclusion` group is covered by Conditional Access policy.
 - Confirm that no sensitive real user will be used as an agent.
 - Confirm that the Azure resource costs are accepted.
 
@@ -25,7 +25,7 @@ Rerunning is normal, but the recommended pattern is:
 
 ```powershell
 .\tools\Test-InstallationDefinitionsConsistency.ps1
-.\Install-AutonomousAgents.ps1 -UseInstallationDefinitions -Step <n> -SkipPrerequisites
+.\Install-ClaudIA.ps1 -UseInstallationDefinitions -Step <n> -SkipPrerequisites
 ```
 
 ## Known Timing Issues
@@ -100,7 +100,7 @@ DLP/IRM script failures:
 ```powershell
 Import-Module ExchangeOnlineManagement
 Connect-IPPSSession
-.\Install-AutonomousAgents.ps1 -UseInstallationDefinitions -Step 6 -SkipPrerequisites
+.\Install-ClaudIA.ps1 -UseInstallationDefinitions -Step 6 -SkipPrerequisites
 ```
 
 ## Cost Management

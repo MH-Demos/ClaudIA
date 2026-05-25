@@ -18,7 +18,7 @@ Starts one Azure Automation runbook job for a selected agent and validates that 
 
 ## Installer Integration
 
-Not called by `Install-AutonomousAgents.ps1`, but printed as a recommended post-install command.
+Not called by `Install-ClaudIA.ps1`, but printed as a recommended post-install command.
 
 ## Alternatives
 

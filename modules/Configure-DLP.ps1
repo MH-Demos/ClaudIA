@@ -23,7 +23,7 @@
     === IRM INSTRUCTIONS (manual steps, printed to console) ===
 
     - Enable 'Generative AI apps' policy indicators in IRM Settings
-    - Create 'Autonomous Agents' Priority User Group with agent UPNs
+    - Create 'ClaudIA Agents' Priority User Group with agent UPNs
     - Enable DSPM for AI in the Purview portal
 
     -> Customize: Edit policy names, SIT types, or thresholds below.
@@ -55,7 +55,7 @@ try {
         Write-Host " [MANUAL]" -ForegroundColor Yellow
         Write-Host "    Could not connect automatically. Run manually:" -ForegroundColor Yellow
         Write-Host "      Connect-IPPSSession" -ForegroundColor Yellow
-        Write-Host "    Then re-run: .\Install-AutonomousAgents.ps1 -Step 6 -SkipPrerequisites" -ForegroundColor Yellow
+        Write-Host "    Then re-run: .\Install-ClaudIA.ps1 -Step 6 -SkipPrerequisites" -ForegroundColor Yellow
     }
 }
 if (-not $ippsReady) { return }
@@ -125,8 +125,8 @@ try {
     Write-Host " [SKIP] $($_.Exception.Message)" -ForegroundColor DarkYellow
 }
 
-# Policy 3: Agent Activity Audit
-$pol3Name = 'DSPM-AI-AgentActivity-Audit'
+# Policy 3: ClaudIA Activity Audit
+$pol3Name = 'DSPM-AI-ClaudIAActivity-Audit'
 Write-Host "  Creating $pol3Name..." -NoNewline
 try {
     $existingPol3 = Get-DlpCompliancePolicy -Identity $pol3Name -ErrorAction SilentlyContinue
@@ -145,7 +145,7 @@ Write-Host "  3 DSPM DLP policies configured." -ForegroundColor Green
 Write-Host ""
 Write-Host "  MANUAL STEPS (Purview Portal):" -ForegroundColor Yellow
 Write-Host "    1. IRM > Settings > Policy indicators > Enable 'Generative AI apps'" -ForegroundColor Yellow
-Write-Host "    2. IRM > Settings > Priority user groups > Create 'Autonomous Agents'" -ForegroundColor Yellow
+Write-Host "    2. IRM > Settings > Priority user groups > Create 'ClaudIA Agents'" -ForegroundColor Yellow
 Write-Host "       Add these UPNs:" -ForegroundColor Yellow
 foreach ($upn in $agentUpns) { Write-Host "         $upn" -ForegroundColor Gray }
 Write-Host "    3. DSPM for AI > AI security > Get started" -ForegroundColor Yellow

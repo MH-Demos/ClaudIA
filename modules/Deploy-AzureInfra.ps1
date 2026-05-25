@@ -8,7 +8,7 @@
     === RESOURCES CREATED ===
 
     1. RESOURCE GROUP ($Config.infrastructure.resourceGroup)
-       Contains all agent resources. Default: rg-agents-lab.
+       Contains all agent resources. Default: rg-claudia-lab.
 
     2. AZURE OPENAI (S0 tier, $Config.infrastructure.openAiAccountName)
        Deploys GPT-4o-mini model. Used by the runbook to generate content.
@@ -624,11 +624,11 @@ if ($aaExists) {
 # Get MI object ID
 $aaObjId = (Invoke-RestMethod "https://management.azure.com/subscriptions/$sub/resourceGroups/$aaRg/providers/Microsoft.Automation/automationAccounts/${aaName}?api-version=2023-11-01" -Headers $h).identity.principalId
 
-# Grant Key Vault secret read access to Automation MI and app-dataagent.
+# Grant Key Vault secret read access to Automation MI and app-claudia-dataagent.
 Write-Host "  Granting Key Vault secret access..." -NoNewline
 az role assignment create --role "Key Vault Secrets User" --assignee-object-id $aaObjId `
     --assignee-principal-type ServicePrincipal --scope $kvId -o none 2>$null
-$agentAppId = az ad app list --display-name 'app-dataagent' --query "[0].appId" -o tsv 2>$null
+$agentAppId = az ad app list --display-name 'app-claudia-dataagent' --query "[0].appId" -o tsv 2>$null
 if ($agentAppId) {
     $agentSpObjectId = az ad sp show --id $agentAppId --query id -o tsv 2>$null
     if ($agentSpObjectId) {

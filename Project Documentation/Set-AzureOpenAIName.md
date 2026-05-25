@@ -19,5 +19,5 @@ Updates the Azure OpenAI account name in `config/agents.json` and `config/Instal
 
 ## Installer Integration
 
-Not called by `Install-AutonomousAgents.ps1`. Use before rerunning Step `4` and Step `5` if the configured Azure OpenAI name conflicts or points to another tenant.
+Not called by `Install-ClaudIA.ps1`. Use before rerunning Step `4` and Step `5` if the configured Azure OpenAI name conflicts or points to another tenant.
 

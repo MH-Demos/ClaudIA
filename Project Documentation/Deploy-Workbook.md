@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Deploys the Azure Monitor Workbook `Agent Activity Monitor` backed by ADX queries.
+Deploys the Azure Monitor Workbook `ClaudIA Activity Monitor` backed by ADX queries.
 
 ## Execution
 
@@ -14,7 +14,7 @@ Deploys the Azure Monitor Workbook `Agent Activity Monitor` backed by ADX querie
 Normally run by:
 
 ```powershell
-.\Install-AutonomousAgents.ps1 -Step 7 -SkipPrerequisites -UseInstallationDefinitions
+.\Install-ClaudIA.ps1 -Step 7 -SkipPrerequisites -UseInstallationDefinitions
 ```
 
 ## Parameters
@@ -24,7 +24,7 @@ Normally run by:
 
 ## Installer Integration
 
-Called by `Install-AutonomousAgents.ps1` in Step `7`.
+Called by `Install-ClaudIA.ps1` in Step `7`.
 
 ## Dependencies
 

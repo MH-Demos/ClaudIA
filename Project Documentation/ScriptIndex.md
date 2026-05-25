@@ -1,8 +1,8 @@
 # Script Index
 
-| Script | Purpose | Called by `Install-AutonomousAgents.ps1` |
+| Script | Purpose | Called by `Install-ClaudIA.ps1` |
 | --- | --- | --- |
-| `Install-AutonomousAgents.ps1` | Main deployment wizard | Main script |
+| `Install-ClaudIA.ps1` | Main deployment wizard | Main script |
 | `Manage-Costs.ps1` | Cost status, estimates, and schedule/Fabric controls | No |
 | `modules/Common.ps1` | Shared helpers for config, Key Vault names, installation definitions, and cleanup | Dot-sourced by installer/modules/tools |
 | `modules/Configure-CoreDLP.ps1` | Category-based core DLP policies | Step `6a` |

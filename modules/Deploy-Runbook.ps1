@@ -9,9 +9,9 @@
     === AUTOMATION VARIABLES CREATED ===
 
     AgentTenantId      - Entra tenant ID (for ROPC token requests)
-    AgentAppId         - app-dataagent application ID
+    AgentAppId         - app-claudia-dataagent application ID
     AgentKeyVaultName  - Key Vault that contains app and user credentials
-    AgentClientSecretName - Key Vault secret name for app-dataagent client secret
+    AgentClientSecretName - Key Vault secret name for app-claudia-dataagent client secret
     AgentConfig        - Full agents.json as JSON string (agent personas, infra config)
     AgentSitReference  - SIT precision patterns from config/sit-reference.txt
     AgentEmailThreads  - Multi-turn conversation scenarios from config/email-threads.json
@@ -91,9 +91,9 @@ $h = @{Authorization="Bearer $t"; 'Content-Type'='application/json'}
 $aaUri = "https://management.azure.com/subscriptions/${sub}/resourceGroups/${rg}/providers/Microsoft.Automation/automationAccounts/${aaName}"
 
 # Get app registration details
-$appId = az ad app list --display-name 'app-dataagent' --query "[0].appId" -o tsv 2>$null
+$appId = az ad app list --display-name 'app-claudia-dataagent' --query "[0].appId" -o tsv 2>$null
 $tenantId = az account show --query tenantId -o tsv 2>$null
-if (-not $appId) { throw "app-dataagent was not found. Run Step 3 first." }
+if (-not $appId) { throw "app-claudia-dataagent was not found. Run Step 3 first." }
 
 Write-Host "  Validating app delegated consent..." -NoNewline
 try {
@@ -101,7 +101,7 @@ try {
     Write-Host " [OK]" -ForegroundColor Green
 } catch {
     Write-Host " [WARN]" -ForegroundColor Yellow
-    Write-Host "  Could not verify/admin-consent app-dataagent permissions: $($_.Exception.Message)" -ForegroundColor Yellow
+    Write-Host "  Could not verify/admin-consent app-claudia-dataagent permissions: $($_.Exception.Message)" -ForegroundColor Yellow
     Write-Host "  Run Step 3 with a Global Admin or Privileged Role Admin if ROPC returns consent_required." -ForegroundColor Yellow
 }
 
@@ -109,7 +109,7 @@ try {
 $clientSecret = az ad app credential reset --id $appId --display-name 'agent-deploy' --years 1 --query password -o tsv 2>$null
 
 # Validate Key Vault RBAC. The runbook reads secrets with the Automation Managed
-# Identity. app-dataagent is also granted Secrets User for admin validation and
+# Identity. app-claudia-dataagent is also granted Secrets User for admin validation and
 # future secret-read scenarios, but ROPC itself does not read Key Vault.
 $kvResourceGroup = $Config.infrastructure.resourceGroup
 $kvSubscriptionId = $sub
@@ -196,7 +196,7 @@ try {
             -ContentType 'application/x-www-form-urlencoded' -Body $tokenBody -ErrorAction Stop | Out-Null
     } catch {
         $tokenError = if ($_.ErrorDetails.Message) { $_.ErrorDetails.Message } else { $_.Exception.Message }
-        throw "Stored Key Vault secret 'agent-client-secret' is not valid for app-dataagent ($appId): $tokenError"
+        throw "Stored Key Vault secret 'agent-client-secret' is not valid for app-claudia-dataagent ($appId): $tokenError"
     }
 
     foreach ($agent in $Config.agents) {

@@ -2,7 +2,7 @@
 .SYNOPSIS
     Register Entra app with delegated scopes for ROPC agent authentication.
 .DESCRIPTION
-    Creates 'app-dataagent' in Entra ID with:
+    Creates 'app-claudia-dataagent' in Entra ID with:
     - Public client enabled (required for ROPC flow)
     - 11 delegated Microsoft Graph permissions (admin-consented)
     - 1-year client secret
@@ -31,9 +31,9 @@
 param([string]$Domain)
 . (Join-Path $PSScriptRoot 'Common.ps1')
 
-Write-Host "  Registering app 'app-dataagent'..." -NoNewline
+Write-Host "  Registering app 'app-claudia-dataagent'..." -NoNewline
 
-$appName = 'app-dataagent'
+$appName = 'app-claudia-dataagent'
 $existing = az ad app list --display-name $appName --query "[0].appId" -o tsv 2>$null
 
 if ($existing) {

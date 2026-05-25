@@ -17,7 +17,7 @@ Publishes the local `modules/Invoke-AgentRunbook.ps1` to Azure Automation withou
 
 ## Installer Integration
 
-Not called by `Install-AutonomousAgents.ps1`. Use after Step `5` when only runbook code or non-secret config changed.
+Not called by `Install-ClaudIA.ps1`. Use after Step `5` when only runbook code or non-secret config changed.
 
 ## Alternatives
 

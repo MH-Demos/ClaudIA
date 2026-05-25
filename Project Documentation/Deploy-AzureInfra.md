@@ -14,7 +14,7 @@ Deploys Azure infrastructure: resource group, Azure OpenAI, Azure Automation, Ke
 Normally run by:
 
 ```powershell
-.\Install-AutonomousAgents.ps1 -Step 4 -SkipPrerequisites -UseInstallationDefinitions
+.\Install-ClaudIA.ps1 -Step 4 -SkipPrerequisites -UseInstallationDefinitions
 ```
 
 ## Parameters
@@ -24,7 +24,7 @@ Normally run by:
 
 ## Installer Integration
 
-Called by `Install-AutonomousAgents.ps1` in Step `4`. After this module, the installer calls `tools/Deploy-AdxTelemetry.ps1`.
+Called by `Install-ClaudIA.ps1` in Step `4`. After this module, the installer calls `tools/Deploy-AdxTelemetry.ps1`.
 
 ## Current Configuration
 

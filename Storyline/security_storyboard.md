@@ -1,4 +1,4 @@
-# MH Demos – Security & Collaboration Storyboard
+# ClaudIA - Security & Collaboration Storyboard
 
 ## Scenario 1 – Quarterly Business Review
 Participants:

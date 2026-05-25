@@ -25,12 +25,12 @@ Provisions Azure Data Explorer telemetry for agent activity: cluster, database, 
 
 ## Installer Integration
 
-Called by `Install-AutonomousAgents.ps1` immediately after Step `4` Azure infrastructure.
+Called by `Install-ClaudIA.ps1` immediately after Step `4` Azure infrastructure.
 
 ## Current Configuration
 
 - Cluster: `adx-claudia-lab`
 - Database: `ADX-CLAUDIA`
-- Table: `CLAUDIA_AgentActivity`
-- Mapping: `CLAUDIA_AgentActivity_mapping`
+- Table: `CLAUDIA_Activity`
+- Mapping: `CLAUDIA_Activity_mapping`
 

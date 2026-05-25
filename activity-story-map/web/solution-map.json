@@ -1,9 +1,9 @@
 {
   "generatedAt": "2026-05-24T00:00:00-05:00",
   "summary": {
-    "title": "MH Demos Autonomous Agents",
+    "title": "ClaudIA",
     "tenant": "contoso.example",
-    "subscription": "VSES - MH Demos",
+    "subscription": "ClaudIA Demo Subscription",
     "resourceGroup": "rg-claudia-lab",
     "purpose": "Educational map of the Azure, Microsoft 365, Microsoft Entra, ADX, browser automation, and character dependencies behind the Activity Story Map."
   },
@@ -23,7 +23,7 @@
     },
     {
       "id": "subscription:karla",
-      "label": "Azure Subscription\nVSES - MH Demos",
+      "label": "Azure Subscription\nClaudIA Demo Subscription",
       "type": "subscription",
       "layer": "Azure",
       "details": {
@@ -35,7 +35,7 @@
       }
     },
     {
-      "id": "rg:mh-demos-agents",
+      "id": "rg:claudia-lab",
       "label": "Resource Group\nrg-claudia-lab",
       "type": "resourceGroup",
       "layer": "Azure",
@@ -117,14 +117,14 @@
     },
     {
       "id": "adx:table",
-      "label": "Table\nCLAUDIA_AgentActivity",
+      "label": "Table\nCLAUDIA_Activity",
       "type": "data",
       "layer": "Telemetry",
       "details": {
         "Description": "ADX table that stores the enriched Event payload used by the Activity Map.",
         "Core activity": "Keeps the event history used for graph construction and narrative filters.",
         "Dependencies": "ADX cluster and JSON ingestion mapping",
-        "Mapping": "CLAUDIA_AgentActivity_mapping",
+        "Mapping": "CLAUDIA_Activity_mapping",
         "Retention": "365 days",
         "Status": "Required"
       }
@@ -479,18 +479,18 @@
   ],
   "edges": [
     { "source": "tenant:contoso.example", "target": "subscription:karla", "label": "hosts Azure subscription" },
-    { "source": "subscription:karla", "target": "rg:mh-demos-agents", "label": "contains" },
-    { "source": "rg:mh-demos-agents", "target": "aa:aa-claudia-lab", "label": "PaaS resource" },
-    { "source": "rg:mh-demos-agents", "target": "kv:kv-claudia-lab", "label": "PaaS resource" },
-    { "source": "rg:mh-demos-agents", "target": "oai:oai-claudia-lab", "label": "PaaS resource" },
-    { "source": "rg:mh-demos-agents", "target": "adx:cluster", "label": "PaaS resource" },
-    { "source": "rg:mh-demos-agents", "target": "func:story", "label": "PaaS resource" },
-    { "source": "rg:mh-demos-agents", "target": "storage:web", "label": "PaaS resource" },
-    { "source": "rg:mh-demos-agents", "target": "storage:function", "label": "PaaS resource" },
-    { "source": "rg:mh-demos-agents", "target": "afd:profile", "label": "edge resource" },
-    { "source": "rg:mh-demos-agents", "target": "workbook:activity", "label": "observability" },
-    { "source": "rg:mh-demos-agents", "target": "ai:appinsights", "label": "observability" },
-    { "source": "rg:mh-demos-agents", "target": "browser:platform", "label": "browser automation layer" },
+    { "source": "subscription:karla", "target": "rg:claudia-lab", "label": "contains" },
+    { "source": "rg:claudia-lab", "target": "aa:aa-claudia-lab", "label": "PaaS resource" },
+    { "source": "rg:claudia-lab", "target": "kv:kv-claudia-lab", "label": "PaaS resource" },
+    { "source": "rg:claudia-lab", "target": "oai:oai-claudia-lab", "label": "PaaS resource" },
+    { "source": "rg:claudia-lab", "target": "adx:cluster", "label": "PaaS resource" },
+    { "source": "rg:claudia-lab", "target": "func:story", "label": "PaaS resource" },
+    { "source": "rg:claudia-lab", "target": "storage:web", "label": "PaaS resource" },
+    { "source": "rg:claudia-lab", "target": "storage:function", "label": "PaaS resource" },
+    { "source": "rg:claudia-lab", "target": "afd:profile", "label": "edge resource" },
+    { "source": "rg:claudia-lab", "target": "workbook:activity", "label": "observability" },
+    { "source": "rg:claudia-lab", "target": "ai:appinsights", "label": "observability" },
+    { "source": "rg:claudia-lab", "target": "browser:platform", "label": "browser automation layer" },
 
     { "source": "aa:aa-claudia-lab", "target": "runbook:invoke-agent", "label": "executes" },
     { "source": "runbook:invoke-agent", "target": "kv:kv-claudia-lab", "label": "reads secrets" },
@@ -582,7 +582,7 @@
     { "title": "Characters", "body": "Personas are defined in config/agents.json and enriched with Microsoft Entra user and manager relationships." },
     { "title": "Activity execution", "body": "Azure Automation executes the runbook, reads secrets from Key Vault, uses Azure OpenAI for generated content, and performs Microsoft 365 workload actions." },
     { "title": "Browser agents", "body": "Container Apps jobs use regional Playwright workspaces to emulate richer browser-based user activity." },
-    { "title": "Telemetry", "body": "Runbook and browser-agent activity is normalized and stored in Azure Data Explorer in CLAUDIA_AgentActivity." },
+    { "title": "Telemetry", "body": "Runbook and browser-agent activity is normalized and stored in Azure Data Explorer in CLAUDIA_Activity." },
     { "title": "Portal", "body": "Azure Front Door serves the static portal from Storage. The browser calls the Azure Function API, which queries ADX and tracks aggregate portal visits." }
   ]
 }

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Creates or updates the Entra ID app registration `app-dataagent`, which is used by the runbook for Graph and telemetry authentication flows.
+Creates or updates the Entra ID app registration `app-claudia-dataagent`, which is used by the runbook for Graph and telemetry authentication flows.
 
 ## Execution
 
@@ -13,7 +13,7 @@ Creates or updates the Entra ID app registration `app-dataagent`, which is used 
 Normally run by:
 
 ```powershell
-.\Install-AutonomousAgents.ps1 -Step 3 -SkipPrerequisites
+.\Install-ClaudIA.ps1 -Step 3 -SkipPrerequisites
 ```
 
 ## Parameters
@@ -22,7 +22,7 @@ Normally run by:
 
 ## Installer Integration
 
-Called by `Install-AutonomousAgents.ps1` in Step `3`.
+Called by `Install-ClaudIA.ps1` in Step `3`.
 
 ## Notes
 

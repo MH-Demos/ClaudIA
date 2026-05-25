@@ -33,8 +33,8 @@ Current ADX resources:
 
 - Cluster: `adx-claudia-lab`
 - Database: `ADX-CLAUDIA`
-- Table: `CLAUDIA_AgentActivity`
-- Mapping: `CLAUDIA_AgentActivity_mapping`
+- Table: `CLAUDIA_Activity`
+- Mapping: `CLAUDIA_Activity_mapping`
 - Retention: `365` days
 - SKU: `Dev(No SLA)_Standard_E2a_v4`
 - Query/Ingest URI: `https://adx-claudia-lab.westus.kusto.windows.net`
@@ -115,7 +115,7 @@ Impact:
 
 ## Main Installer Changes
 
-`Install-AutonomousAgents.ps1` was significantly expanded.
+`Install-ClaudIA.ps1` was significantly expanded.
 
 New parameters or capabilities:
 
@@ -131,7 +131,7 @@ Flow changes:
 - Step `0`: connection reset and prerequisite validation.
 - Step `1`: create or select users.
 - Step `2`: license assignment and MFA exclusion group.
-- Step `3`: `app-dataagent` app registration.
+- Step `3`: `app-claudia-dataagent` app registration.
 - Step `4`: Azure infrastructure and Key Vault.
 - After Step `4`: ADX provisioning through `tools/Deploy-AdxTelemetry.ps1`.
 - Step `4a`: Microsoft 365 collaboration.
@@ -374,7 +374,7 @@ DSPM for AI:
 - Current policies:
   - `DLP-CopilotStudio-PII-Monitor`
   - `DSPM-AI-Labels-Restrict`
-  - `DSPM-AI-AgentActivity-Audit`
+  - `DSPM-AI-ClaudIAActivity-Audit`
 
 IRM:
 
@@ -454,7 +454,7 @@ Recommended pending cleanup:
 
 ## Important Modified Files
 
-- `Install-AutonomousAgents.ps1`: expanded main orchestration.
+- `Install-ClaudIA.ps1`: expanded main orchestration.
 - `Manage-Costs.ps1`: cost controls.
 - `modules/Common.ps1`: configuration/definitions/secrets helper layer.
 - `modules/Deploy-AzureInfra.ps1`: Azure infrastructure, OpenAI, Automation, Key Vault, and providers.

@@ -28,7 +28,7 @@ Adds additional storyline personas from `Storyline/profiles.md` into the lab con
 
 ## Installer Integration
 
-Not called by `Install-AutonomousAgents.ps1`. The installer prints a suggestion to run it for storyline expansion.
+Not called by `Install-ClaudIA.ps1`. The installer prints a suggestion to run it for storyline expansion.
 
 ## Alternatives
 

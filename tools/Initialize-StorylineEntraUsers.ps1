@@ -83,7 +83,7 @@ function Get-StorylineProfiles {
     $current = $null
     foreach ($line in Get-Content $Path -Encoding utf8) {
         if ($line -match '^#\s+(.+?)\s*$') {
-            if ($current -and $current.displayName -ne 'MH Demos - Characters Presentations') {
+            if ($current -and $current.displayName -ne 'ClaudIA - Characters Presentations') {
                 $profiles += [pscustomobject]$current
             }
             $current = [ordered]@{
@@ -102,7 +102,7 @@ function Get-StorylineProfiles {
         if ($line -match '^\-\s+\*\*Department:\*\*\s+(.+?)\s*$') { $current.department = $Matches[1].Trim(); continue }
         if ($line -match '^\-\s+\*\*Licenses:\*\*\s+(.+?)\s*$') { $current.licenses = $Matches[1].Trim(); continue }
     }
-    if ($current -and $current.displayName -ne 'MH Demos - Characters Presentations') {
+    if ($current -and $current.displayName -ne 'ClaudIA - Characters Presentations') {
         $profiles += [pscustomobject]$current
     }
 

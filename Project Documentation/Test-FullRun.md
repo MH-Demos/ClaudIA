@@ -25,7 +25,7 @@ Starts Azure Automation jobs for multiple configured agents, optionally in paral
 
 ## Installer Integration
 
-Not called by `Install-AutonomousAgents.ps1`, but suggested at the end of install.
+Not called by `Install-ClaudIA.ps1`, but suggested at the end of install.
 
 ## Alternatives
 

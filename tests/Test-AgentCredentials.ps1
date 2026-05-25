@@ -1,10 +1,10 @@
 <#
 .SYNOPSIS
-    Validate app-dataagent client secret and one agent password from Key Vault.
+    Validate app-claudia-dataagent client secret and one agent password from Key Vault.
 .DESCRIPTION
     Reads the existing project config/installation definitions, resolves the selected
     agent UPN and Key Vault secret names, then validates:
-      - app-dataagent client secret can obtain a client_credentials token
+      - app-claudia-dataagent client secret can obtain a client_credentials token
       - agent password can obtain a delegated ROPC Graph token
 
     By default it never prints secret values. Use -RevealSecretValues only in a lab.
@@ -76,9 +76,9 @@ $keyVaultName = Get-KeyVaultName -Config $config
 $appId = $null
 if ($definitions -and $definitions.steps.'3'.appId) { $appId = $definitions.steps.'3'.appId }
 if (-not $appId) {
-    $appId = az ad app list --display-name 'app-dataagent' --query "[0].appId" -o tsv 2>$null
+    $appId = az ad app list --display-name 'app-claudia-dataagent' --query "[0].appId" -o tsv 2>$null
 }
-if (-not $appId) { throw "Could not resolve app-dataagent appId." }
+if (-not $appId) { throw "Could not resolve app-claudia-dataagent appId." }
 
 Write-Host "=== Agent Credential Validation ===" -ForegroundColor Cyan
 Write-Host "  Tenant:       $tenantId"

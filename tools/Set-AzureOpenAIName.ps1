@@ -58,6 +58,6 @@ Write-Host "  Old: $oldName"
 Write-Host "  New: $Name"
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
-Write-Host "  .\Install-AutonomousAgents.ps1 -UseExistingUsers -UseInstallationDefinitions -Step 4"
-Write-Host "  .\Install-AutonomousAgents.ps1 -UseExistingUsers -UseInstallationDefinitions -Step 5"
+Write-Host "  .\Install-ClaudIA.ps1 -UseExistingUsers -UseInstallationDefinitions -Step 4"
+Write-Host "  .\Install-ClaudIA.ps1 -UseExistingUsers -UseInstallationDefinitions -Step 5"
 Write-Host "  .\tests\Test-AzureOpenAI.ps1"

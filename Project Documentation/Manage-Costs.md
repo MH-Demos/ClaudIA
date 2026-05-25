@@ -21,7 +21,7 @@ Cost utility for checking Azure spend, estimating monthly cost, pausing/resuming
 
 ## Installer Integration
 
-Not called by `Install-AutonomousAgents.ps1`. It is an operational script used after deployment.
+Not called by `Install-ClaudIA.ps1`. It is an operational script used after deployment.
 
 ## Alternatives
 

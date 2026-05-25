@@ -6,7 +6,7 @@ Generated from the current PowerShell scripts in the repository. It focuses on s
 
 ## Quick Index
 
-- [`Install-AutonomousAgents.ps1`](#install-autonomousagents-ps1)
+- [`Install-ClaudIA.ps1`](#install-claudia-ps1)
 - [`Manage-Costs.ps1`](#manage-costs-ps1)
 - [`prerequisites/Test-Prerequisites.ps1`](#prerequisites-test-prerequisites-ps1)
 - [`tests/Test-AgentCredentials.ps1`](#tests-test-agentcredentials-ps1)
@@ -45,7 +45,7 @@ Generated from the current PowerShell scripts in the repository. It focuses on s
 - [`tools/Test-InstallationDefinitionsConsistency.ps1`](#tools-test-installationdefinitionsconsistency-ps1)
 - [`tools/Update-ActivityStoryMapCharacterProfiles.ps1`](#tools-update-activitystorymapcharacterprofiles-ps1)
 
-## `Install-AutonomousAgents.ps1`
+## `Install-ClaudIA.ps1`
 
 **Purpose:** ClaudIA - Interactive Deployment Wizard
 
@@ -54,16 +54,16 @@ Generated from the current PowerShell scripts in the repository. It focuses on s
 **Base command:**
 
 ```powershell
-.\Install-AutonomousAgents.ps1
+.\Install-ClaudIA.ps1
 ```
 
 **Examples from script help:**
 
 ```powershell
-.\Install-AutonomousAgents.ps1
-.\Install-AutonomousAgents.ps1 -UseExistingUsers
-.\Install-AutonomousAgents.ps1 -Step 4 -SkipPrerequisites
-.\Install-AutonomousAgents.ps1 -DryRun
+.\Install-ClaudIA.ps1
+.\Install-ClaudIA.ps1 -UseExistingUsers
+.\Install-ClaudIA.ps1 -Step 4 -SkipPrerequisites
+.\Install-ClaudIA.ps1 -DryRun
 === WIZARD FLOW (9 steps, all idempotent) ===
 Step 0: PREREQUISITES
 Runs Test-Prerequisites.ps1 (13 checks: tools, providers, licenses, permissions).
@@ -75,10 +75,10 @@ Mode 'prompt': Asks which mode at runtime.
 -> Customize via -UseExistingUsers switch or features.userMode in agents.json.
 Step 2: LICENSES + MFA EXCLUSION
 Assigns M365 E5 (all agents) + Copilot (Wave 2) licenses via Graph API.
-Creates grp-agent-mfa-exclusion security group and adds all agents.
+Creates grp-claudia-agent-mfa-exclusion security group and adds all agents.
 -> MANUAL: Exclude this group from your Conditional Access MFA policy.
 Step 3: REGISTER ENTRA APP
-Creates app-dataagent with 11 delegated scopes for ROPC.
+Creates app-claudia-dataagent with 11 delegated scopes for ROPC.
 -> Calls modules/Register-AgentApp.ps1.
 Step 4: DEPLOY AZURE INFRASTRUCTURE
 Creates: Resource Group, Azure OpenAI (S0), Automation (Basic), and Key Vault access.
@@ -105,7 +105,7 @@ Step 6: CONFIGURE PURVIEW (DLP + IRM)
 Creates 3 DSPM DLP policies. Prints IRM manual steps.
 -> Calls modules/Configure-DLP.ps1.
 Step 7: DEPLOY WORKBOOK
-Deploys Agent Activity Monitor Azure workbook (8 KQL sections).
+Deploys ClaudIA Activity Monitor Azure workbook (8 KQL sections).
 -> Calls modules/Deploy-Workbook.ps1.
 Step 8: DEPLOY ACTIVITY STORY MAP
 Deploys an Azure Storage static website and Azure Function backed by ADX.
@@ -128,7 +128,7 @@ Deploys an Azure Storage static website and Azure Function backed by ADX.
 
 ## `Manage-Costs.ps1`
 
-**Purpose:** Cost management utilities for the Autonomous Agents lab.
+**Purpose:** Cost management utilities for the ClaudIA lab.
 
 **Details:** Check current Azure spend, estimate monthly costs, pause/resume Fabric, adjust schedules, and get optimization recommendations.
 
@@ -193,9 +193,9 @@ if (-not $result.AllPassed) { $result.Results | Where-Object { -not $_.Passed } 
 
 ## `tests/Test-AgentCredentials.ps1`
 
-**Purpose:** Validate app-dataagent client secret and one agent password from Key Vault.
+**Purpose:** Validate app-claudia-dataagent client secret and one agent password from Key Vault.
 
-**Details:** Reads the existing project config/installation definitions, resolves the selected agent UPN and Key Vault secret names, then validates: - app-dataagent client secret can obtain a client_credentials token - agent password can obtain a delegated ROPC Graph token By default it never prints secret values. Use -RevealSecretValues only in a lab.
+**Details:** Reads the existing project config/installation definitions, resolves the selected agent UPN and Key Vault secret names, then validates: - app-claudia-dataagent client secret can obtain a client_credentials token - agent password can obtain a delegated ROPC Graph token By default it never prints secret values. Use -RevealSecretValues only in a lab.
 
 **Base command:**
 
@@ -420,7 +420,7 @@ if (-not $result.AllPassed) { $result.Results | Where-Object { -not $_.Passed } 
 ```powershell
 .\tools\Deploy-BrowserAgentInfra.ps1
 
-.\tools\Deploy-BrowserAgentInfra.ps1 -Location eastus -WorkspaceName pw-aa-claudia-lab
+.\tools\Deploy-BrowserAgentInfra.ps1 -Location eastus -WorkspaceName pw-claudia-lab
 
 ```
 
@@ -432,7 +432,7 @@ if (-not $result.AllPassed) { $result.Results | Where-Object { -not $_.Passed } 
 | `-SubscriptionId` | `string` | No | `''` | Azure subscription ID used for Azure CLI/ARM operations. |
 | `-ResourceGroup` | `string` | No | `''` | Azure resource group containing or receiving the lab resources. |
 | `-Location` | `string` | No | `'eastus'` | Azure region for resources created by the script. |
-| `-WorkspaceName` | `string` | No | `'pw-aa-claudia-lab'` | Azure Playwright Workspace name. |
+| `-WorkspaceName` | `string` | No | `'pw-claudia-lab'` | Azure Playwright Workspace name. |
 | `-AssignCurrentUserRole` | `switch` | No |  | Script-specific option. See the script help and examples before use. |
 
 ## `tools/Deploy-BrowserAgentScheduledJobs.ps1`
@@ -512,7 +512,7 @@ if (-not $result.AllPassed) { $result.Results | Where-Object { -not $_.Passed } 
 
 **Purpose:** Enables Microsoft Graph metered API billing for the lab app registration.
 
-**Details:** Creates or reuses a Microsoft.GraphServices/accounts resource associated with the configured app-dataagent application registration. This is required for metered APIs such as SharePoint/OneDrive assignSensitivityLabel.
+**Details:** Creates or reuses a Microsoft.GraphServices/accounts resource associated with the configured app-claudia-dataagent application registration. This is required for metered APIs such as SharePoint/OneDrive assignSensitivityLabel.
 
 **Base command:**
 
@@ -534,7 +534,7 @@ if (-not $result.AllPassed) { $result.Results | Where-Object { -not $_.Passed } 
 | `-SubscriptionId` | `string` | Yes |  | Azure subscription ID used for Azure CLI/ARM operations. |
 | `-ResourceGroup` | `string` | Yes |  | Azure resource group containing or receiving the lab resources. |
 | `-Location` | `string` | No | `'eastus'` | Azure region for resources created by the script. |
-| `-GraphResourceName` | `string` | No | `'graph-metered-app-dataagent'` | Script-specific option. See the script help and examples before use. |
+| `-GraphResourceName` | `string` | No | `'graph-metered-app-claudia-dataagent'` | Script-specific option. See the script help and examples before use. |
 | `-ConfigPath` | `string` | No | `(Join-Path $PSScriptRoot '..\config\agents.json')` | Path to the main configuration file, usually `config/agents.json`. |
 | `-InstallationDefinitionsPath` | `string` | No | `(Join-Path $PSScriptRoot '..\config\Installation_definitions.json')` | Path to installation definitions JSON used for resumable setup state. |
 | `-AppId` | `string` | No | `''` | Script-specific option. See the script help and examples before use. |

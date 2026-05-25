@@ -22,7 +22,7 @@ Runbook parameters:
 
 ## Installer Integration
 
-Not directly executed by `Install-AutonomousAgents.ps1`; it is uploaded and published by `modules/Deploy-Runbook.ps1` in Step `5`.
+Not directly executed by `Install-ClaudIA.ps1`; it is uploaded and published by `modules/Deploy-Runbook.ps1` in Step `5`.
 
 ## Configuration Sources
 

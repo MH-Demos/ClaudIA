@@ -14,7 +14,7 @@ The script now also attempts to apply the lab policies to all users and enable t
 Normally run by:
 
 ```powershell
-.\Install-AutonomousAgents.ps1 -Step 6 -SkipPrerequisites -UseInstallationDefinitions
+.\Install-ClaudIA.ps1 -Step 6 -SkipPrerequisites -UseInstallationDefinitions
 ```
 
 ## Parameters
@@ -24,7 +24,7 @@ Normally run by:
 
 ## Installer Integration
 
-Called by `Install-AutonomousAgents.ps1` in Step `6c`.
+Called by `Install-ClaudIA.ps1` in Step `6c`.
 
 ## Policies
 

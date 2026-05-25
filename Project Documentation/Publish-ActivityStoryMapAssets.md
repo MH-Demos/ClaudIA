@@ -18,7 +18,7 @@ Copies character and service images into the Activity Story Map web asset folder
 
 ## Installer Integration
 
-Not called by `Install-AutonomousAgents.ps1`. Use after changing images or manifests.
+Not called by `Install-ClaudIA.ps1`. Use after changing images or manifests.
 
 ## Inputs
 

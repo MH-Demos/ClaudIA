@@ -25,10 +25,10 @@
     Skip user creation and instead pick existing Entra ID users interactively.
     Equivalent to setting features.userMode = "existing" in agents.json.
 .EXAMPLE
-    .\Install-AutonomousAgents.ps1
-    .\Install-AutonomousAgents.ps1 -UseExistingUsers
-    .\Install-AutonomousAgents.ps1 -Step 4 -SkipPrerequisites
-    .\Install-AutonomousAgents.ps1 -DryRun
+    .\Install-ClaudIA.ps1
+    .\Install-ClaudIA.ps1 -UseExistingUsers
+    .\Install-ClaudIA.ps1 -Step 4 -SkipPrerequisites
+    .\Install-ClaudIA.ps1 -DryRun
 
     === WIZARD FLOW (9 steps, all idempotent) ===
 
@@ -44,11 +44,11 @@
 
     Step 2: LICENSES + MFA EXCLUSION
       Assigns M365 E5 (all agents) + Copilot (Wave 2) licenses via Graph API.
-      Creates grp-agent-mfa-exclusion security group and adds all agents.
+      Creates grp-claudia-agent-mfa-exclusion security group and adds all agents.
       -> MANUAL: Exclude this group from your Conditional Access MFA policy.
 
     Step 3: REGISTER ENTRA APP
-      Creates app-dataagent with 11 delegated scopes for ROPC.
+      Creates app-claudia-dataagent with 11 delegated scopes for ROPC.
       -> Calls modules/Register-AgentApp.ps1.
 
     Step 4: DEPLOY AZURE INFRASTRUCTURE
@@ -82,7 +82,7 @@
       -> Calls modules/Configure-DLP.ps1.
 
     Step 7: DEPLOY WORKBOOK
-      Deploys Agent Activity Monitor Azure workbook (8 KQL sections).
+      Deploys ClaudIA Activity Monitor Azure workbook (8 KQL sections).
       -> Calls modules/Deploy-Workbook.ps1.
 
     Step 8: DEPLOY ACTIVITY STORY MAP
@@ -154,7 +154,7 @@ function Format-AAAgentWaveSummary {
 $logRoot = Join-Path $PSScriptRoot 'logs'
 if (-not (Test-Path $logRoot)) { New-Item -ItemType Directory -Path $logRoot | Out-Null }
 $runStamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-$runLogPath = Join-Path $logRoot "Install-AutonomousAgents-$runStamp.log"
+$runLogPath = Join-Path $logRoot "Install-ClaudIA-$runStamp.log"
 $installationDefinitionsPath = Join-Path $PSScriptRoot 'config\Installation_definitions.json'
 Start-Transcript -Path $runLogPath -Append | Out-Null
 Write-Host "  Log file: $runLogPath" -ForegroundColor Gray
@@ -165,7 +165,7 @@ Write-Host "  Log file: $runLogPath" -ForegroundColor Gray
 try { Clear-Host } catch {}
 Write-Host ""
 Write-Host "================================================================" -ForegroundColor Red
-Write-Host "  PURVIEW AUTONOMOUS AGENTS - Lab Deployment Wizard" -ForegroundColor Cyan
+Write-Host "  ClaudIA - Lab Deployment Wizard" -ForegroundColor Cyan
 Write-Host "================================================================" -ForegroundColor Red
 Write-Host ""
 Write-Host "  WARNING: This tool deploys autonomous agents that:" -ForegroundColor Yellow
@@ -348,6 +348,26 @@ function New-AADefaultKeyVaultName {
     return "kv$base$suffix"
 }
 
+function Invoke-AAAzureCliLogin {
+    param([string]$TenantHint)
+
+    if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
+        Write-Host "    [WARN] Azure CLI is not installed or not in PATH." -ForegroundColor Yellow
+        Write-Host "           Install it first: winget install Microsoft.AzureCLI" -ForegroundColor DarkYellow
+        return
+    }
+
+    $tenantArg = @()
+    if ($TenantHint -and $TenantHint -notmatch 'REPLACE_WITH') {
+        $tenantArg = @('--tenant', $TenantHint)
+    }
+
+    Write-Host ""
+    Write-Host "    Azure CLI needs a fresh sign-in for the target demo tenant." -ForegroundColor Cyan
+    Write-Host "    A browser or device-code login will open. Use the tenant admin account for this lab." -ForegroundColor Gray
+    & az login @tenantArg --use-device-code | Out-Null
+}
+
 function Select-AASubscription {
     param([string]$Current)
 
@@ -358,7 +378,20 @@ function Select-AASubscription {
     }
 
     if ($accounts.Count -eq 0) {
-        Write-Host "    [WARN] Azure CLI has no visible subscriptions. Run az login first." -ForegroundColor Yellow
+        Write-Host "    [WARN] Azure CLI has no visible subscriptions." -ForegroundColor Yellow
+        $loginChoice = if ($Auto) { 'Y' } else { Read-Host "    Sign in to Azure CLI now? (Y/n)" }
+        if ($loginChoice -notin @('n','N','no','NO')) {
+            Invoke-AAAzureCliLogin -TenantHint $config.tenant.domain
+            $accountsJson = az account list --query "[].{name:name,id:id,isDefault:isDefault,tenantId:tenantId}" -o json 2>$null
+            if ($accountsJson) {
+                try { $accounts = @($accountsJson | ConvertFrom-Json) } catch { $accounts = @() }
+            }
+        }
+    }
+
+    if ($accounts.Count -eq 0) {
+        Write-Host "    [WARN] Azure CLI still has no visible subscriptions." -ForegroundColor Yellow
+        Write-Host "           You can paste the subscription ID, but Step 4 will fail unless this account can access it." -ForegroundColor DarkYellow
         return Read-ConfigValue -Label "Azure subscription ID" -Current $Current -Hint "e.g. 84000b2d-4410-4243-bf7e-f813b43bc2bd"
     }
 
@@ -469,6 +502,8 @@ if (($needsSetup -or $script:ForceConfigurationPrompt) -and -not $DryRun -and -n
     # --- INFRASTRUCTURE ---
     Write-Host ""
     Write-Host "  --- Azure Resources (press Enter to keep defaults) ---" -ForegroundColor White
+    Write-Host "  A new Azure subscription does not need an existing resource group." -ForegroundColor Gray
+    Write-Host "  If the resource group below does not exist, ClaudIA will create it in Step 4." -ForegroundColor Gray
 
     $infraFields = @(
         @{ Key='resourceGroup';        Label='Resource group';        Default=$config.infrastructure.resourceGroup },
@@ -688,12 +723,12 @@ if (-not $DryRun -and $domain -notmatch 'REPLACE_WITH') {
     }
 
     # -- Check Entra app registration ---
-    $appExists = az ad app list --display-name 'app-dataagent' --query "[0].appId" -o tsv 2>$null
+    $appExists = az ad app list --display-name 'app-claudia-dataagent' --query "[0].appId" -o tsv 2>$null
     if ($appExists) {
-        Write-Host "  [OK]  Entra app: app-dataagent ($appExists)" -ForegroundColor Green
+        Write-Host "  [OK]  Entra app: app-claudia-dataagent ($appExists)" -ForegroundColor Green
         $probeResults['app'] = 'exists'
     } else {
-        Write-Host "  [NEW] Entra app: app-dataagent (will be created at Step 3)" -ForegroundColor DarkYellow
+        Write-Host "  [NEW] Entra app: app-claudia-dataagent (will be created at Step 3)" -ForegroundColor DarkYellow
         $probeResults['app'] = 'new'
     }
 
@@ -1053,7 +1088,7 @@ if (Test-AAInstallStep '2') {
 
         # Create/reuse MFA exclusion group
         Write-Host "  Resolving MFA exclusion group..." -NoNewline
-        $grpBody = @{displayName='grp-agent-mfa-exclusion'; description='Autonomous agents excluded from MFA for ROPC'; mailEnabled=$false; mailNickname='grp-agent-mfa'; securityEnabled=$true} | ConvertTo-Json
+        $grpBody = @{displayName='grp-claudia-agent-mfa-exclusion'; description='ClaudIA agents excluded from MFA for ROPC'; mailEnabled=$false; mailNickname='grp-claudia-mfa'; securityEnabled=$true} | ConvertTo-Json
         $savedMfaGroupId = $null
         if ($savedDefinitions -and $savedDefinitions.steps -and $savedDefinitions.steps.'2' -and $savedDefinitions.steps.'2'.mfaExclusionGroupId) {
             $savedMfaGroupId = $savedDefinitions.steps.'2'.mfaExclusionGroupId
@@ -1069,7 +1104,7 @@ if (Test-AAInstallStep '2') {
             }
         }
         if (-not $grp) {
-            $existingGroups = @((Invoke-RestMethod -Method GET -Uri "https://graph.microsoft.com/v1.0/groups?`$filter=displayName eq 'grp-agent-mfa-exclusion'&`$select=id,displayName" -Headers $gh).value)
+            $existingGroups = @((Invoke-RestMethod -Method GET -Uri "https://graph.microsoft.com/v1.0/groups?`$filter=displayName eq 'grp-claudia-agent-mfa-exclusion'&`$select=id,displayName" -Headers $gh).value)
             if ($existingGroups.Count -gt 0) {
                 $grp = $existingGroups[0]
                 Write-Host " [EXISTS] $($grp.id)" -ForegroundColor DarkYellow
@@ -1100,7 +1135,7 @@ if (Test-AAInstallStep '2') {
         activity = 'Licenses and MFA exclusion'
         completedAt = (Get-Date).ToString('o')
         dryRun = [bool]$DryRun
-        mfaExclusionGroup = 'grp-agent-mfa-exclusion'
+        mfaExclusionGroup = 'grp-claudia-agent-mfa-exclusion'
         mfaExclusionGroupId = if ($grp) { $grp.id } else { $null }
         selectedLicenseSku = if ($bestSku) { $bestSku.skuPartNumber } else { $null }
         copilotSku = if ($copilotSku) { $copilotSku[0].skuPartNumber } else { $null }
@@ -1110,7 +1145,7 @@ if (Test-AAInstallStep '2') {
     Write-Host ""
     Write-Host "  MANUAL STEP REQUIRED:" -ForegroundColor Yellow
     Write-Host "    1. Go to Entra admin center > Conditional Access" -ForegroundColor Yellow
-    Write-Host "    2. Edit your MFA policy > Exclude > Groups > Add 'grp-agent-mfa-exclusion'" -ForegroundColor Yellow
+    Write-Host "    2. Edit your MFA policy > Exclude > Groups > Add 'grp-claudia-agent-mfa-exclusion'" -ForegroundColor Yellow
     Write-Host "    3. Save the policy" -ForegroundColor Yellow
     Write-Host ""
     if (-not $Auto -and -not $DryRun) {
@@ -1125,19 +1160,19 @@ if (Test-AAInstallStep '2') {
 # STEP 3: REGISTER ENTRA APP
 # ============================================================================
 if (Test-AAInstallStep '3') {
-    Write-Host "=== Step 3: Registering Entra app (app-dataagent) ===" -ForegroundColor Cyan
+    Write-Host "=== Step 3: Registering Entra app (app-claudia-dataagent) ===" -ForegroundColor Cyan
 
     if (-not $DryRun) {
         & (Join-Path $PSScriptRoot 'modules\Register-AgentApp.ps1') -Domain $domain
     } else {
         Write-Host "  [DRY-RUN] Would register app with delegated scopes for ROPC" -ForegroundColor DarkYellow
     }
-    $appDataAgentId = if (-not $DryRun) { az ad app list --display-name 'app-dataagent' --query "[0].appId" -o tsv 2>$null } else { $null }
+    $appDataAgentId = if (-not $DryRun) { az ad app list --display-name 'app-claudia-dataagent' --query "[0].appId" -o tsv 2>$null } else { $null }
     Set-AAInstallationStepDefinition -Path $installationDefinitionsPath -Step '3' -Value ([ordered]@{
-        activity = 'Register app-dataagent'
+        activity = 'Register app-claudia-dataagent'
         completedAt = (Get-Date).ToString('o')
         dryRun = [bool]$DryRun
-        appName = 'app-dataagent'
+        appName = 'app-claudia-dataagent'
         appId = $appDataAgentId
     })
     Write-Host ""
@@ -1379,7 +1414,7 @@ if (Test-AAInstallStep '6b') {
         completedAt = (Get-Date).ToString('o')
         dryRun = [bool]$DryRun
         requested = if ($deployDspm) { $deployDspm -ne 'n' } else { -not $DryRun }
-        policies = @('DLP-CopilotStudio-PII-Monitor','DSPM-AI-Labels-Restrict','DSPM-AI-AgentActivity-Audit')
+        policies = @('DLP-CopilotStudio-PII-Monitor','DSPM-AI-Labels-Restrict','DSPM-AI-ClaudIAActivity-Audit')
         agentUpns = @($agents | ForEach-Object { Get-AgentUpn -Agent $_ -Domain $domain })
     })
     Write-Host ""
@@ -1410,7 +1445,7 @@ if (Test-AAInstallStep '6c') {
         dryRun = [bool]$DryRun
         requested = if ($deployIrm) { $deployIrm -ne 'n' } else { -not $DryRun }
         policies = @('IRM-DataLeaks-Lab','IRM-RiskyAI-Lab')
-        priorityUserGroup = 'Autonomous Agents'
+        priorityUserGroup = 'ClaudIA Agents'
         agentUpns = @($agents | ForEach-Object { Get-AgentUpn -Agent $_ -Domain $domain })
     })
     Write-Host ""
@@ -1420,7 +1455,7 @@ if (Test-AAInstallStep '6c') {
 # STEP 7: DEPLOY WORKBOOK (optional)
 # ============================================================================
 if (Test-AAInstallStep '7') {
-    Write-Host "=== Step 7: Agent Activity Monitor Workbook ===" -ForegroundColor Cyan
+    Write-Host "=== Step 7: ClaudIA Activity Monitor Workbook ===" -ForegroundColor Cyan
     Write-Host "  Deploys Azure Monitor workbook backed by ADX telemetry. Optional." -ForegroundColor Gray
 
     $deployWb = 'y'
@@ -1435,11 +1470,11 @@ if (Test-AAInstallStep '7') {
         Write-Host "  [DRY-RUN] Would deploy Azure Monitor workbook with KQL queries" -ForegroundColor DarkYellow
     }
     Set-AAInstallationStepDefinition -Path $installationDefinitionsPath -Step '7' -Value ([ordered]@{
-        activity = 'Agent Activity Monitor workbook'
+        activity = 'ClaudIA Activity Monitor workbook'
         completedAt = (Get-Date).ToString('o')
         dryRun = [bool]$DryRun
         requested = if ($deployWb) { $deployWb -ne 'n' } else { -not $DryRun }
-        workbookName = 'Agent Activity Monitor'
+        workbookName = 'ClaudIA Activity Monitor'
         telemetryBackend = 'ADX'
     })
     Write-Host ""
@@ -1490,7 +1525,7 @@ $expectedResults = @(
     @{Step="0"; Activity="Prerequisite validation"; Runs=((Test-AAInstallStep '0') -and -not $SkipPrerequisites); SkipComment="Skipped by parameter or targeted step selection."},
     @{Step="1"; Activity="Create or select agent users"; Runs=(Test-AAInstallStep '1'); SkipComment="Skipped by targeted step selection."},
     @{Step="2"; Activity="Licenses and MFA exclusion"; Runs=(Test-AAInstallStep '2'); SkipComment="Skipped by targeted step selection."},
-    @{Step="3"; Activity="Register app-dataagent"; Runs=(Test-AAInstallStep '3'); SkipComment="Skipped by targeted step selection."},
+    @{Step="3"; Activity="Register app-claudia-dataagent"; Runs=(Test-AAInstallStep '3'); SkipComment="Skipped by targeted step selection."},
     @{Step="4"; Activity="Azure infrastructure and Key Vault"; Runs=(Test-AAInstallStep '4'); SkipComment="Skipped by targeted step selection."},
     @{Step="4a"; Activity="M365 collaboration"; Runs=(Test-AAInstallStep '4a'); SkipComment="Skipped by targeted step selection."},
     @{Step="4b"; Activity="Sensitivity labels"; Runs=(Test-AAInstallStep '4b'); SkipComment="Skipped by targeted step selection."},
@@ -1499,7 +1534,7 @@ $expectedResults = @(
     @{Step="6a"; Activity="Core DLP policies"; Runs=(Test-AAInstallStep '6a'); SkipComment="Skipped by targeted step selection."},
     @{Step="6b"; Activity="DSPM for AI policies"; Runs=(Test-AAInstallStep '6b'); SkipComment="Skipped by targeted step selection."},
     @{Step="6c"; Activity="Insider Risk Management"; Runs=(Test-AAInstallStep '6c'); SkipComment="Skipped by targeted step selection."},
-    @{Step="7"; Activity="Agent Activity Monitor workbook"; Runs=(Test-AAInstallStep '7'); SkipComment="Skipped by targeted step selection."},
+    @{Step="7"; Activity="ClaudIA Activity Monitor workbook"; Runs=(Test-AAInstallStep '7'); SkipComment="Skipped by targeted step selection."},
     @{Step="8"; Activity="Activity Story Map"; Runs=(Test-AAInstallStep '8'); SkipComment="Skipped by targeted step selection."}
 )
 foreach ($item in $expectedResults) {
@@ -1546,7 +1581,7 @@ Write-Host ""
 
 if ((-not $script:RunAllSteps) -and $Step -lt 5) {
     Write-Host "  Next required step:" -ForegroundColor Cyan
-    Write-Host "    .\Install-AutonomousAgents.ps1 -UseExistingUsers -UseInstallationDefinitions -Step 5" -ForegroundColor White
+    Write-Host "    .\Install-ClaudIA.ps1 -UseExistingUsers -UseInstallationDefinitions -Step 5" -ForegroundColor White
     Write-Host ""
     Write-Host "  Tests are available after Step 5 deploys the runbook and stores Key Vault secrets." -ForegroundColor Gray
 } else {
@@ -1562,12 +1597,12 @@ if ((-not $script:RunAllSteps) -and $Step -lt 5) {
 
 Write-Host ""
 Write-Host "  Optional components (deploy only if still needed):" -ForegroundColor Yellow
-Write-Host "    .\Install-AutonomousAgents.ps1 -UseInstallationDefinitions -Step 6 -SkipPrerequisites  # DLP/DSPM/IRM" -ForegroundColor Gray
+Write-Host "    .\Install-ClaudIA.ps1 -UseInstallationDefinitions -Step 6 -SkipPrerequisites  # DLP/DSPM/IRM" -ForegroundColor Gray
 if ($config.adx -and $config.adx.enabled -eq $true) {
-    Write-Host "    .\Install-AutonomousAgents.ps1 -UseInstallationDefinitions -Step 7 -SkipPrerequisites  # ADX workbook" -ForegroundColor Gray
-    Write-Host "    .\Install-AutonomousAgents.ps1 -UseInstallationDefinitions -Step 8 -SkipPrerequisites  # Activity Story Map" -ForegroundColor Gray
+    Write-Host "    .\Install-ClaudIA.ps1 -UseInstallationDefinitions -Step 7 -SkipPrerequisites  # ADX workbook" -ForegroundColor Gray
+    Write-Host "    .\Install-ClaudIA.ps1 -UseInstallationDefinitions -Step 8 -SkipPrerequisites  # Activity Story Map" -ForegroundColor Gray
 } else {
-    Write-Host "    .\Install-AutonomousAgents.ps1 -UseInstallationDefinitions -Step 7 -SkipPrerequisites  # Workbook" -ForegroundColor Gray
+    Write-Host "    .\Install-ClaudIA.ps1 -UseInstallationDefinitions -Step 7 -SkipPrerequisites  # Workbook" -ForegroundColor Gray
 }
 
 if ($config.activityStoryMap -and $config.activityStoryMap.launchUrl) {
@@ -1580,7 +1615,7 @@ if ($script:RunAllSteps -or $Step -eq 6) {
     Write-Host ""
     Write-Host "  Manual portal steps, only if not already completed:" -ForegroundColor Yellow
     Write-Host "    1. IRM > Settings > Policy indicators > Enable 'Generative AI apps'" -ForegroundColor Yellow
-    Write-Host "    2. IRM > Priority User Groups > Create 'Autonomous Agents' with agent UPNs" -ForegroundColor Yellow
+    Write-Host "    2. IRM > Priority User Groups > Create 'ClaudIA Agents' with agent UPNs" -ForegroundColor Yellow
     Write-Host "    3. DSPM for AI > Get started (if not already enabled)" -ForegroundColor Yellow
 }
 Write-Host ""

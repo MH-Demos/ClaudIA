@@ -3,9 +3,9 @@
 ## Authentication Flow
 
 ```
-Install-AutonomousAgents.ps1
+Install-ClaudIA.ps1
     |
-    +-- Creates Entra App Registration (app-dataagent)
+    +-- Creates Entra App Registration (app-claudia-dataagent)
     |     - ROPC enabled (Allow public client flows)
     |     - Delegated permissions (NOT application)
     |     - Admin consent granted
@@ -18,7 +18,7 @@ Install-AutonomousAgents.ps1
           1. Automation MI gets shared key from LA workspace
           2. For each agent: ROPC token with explicit delegated scopes
           3. Agent actions (file upload, email) under agent's own identity
-          4. Activity logged to AgentActivity_CL via Data Collector API
+          4. Activity logged to ClaudIAActivity_CL via Data Collector API
 ```
 
 ## Why ROPC (and why it's risky)
@@ -65,7 +65,7 @@ Install-AutonomousAgents.ps1
 
 | Role | Scope | Usage |
 | --- | --- | --- |
-| Cognitive Services OpenAI User | oai-agents | Call GPT-4o-mini |
+| Cognitive Services OpenAI User | oai-claudia-lab | Call GPT-4o-mini |
 | Log Analytics Contributor | la-agents | Get shared key for Data Collector API |
 
 ### Automation MI (Graph App Permissions — for remediation runbook)
@@ -99,7 +99,7 @@ The package deploys two components to enforce the no-admin constraint:
 **2. Remediation Runbook: `Remediate-AgentPrivilegeEscalation`**
 - Azure Automation runbook using Managed Identity (Graph: `Group.ReadWrite.All`, `User.Read.All`)
 - Scans all MFA exclusion group members for directory role assignments
-- **Auto-removes** any privileged agent from `grp-agent-mfa-exclusion`
+- **Auto-removes** any privileged agent from `grp-claudia-agent-mfa-exclusion`
 - Result: the agent falls back under Conditional Access MFA enforcement immediately
 - Can be triggered manually or linked to Sentinel automation rule
 

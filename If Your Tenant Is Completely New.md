@@ -19,6 +19,23 @@ Recommended validation model:
 3. Store generated secrets in Azure Key Vault or Automation encrypted variables.
 4. Keep `.env`, `BrowserAgents/.auth`, logs, and generated output outside Git.
 
+## Source Folder
+
+Use the GitHub repository when available:
+
+```powershell
+git clone https://github.com/MH-Demos/ClaudIA.git C:\MyDev\ClaudIA
+cd C:\MyDev\ClaudIA
+```
+
+If the repository is private or not accessible, use the local synchronized copy:
+
+```powershell
+cd C:\MyDev\ClaudIA
+```
+
+Do not modify or run validation from an older functional folder such as `purview-autonomous-agents-master\M365-Autonomous-IA` unless you are intentionally testing that older implementation.
+
 ## New Tenant Decision Checklist
 
 | Decision | Why it matters |
@@ -48,6 +65,8 @@ Run:
 az account show --query "{tenant:tenantId, subscription:id, name:name}" -o table
 .\prerequisites\Test-Prerequisites.ps1 -RegisterProviders
 ```
+
+If the Azure subscription is brand new, it may not contain any resource groups. That is expected. ClaudIA asks for a resource group name and creates it during Azure infrastructure deployment. If your environment already has an approved resource group, enter that existing name instead.
 
 ## 2. Security Defaults And Conditional Access
 
@@ -97,13 +116,13 @@ Before deployment, decide:
 Run:
 
 ```powershell
-.\Install-AutonomousAgents.ps1 -DryRun
+.\Install-ClaudIA.ps1 -DryRun
 ```
 
 Then run the full installer when the dry run looks correct:
 
 ```powershell
-.\Install-AutonomousAgents.ps1
+.\Install-ClaudIA.ps1
 ```
 
 ## 5. Upload Persona Pictures
@@ -184,7 +203,7 @@ Before declaring the environment ready:
 ```powershell
 .\tools\Test-PublicRepoSafety.ps1
 .\prerequisites\Test-Prerequisites.ps1
-.\Install-AutonomousAgents.ps1 -DryRun
+.\Install-ClaudIA.ps1 -DryRun
 .\tests\Test-SingleAgent.ps1 -Agent priya.sharma
 ```
 
@@ -198,4 +217,3 @@ Then validate in the portals:
 | Exchange and SharePoint | Mailboxes, OneDrive, SharePoint sites, and Teams resources are provisioned. |
 | Azure Portal | Key Vault, Automation, OpenAI, Log Analytics, Sentinel, ADX, Function App, and Storage are deployed as configured. |
 | Activity Portal | Images, branding, personas, and activity data load correctly if the portal is enabled. |
-

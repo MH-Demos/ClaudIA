@@ -58,8 +58,8 @@ Important: a real Foundry call produces real Azure model invocation and ADX tele
 ## Deployment
 
 ```powershell
-.\Install-AutonomousAgents.ps1 -Step 4 -SkipPrerequisites
-.\Install-AutonomousAgents.ps1 -Step 5 -SkipPrerequisites
+.\Install-ClaudIA.ps1 -Step 4 -SkipPrerequisites
+.\Install-ClaudIA.ps1 -Step 5 -SkipPrerequisites
 ```
 
 Step 4 provisions the additional Teams/SharePoint sites and stores `AgentCollaborationSites`.
@@ -68,7 +68,7 @@ Step 5 republishes the runbook and stores the updated agent and thread configura
 ## ADX Validation Query
 
 ```kusto
-CLAUDIA_AgentActivity
+CLAUDIA_Activity
 | where Event.ActivityType == "external_ai"
 | project TimeGenerated, AgentName=tostring(Event.AgentName), Department=tostring(Event.Department), Service=tostring(Event.Service), RuntimeMode=tostring(Event.RuntimeMode), FoundryDeployment=tostring(Event.FoundryDeployment), Detail=tostring(Event.Detail), Prompt=tostring(Event.PromptContent), Response=tostring(Event.ResponseContent)
 | order by TimeGenerated desc

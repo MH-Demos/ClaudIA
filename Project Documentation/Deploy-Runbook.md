@@ -13,7 +13,7 @@ Stores agent and app secrets in Key Vault, writes non-secret Automation variable
 Normally run by:
 
 ```powershell
-.\Install-AutonomousAgents.ps1 -Step 5 -SkipPrerequisites -UseInstallationDefinitions
+.\Install-ClaudIA.ps1 -Step 5 -SkipPrerequisites -UseInstallationDefinitions
 ```
 
 ## Parameters
@@ -23,7 +23,7 @@ Normally run by:
 
 ## Installer Integration
 
-Called by `Install-AutonomousAgents.ps1` in Step `5`.
+Called by `Install-ClaudIA.ps1` in Step `5`.
 
 ## Variables Created
 

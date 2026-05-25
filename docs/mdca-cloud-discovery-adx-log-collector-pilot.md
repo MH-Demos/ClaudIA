@@ -37,7 +37,7 @@ Referencias oficiales:
 
 ## Hipotesis
 
-Si exportamos eventos de `CLAUDIA_AgentActivity` desde ADX hacia un CSV o syslog
+Si exportamos eventos de `CLAUDIA_Activity` desde ADX hacia un CSV o syslog
 con campos de trafico web suficientes, MDCA deberia poder:
 
 - Parsear el archivo o stream mediante un custom parser.
@@ -63,7 +63,7 @@ onboarded.
 BrowserAgents / Runbooks
         |
         v
-ADX: CLAUDIA_AgentActivity
+ADX: CLAUDIA_Activity
         |
         v
 KQL export: MDCA discovery CSV
@@ -103,13 +103,13 @@ Campos propuestos:
 
 ## KQL De Export Inicial
 
-Este query proyecta la tabla actual `CLAUDIA_AgentActivity`, que guarda el evento
+Este query proyecta la tabla actual `CLAUDIA_Activity`, que guarda el evento
 normalizado dentro de la columna dinamica `Event`.
 
 ```kusto
 let defaultSourceIp = "10.50.10.25";
 let defaultUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36 Edg/125.0";
-CLAUDIA_AgentActivity
+CLAUDIA_Activity
 | where TimeGenerated > ago(24h)
 | extend e = todynamic(Event)
 | extend
@@ -260,7 +260,7 @@ Scripts agregados:
 | Script | Proposito |
 | --- | --- |
 | `tools\Test-MdcaCloudDiscoveryApi.ps1` | Valida token, URL y endpoints read-only/upload-init de MDCA. |
-| `tools\Export-MdcaDiscoveryLogFromAdx.ps1` | Exporta eventos de `CLAUDIA_AgentActivity` como log CEF sintetico. |
+| `tools\Export-MdcaDiscoveryLogFromAdx.ps1` | Exporta eventos de `CLAUDIA_Activity` como log CEF sintetico. |
 | `tools\Upload-MdcaCloudDiscoveryLog.ps1` | Ejecuta el flujo API de MDCA: initiate, PUT y finalize. |
 
 Archivo temporal de credenciales esperado:

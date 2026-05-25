@@ -14,7 +14,7 @@ Creates or connects to Microsoft 365 collaboration assets for the lab, including
 Normally run by:
 
 ```powershell
-.\Install-AutonomousAgents.ps1 -Step 4 -SkipPrerequisites -UseInstallationDefinitions
+.\Install-ClaudIA.ps1 -Step 4 -SkipPrerequisites -UseInstallationDefinitions
 ```
 
 ## Parameters
@@ -24,7 +24,7 @@ Normally run by:
 
 ## Installer Integration
 
-Called by `Install-AutonomousAgents.ps1` in Step `4a`.
+Called by `Install-ClaudIA.ps1` in Step `4a`.
 
 ## Current Configuration
 

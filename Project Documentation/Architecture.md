@@ -2,9 +2,9 @@
 
 ## High-Level Flow
 
-1. `Install-AutonomousAgents.ps1` loads `config/agents.json`.
+1. `Install-ClaudIA.ps1` loads `config/agents.json`.
 2. If available, `config/Installation_definitions.json` is merged as the effective installation state.
-3. The installer validates prerequisites, creates or selects agent users, assigns licenses, creates an MFA exclusion group, registers `app-dataagent`, and deploys Azure resources.
+3. The installer validates prerequisites, creates or selects agent users, assigns licenses, creates an MFA exclusion group, registers `app-claudia-dataagent`, and deploys Azure resources.
 4. Azure Automation runs `modules/Invoke-AgentRunbook.ps1` on schedule or on demand.
 5. Each agent authenticates through ROPC, generates synthetic business content with Azure OpenAI, writes files/messages/emails through Microsoft Graph, applies sensitivity labels, and pushes telemetry to ADX.
 6. Purview policies, IRM policies, ADX workbook, and Activity Story Map consume the generated activity for demo and validation.
@@ -29,10 +29,10 @@
 - ADX cluster: `adx-claudia-lab`
 - ADX SKU: `Dev(No SLA)_Standard_E2a_v4`
 - ADX database: `ADX-CLAUDIA`
-- ADX table: `CLAUDIA_AgentActivity`
-- ADX mapping: `CLAUDIA_AgentActivity_mapping`
+- ADX table: `CLAUDIA_Activity`
+- ADX mapping: `CLAUDIA_Activity_mapping`
 - ADX retention: `365` days
-- Workbook: `Agent Activity Monitor`
+- Workbook: `ClaudIA Activity Monitor`
 - Activity Story Map Storage URL: `https://stclaudiamap.z22.web.core.windows.net/`
 - Activity Story Map API: `https://func-claudia-story.azurewebsites.net`
 
@@ -42,8 +42,8 @@
 - Departments configured: `HR`, `Finance`, `Legal`, `Engineering`, `Sales`
 - Sensitivity label policy: `CorpLab-Labels-Policy`
 - Labels: `General`, `Confidential`, `Conf-HR`, `Conf-Finance`, `Highly Confidential`
-- MFA exclusion group: `grp-agent-mfa-exclusion`
-- App registration: `app-dataagent`
+- MFA exclusion group: `grp-claudia-agent-mfa-exclusion`
+- App registration: `app-claudia-dataagent`
 - Runbook: `Invoke-AgentRunbook`
 
 ## Purview DLP and IRM Configuration
@@ -61,7 +61,7 @@ DSPM for AI policies are created in Step `6b`:
 
 - `DLP-CopilotStudio-PII-Monitor`
 - `DSPM-AI-Labels-Restrict`
-- `DSPM-AI-AgentActivity-Audit`
+- `DSPM-AI-ClaudIAActivity-Audit`
 
 IRM policies are created in Step `6c`:
 
@@ -85,7 +85,7 @@ IRM policies are created in Step `6c`:
   - `agent-client-secret`
   - One secret per agent, for example `ana-rodriguez`, `carlos-delgado`, `sofia-lopez`.
 - Local logs:
-  - `logs/Install-AutonomousAgents-<timestamp>.log`
+  - `logs/Install-ClaudIA-<timestamp>.log`
 - Story Map static assets:
   - `activity-story-map/web`
   - `activity-story-map/web/images`

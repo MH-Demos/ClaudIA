@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Validates local and cloud prerequisites for installing M365 Autonomous IA.
+    Validates local and cloud prerequisites for installing ClaudIA.
 .DESCRIPTION
     This preflight script is intended for a clean workstation or jump box that
     only has the project scripts and support files. It validates the host tools,
@@ -222,7 +222,7 @@ function Write-Section {
 
 Write-Host ""
 Write-Host "================================================================" -ForegroundColor Cyan
-Write-Host "  M365 AUTONOMOUS IA - Prerequisite Check" -ForegroundColor Cyan
+Write-Host "  ClaudIA - Prerequisite Check" -ForegroundColor Cyan
 Write-Host "================================================================" -ForegroundColor Cyan
 Write-Host "  Project root: $ProjectRoot" -ForegroundColor DarkGray
 Write-Host ""
@@ -238,7 +238,7 @@ Invoke-Check 'Project Files' 'config\agents.json is readable' {
 } "Create or restore config\agents.json from the project package."
 
 $requiredPaths = @(
-    'Install-AutonomousAgents.ps1',
+    'Install-ClaudIA.ps1',
     'Manage-Costs.ps1',
     'modules\Deploy-AzureInfra.ps1',
     'modules\Deploy-Runbook.ps1',
@@ -516,7 +516,7 @@ if ($allPassed) {
     Write-Host "  READY ($($passed.Count) passed, $($warnings.Count) warning(s), $($skipped.Count) skipped)" -ForegroundColor Green
 } else {
     Write-Host "  NOT READY ($($failed.Count) failed, $($warnings.Count) warning(s), $($skipped.Count) skipped)" -ForegroundColor Red
-    Write-Host "  Fix failed checks before running Install-AutonomousAgents.ps1." -ForegroundColor Yellow
+    Write-Host "  Fix failed checks before running Install-ClaudIA.ps1." -ForegroundColor Yellow
 }
 Write-Host "================================================================" -ForegroundColor Cyan
 Write-Host ""

@@ -26,7 +26,7 @@ End-to-end orchestrator for a clean ADX-backed lab installation. It updates conf
 
 ## Installer Integration
 
-Not called by `Install-AutonomousAgents.ps1`; this tool calls the installer and related tools as a higher-level orchestration path.
+Not called by `Install-ClaudIA.ps1`; this tool calls the installer and related tools as a higher-level orchestration path.
 
 ## Alternatives
 

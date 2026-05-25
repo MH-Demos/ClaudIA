@@ -742,7 +742,7 @@ function Get-ROPCToken {
     $ClientSecret = ConvertTo-AAPlainString $ClientSecret
 
     # Password grant still produces a delegated user token. .default consumes the
-    # tenant-wide admin consent already granted to app-dataagent and avoids per-user
+    # tenant-wide admin consent already granted to app-claudia-dataagent and avoids per-user
     # consent prompts that can happen with dynamic short scope names.
     $scopeAttempts = @(
         'https://graph.microsoft.com/.default',

@@ -109,7 +109,7 @@ Emma Leroy (eleroy) generates 30 data engineering file types across 8 formats: C
 2. Ensure Emma Leroy (eleroy) has a license with SharePoint access (E3/E5/E7)
 3. Re-run Step 5 to update the runbook config:
    ```powershell
-   .\Install-AutonomousAgents.ps1 -Step 5 -SkipPrerequisites
+   .\Install-ClaudIA.ps1 -Step 5 -SkipPrerequisites
    ```
 4. On the next scheduled run, Emma will generate 7-13 files/day across 30 templates (8 formats)
 
@@ -119,7 +119,7 @@ The wizard now automates this via **Step 4c** (Fabric Provisioning):
 
 ```powershell
 # The wizard handles everything:
-.\Install-AutonomousAgents.ps1 -Step 4
+.\Install-ClaudIA.ps1 -Step 4
 # At Step 4c, choose [C]reate or [E]xisting
 ```
 
@@ -130,9 +130,9 @@ The wizard now automates this via **Step 4c** (Fabric Provisioning):
 3. Add `storage.azure.com/user_impersonation` scope to the Entra app + admin consent
 4. Store workspace/lakehouse IDs as Automation variables:
    ```powershell
-   az automation variable create --automation-account-name aa-agents --resource-group <RG> \
+   az automation variable create --automation-account-name aa-claudia-lab --resource-group <RG> \
        --name AgentFabricWorkspaceId --value '"<workspace-id>"'
-   az automation variable create --automation-account-name aa-agents --resource-group <RG> \
+   az automation variable create --automation-account-name aa-claudia-lab --resource-group <RG> \
        --name AgentFabricLakehouseId --value '"<lakehouse-id>"'
    ```
 5. Re-deploy the runbook (Step 5) -- it will auto-detect OneLake variables and dual-write

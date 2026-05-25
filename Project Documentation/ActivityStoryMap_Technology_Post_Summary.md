@@ -115,7 +115,7 @@ These services are visualized in the Activity Map as part of the story of what u
 
 Azure Data Explorer is the main telemetry store for the solution.
 
-Every relevant agent activity is normalized and stored in ADX, especially inside the `CLAUDIA_AgentActivity` table. The Activity Story Map queries ADX live through an Azure Function API.
+Every relevant agent activity is normalized and stored in ADX, especially inside the `CLAUDIA_Activity` table. The Activity Story Map queries ADX live through an Azure Function API.
 
 Key role in the project:
 
@@ -128,7 +128,7 @@ Current ADX components:
 
 - Cluster: `adx-claudia-lab`
 - Database: `ADX-CLAUDIA`
-- Table: `CLAUDIA_AgentActivity`
+- Table: `CLAUDIA_Activity`
 - Retention: `365 days`
 
 ### ADX Workbook

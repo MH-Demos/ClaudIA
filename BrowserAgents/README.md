@@ -35,7 +35,7 @@ node scripts/run-scheduled.js
 Current workspace:
 
 - Resource group: `rg-claudia-lab`
-- Workspace: `pw-aa-claudia-lab`
+- Workspace: `pw-claudia-lab`
 - Location: `eastus`
 - Workspace id: `44444444-4444-4444-4444-444444444444`
 - Service URL:

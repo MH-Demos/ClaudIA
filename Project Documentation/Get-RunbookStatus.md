@@ -26,5 +26,5 @@ Shows recent Azure Automation `Invoke-AgentRunbook` jobs, with optional stream/o
 
 ## Installer Integration
 
-Not called by `Install-AutonomousAgents.ps1`. Use it after Step `5` and for ongoing operations.
+Not called by `Install-ClaudIA.ps1`. Use it after Step `5` and for ongoing operations.
 

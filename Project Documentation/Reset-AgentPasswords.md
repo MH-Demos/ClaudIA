@@ -24,5 +24,5 @@ Resets one or more configured agent passwords, stores them in Key Vault, and opt
 
 ## Installer Integration
 
-Not called by `Install-AutonomousAgents.ps1`. Use when credentials drift or after adding storyline users.
+Not called by `Install-ClaudIA.ps1`. Use when credentials drift or after adding storyline users.
 

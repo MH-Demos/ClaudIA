@@ -19,7 +19,7 @@ Runs a smoke test against the configured Azure OpenAI deployment.
 
 ## Installer Integration
 
-Not called by `Install-AutonomousAgents.ps1`. Use after Step `4` or after changing Azure OpenAI configuration.
+Not called by `Install-ClaudIA.ps1`. Use after Step `4` or after changing Azure OpenAI configuration.
 
 ## Alternatives
 

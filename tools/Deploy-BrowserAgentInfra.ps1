@@ -8,7 +8,7 @@
 .EXAMPLE
     .\tools\Deploy-BrowserAgentInfra.ps1
 .EXAMPLE
-    .\tools\Deploy-BrowserAgentInfra.ps1 -Location eastus -WorkspaceName pw-aa-claudia-lab
+    .\tools\Deploy-BrowserAgentInfra.ps1 -Location eastus -WorkspaceName pw-claudia-lab
 #>
 [CmdletBinding()]
 param(
@@ -16,7 +16,7 @@ param(
     [string]$SubscriptionId = '',
     [string]$ResourceGroup = '',
     [string]$Location = 'eastus',
-    [string]$WorkspaceName = 'pw-aa-claudia-lab',
+    [string]$WorkspaceName = 'pw-claudia-lab',
     [switch]$AssignCurrentUserRole
 )
 

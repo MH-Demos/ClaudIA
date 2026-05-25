@@ -12,7 +12,7 @@
 
 **Fix (v2.1+)**: Re-run the wizard — it detects existing users and offers to auto-reset passwords:
 ```powershell
-.\Install-AutonomousAgents.ps1 -SkipPrerequisites
+.\Install-ClaudIA.ps1 -SkipPrerequisites
 # When prompted "Reset all agent passwords now? (Y/n)" → Y
 # The wizard resets all 10 passwords and stores them in Automation variables automatically
 ```
@@ -32,7 +32,7 @@ Invoke-RestMethod -Method PATCH -Uri "https://graph.microsoft.com/v1.0/users/amo
 **Cause**: Agent is not in the MFA exclusion group, or the CA policy exclusion was not saved.
 
 **Fix**:
-1. Verify agent is member of `grp-agent-mfa-exclusion`
+1. Verify agent is member of `grp-claudia-agent-mfa-exclusion`
 2. Entra admin center > Conditional Access > Edit MFA policy > Exclude > Verify the group is listed
 3. Save the policy
 
@@ -45,11 +45,11 @@ Invoke-RestMethod -Method PATCH -Uri "https://graph.microsoft.com/v1.0/users/amo
 .\modules\Deploy-Runbook.ps1 -Config $config -AgentPassword $pwd
 ```
 
-### AgentActivity_CL table empty in Log Analytics
+### ClaudIAActivity_CL table empty in Log Analytics
 
 **Cause 1**: Automation MI doesn't have `Log Analytics Contributor` role.
 ```powershell
-$aaObjId = az automation account show --name aa-agents -g rg-agents-lab --query identity.principalId -o tsv
+$aaObjId = az automation account show --name aa-claudia-lab -g rg-claudia-lab --query identity.principalId -o tsv
 az role assignment create --role "Log Analytics Contributor" --assignee-object-id $aaObjId `
     --assignee-principal-type ServicePrincipal --scope "/subscriptions/.../workspaces/la-agents"
 ```
@@ -115,7 +115,7 @@ az resource invoke-action --action resume --resource-type "Microsoft.Fabric/capa
 **Fix**:
 1. Check the Sentinel incident `Agent-Privilege-Escalation` for details
 2. Remove any admin role from the agent account
-3. Re-add the agent to `grp-agent-mfa-exclusion` (only after role is removed)
+3. Re-add the agent to `grp-claudia-agent-mfa-exclusion` (only after role is removed)
 4. Verify: the agent must have ZERO directory roles before re-adding to the exclusion group
 
 ### Key Vault Forbidden errors
@@ -133,8 +133,8 @@ az resource invoke-action --action resume --resource-type "Microsoft.Fabric/capa
 
 **Fix**:
 ```powershell
-$aaObjId = az automation account show --name aa-agents -g rg-agents-lab --query identity.principalId -o tsv
-$oaiId = az cognitiveservices account show -n oai-agents -g rg-agents-lab --query id -o tsv
+$aaObjId = az automation account show --name aa-claudia-lab -g rg-claudia-lab --query identity.principalId -o tsv
+$oaiId = az cognitiveservices account show -n oai-claudia-lab -g rg-claudia-lab --query id -o tsv
 az role assignment create --role "Cognitive Services OpenAI User" --assignee-object-id $aaObjId `
     --assignee-principal-type ServicePrincipal --scope $oaiId
 ```
@@ -155,15 +155,15 @@ az role assignment create --role "Cognitive Services OpenAI User" --assignee-obj
 **Fix**: Upgrade to Basic tier:
 ```powershell
 $body = @{properties=@{sku=@{name='Basic'}}} | ConvertTo-Json -Depth 3
-Invoke-RestMethod -Method PATCH -Uri ".../automationAccounts/aa-agents?api-version=2023-11-01" `
+Invoke-RestMethod -Method PATCH -Uri ".../automationAccounts/aa-claudia-lab?api-version=2023-11-01" `
     -Headers $h -Body $body
 ```
 
 ### Sentinel rules show no incidents
 
-**Cause**: Custom rules reference `AzureDiagnostics` but agent data is in `AgentActivity_CL`.
+**Cause**: Custom rules reference `AzureDiagnostics` but agent data is in `ClaudIAActivity_CL`.
 
-**Fix**: Update Sentinel rules to query `AgentActivity_CL` instead. The packaged Sentinel rules are already configured correctly.
+**Fix**: Update Sentinel rules to query `ClaudIAActivity_CL` instead. The packaged Sentinel rules are already configured correctly.
 
 ## Logs and Diagnostics
 
@@ -171,7 +171,7 @@ Invoke-RestMethod -Method PATCH -Uri ".../automationAccounts/aa-agents?api-versi
 | --- | --- | --- |
 | Automation job output | Azure Portal > Automation > Jobs > Output | Real-time agent activity |
 | Automation job streams | Azure Portal > Automation > Jobs > Errors/Warnings | ROPC failures, API errors |
-| AgentActivity_CL | LA > Logs > `AgentActivity_CL` | Agent UPN, activity type, prompt, response |
+| ClaudIAActivity_CL | LA > Logs > `ClaudIAActivity_CL` | Agent UPN, activity type, prompt, response |
 | AzureDiagnostics | LA > Logs > `AzureDiagnostics` | OpenAI API metadata (no user field) |
 | Activity Explorer | Purview Portal > Activity Explorer | DLP matches, label activity (shows "guest" for AI) |
 | Sentinel Incidents | Azure Portal > Sentinel > Incidents | Anomalous agent behavior alerts |
@@ -221,7 +221,7 @@ Invoke-RestMethod -Method PATCH -Uri ".../automationAccounts/aa-agents?api-versi
 Connect-IPPSSession
 # Authenticate in the browser popup
 # Then run the wizard — it will detect the existing session automatically
-.\Install-AutonomousAgents.ps1 -SkipPrerequisites
+.\Install-ClaudIA.ps1 -SkipPrerequisites
 ```
 
 **v2.1 behavior**: `Configure-DLP.ps1` now detects existing IPPS sessions via `Get-DlpCompliancePolicy`. If a session is already active, it shows `[OK] (existing session)` instantly instead of trying to reconnect.

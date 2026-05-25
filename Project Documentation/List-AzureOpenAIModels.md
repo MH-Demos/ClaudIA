@@ -17,7 +17,7 @@ Lists Azure OpenAI models and quota for the configured Azure OpenAI account and 
 
 ## Installer Integration
 
-Not called by `Install-AutonomousAgents.ps1`.
+Not called by `Install-ClaudIA.ps1`.
 
 ## Alternatives
 

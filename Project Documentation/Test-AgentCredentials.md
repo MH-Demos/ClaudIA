@@ -24,7 +24,7 @@ Validates agent credentials, Key Vault secrets, app consent, and token acquisiti
 
 ## Installer Integration
 
-Not called by `Install-AutonomousAgents.ps1`. Use it after Step `5` or when agent login/runbook auth fails.
+Not called by `Install-ClaudIA.ps1`. Use it after Step `5` or when agent login/runbook auth fails.
 
 ## Alternatives
 

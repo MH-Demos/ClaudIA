@@ -3,7 +3,7 @@
     Enables Microsoft Graph metered API billing for the lab app registration.
 .DESCRIPTION
     Creates or reuses a Microsoft.GraphServices/accounts resource associated
-    with the configured app-dataagent application registration. This is required
+    with the configured app-claudia-dataagent application registration. This is required
     for metered APIs such as SharePoint/OneDrive assignSensitivityLabel.
 .EXAMPLE
     .\tools\Enable-GraphMeteredBilling.ps1 -SubscriptionId ab97362c-5d5f-49a5-bf87-c8480e54e062 -ResourceGroup MH-Agents-PAYG
@@ -17,7 +17,7 @@ param(
     [string]$ResourceGroup,
 
     [string]$Location = 'eastus',
-    [string]$GraphResourceName = 'graph-metered-app-dataagent',
+    [string]$GraphResourceName = 'graph-metered-app-claudia-dataagent',
     [string]$ConfigPath = (Join-Path $PSScriptRoot '..\config\agents.json'),
     [string]$InstallationDefinitionsPath = (Join-Path $PSScriptRoot '..\config\Installation_definitions.json'),
     [string]$AppId = ''
@@ -70,7 +70,7 @@ if ([string]::IsNullOrWhiteSpace($AppId)) {
     elseif ($config.application -and $config.application.clientId) { $AppId = [string]$config.application.clientId }
 }
 if ([string]::IsNullOrWhiteSpace($AppId)) {
-    throw 'Could not resolve app-dataagent AppId from config. Pass -AppId explicitly.'
+    throw 'Could not resolve app-claudia-dataagent AppId from config. Pass -AppId explicitly.'
 }
 
 Write-Host "=== Enable Graph Metered Billing ===" -ForegroundColor Cyan

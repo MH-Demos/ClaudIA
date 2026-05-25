@@ -41,9 +41,9 @@ Workspaces to create browser activity from different Azure regions.
 
 | Browser region key | Workspace | Azure region | Job prefix | Agents |
 | --- | --- | --- | --- | --- |
-| `americas` | `pw-aa-claudia-lab` | `eastus` | `browseragents` | `carlos.delgado,david.chen,diego.martinez,emily.johnson,james.wilson,laura.gomez,miguel.santos,sofia.lopez` |
-| `europe` | `pw-aa-claudia-lab-eu` | `westeurope` | `browseragents-eu` | `alexander.meyer,ana.rodriguez,marcus.olsson,devon.reyes` |
-| `asia` | `pw-aa-claudia-lab-asia` | `eastasia` | `browseragents-asia` | `priya.sharma` |
+| `americas` | `pw-claudia-lab` | `eastus` | `browseragents` | `carlos.delgado,david.chen,diego.martinez,emily.johnson,james.wilson,laura.gomez,miguel.santos,sofia.lopez` |
+| `europe` | `pw-claudia-lab-eu` | `westeurope` | `browseragents-eu` | `alexander.meyer,ana.rodriguez,marcus.olsson,devon.reyes` |
+| `asia` | `pw-claudia-lab-asia` | `eastasia` | `browseragents-asia` | `priya.sharma` |
 
 Brazil and UK are not currently listed for `Microsoft.LoadTestService/playwrightWorkspaces`
 in this subscription. The closest supported split is Americas in East US,

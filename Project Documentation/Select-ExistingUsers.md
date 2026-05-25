@@ -14,7 +14,7 @@ Interactive picker used to select existing Entra ID users as autonomous agents i
 Normally run through:
 
 ```powershell
-.\Install-AutonomousAgents.ps1 -UseExistingUsers
+.\Install-ClaudIA.ps1 -UseExistingUsers
 ```
 
 ## Parameters
@@ -24,7 +24,7 @@ Normally run through:
 
 ## Installer Integration
 
-Called by `Install-AutonomousAgents.ps1` during preselection and Step `1` when existing-user mode is selected.
+Called by `Install-ClaudIA.ps1` during preselection and Step `1` when existing-user mode is selected.
 
 ## Output
 

@@ -20,9 +20,9 @@ activities that can be produced through web apps.
 
 | Browser region key | Workspace | Azure region | Workspace ID | Personas |
 | --- | --- | --- | --- | --- |
-| `americas` | `pw-aa-claudia-lab` | `eastus` | `44444444-4444-4444-4444-444444444444` | Carlos, David, Diego, Emily, James, Laura, Miguel, Sofia |
-| `europe` | `pw-aa-claudia-lab-eu` | `westeurope` | `912454ad-12ba-4bd3-809a-dac74dbf1c0f` | Alexander, Ana, Marcus, Devon |
-| `asia` | `pw-aa-claudia-lab-asia` | `eastasia` | `e051aa82-548a-4b13-bdf2-397b5389b802` | Priya |
+| `americas` | `pw-claudia-lab` | `eastus` | `44444444-4444-4444-4444-444444444444` | Carlos, David, Diego, Emily, James, Laura, Miguel, Sofia |
+| `europe` | `pw-claudia-lab-eu` | `westeurope` | `912454ad-12ba-4bd3-809a-dac74dbf1c0f` | Alexander, Ana, Marcus, Devon |
+| `asia` | `pw-claudia-lab-asia` | `eastasia` | `e051aa82-548a-4b13-bdf2-397b5389b802` | Priya |
 
 Azure currently reports Playwright Workspaces in `East US`, `West US 3`,
 `West Europe`, and `East Asia` for this subscription. Brazil and UK are not
@@ -223,7 +223,7 @@ Query recent BrowserAgent events with:
 .\tools\Get-BrowserAgentTelemetry.ps1 -Agent priya.sharma -SinceMinutes 60
 ```
 
-BrowserAgent ADX ingestion reads the app-dataagent client secret from Key Vault
+BrowserAgent ADX ingestion reads the app-claudia-dataagent client secret from Key Vault
 and uses the ADX configuration in `config\agents.json`. For hosted runners that
 do not have Azure CLI available, inject the secret as:
 

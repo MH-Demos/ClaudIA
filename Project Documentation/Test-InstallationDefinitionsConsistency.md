@@ -17,7 +17,7 @@ Validates that `config/Installation_definitions.json` and `config/agents.json` a
 
 ## Installer Integration
 
-Not called by `Install-AutonomousAgents.ps1`. Use before publishing runbook code or troubleshooting ADX/Automation mismatches.
+Not called by `Install-ClaudIA.ps1`. Use before publishing runbook code or troubleshooting ADX/Automation mismatches.
 
 ## Checks
 

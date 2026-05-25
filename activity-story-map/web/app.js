@@ -557,7 +557,7 @@ function buildJourneyGraph() {
     },
     {
       id: "service:subscription",
-      label: "Azure Subscription\nVSES - MH Demos",
+      label: "Azure Subscription\nClaudIA Demo Subscription",
       type: "subscription",
       layer: "Foundation",
       details: {
@@ -572,7 +572,7 @@ function buildJourneyGraph() {
       type: "resourceGroup",
       layer: "Foundation",
       details: {
-        "Solution component": "rg:mh-demos-agents",
+        "Solution component": "rg:claudia-lab",
         Purpose: "Groups the solution resources for deployment and operations",
         "Why it matters": "Shows how related Azure services are organized, monitored, and cleaned up."
       }
@@ -917,7 +917,7 @@ function buildJourneyGraph() {
     },
     {
       id: "service:adx-table",
-      label: "ADX Table\nCLAUDIA_AgentActivity",
+      label: "ADX Table\nCLAUDIA_Activity",
       type: "data",
       serviceKey: "azure",
       image: journeyNodeImage("service", "azure", "Azure"),
@@ -1144,7 +1144,7 @@ function hideComponentCatalog() {
 const componentPermissionHints = {
   "tenant:contoso.example": "Global Reader or appropriate tenant admin role to inspect; workload admin roles to configure services.",
   "subscription:karla": "Reader to inspect; Contributor or Owner/User Access Administrator to deploy and assign Azure RBAC.",
-  "rg:mh-demos-agents": "Reader for visibility; Contributor for resource lifecycle; User Access Administrator for role assignments.",
+  "rg:claudia-lab": "Reader for visibility; Contributor for resource lifecycle; User Access Administrator for role assignments.",
   "aa:aa-claudia-lab": "Automation Contributor to manage; managed identity needs scoped access to Key Vault, ADX, and target services.",
   "runbook:invoke-agent": "Automation Runbook Operator to run; Automation Contributor to edit; managed identity permissions for downstream services.",
   "kv:kv-claudia-lab": "Key Vault Secrets User for runtime reads; Key Vault Administrator or Secrets Officer to manage secrets.",
@@ -1201,7 +1201,7 @@ function selectedComponentNodeIds(payload) {
   if (scope !== "m365") {
     ids.add("tenant:contoso.example");
     ids.add("subscription:karla");
-    ids.add("rg:mh-demos-agents");
+    ids.add("rg:claudia-lab");
   }
   return ids;
 }
