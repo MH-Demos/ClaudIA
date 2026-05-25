@@ -59,8 +59,13 @@ if (-not $aaCheck) {
     }
 }
 
-# Graph token
-$gt = az account get-access-token --resource https://graph.microsoft.com --query accessToken -o tsv 2>$null
+# Graph token. When Azure and Microsoft 365 use separate admin accounts,
+# Install-ClaudIA passes the M365 admin token through CLAUDIA_GRAPH_TOKEN.
+$gt = if ($env:CLAUDIA_GRAPH_TOKEN) {
+    $env:CLAUDIA_GRAPH_TOKEN
+} else {
+    az account get-access-token --resource https://graph.microsoft.com --query accessToken -o tsv 2>$null
+}
 $gh = @{Authorization = "Bearer $gt"; 'Content-Type' = 'application/json'}
 
 # ARM token for AA variables

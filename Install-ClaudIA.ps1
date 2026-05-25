@@ -578,6 +578,86 @@ function Test-AACurrentUserHasTenantAdminRole {
     }
 }
 
+function Invoke-AAM365Az {
+    param([Parameter(Mandatory)][string[]]$Arguments)
+
+    if (-not $script:AAM365AzConfigDir) { return $null }
+    $oldConfigDir = $env:AZURE_CONFIG_DIR
+    $env:AZURE_CONFIG_DIR = $script:AAM365AzConfigDir
+    try {
+        & az @Arguments
+    } finally {
+        if ($null -ne $oldConfigDir) { $env:AZURE_CONFIG_DIR = $oldConfigDir }
+        else { Remove-Item Env:\AZURE_CONFIG_DIR -ErrorAction SilentlyContinue }
+    }
+}
+
+function Get-AAGraphAccessToken {
+    if ($script:AAM365AzConfigDir) {
+        $token = Invoke-AAM365Az -Arguments @('account','get-access-token','--resource','https://graph.microsoft.com','--query','accessToken','-o','tsv') 2>$null
+        if ($token) { return [string]$token }
+    }
+    return (az account get-access-token --resource https://graph.microsoft.com --query accessToken -o tsv 2>$null)
+}
+
+function Test-AAM365AdminProfileHasTenantAdminRole {
+    $token = Get-AAGraphAccessToken
+    if (-not $token) { return $false }
+    $headers = @{ Authorization = "Bearer $token" }
+    try {
+        $roles = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/me/memberOf' -Headers $headers -ErrorAction Stop).value
+        $adminRoles = @($roles | Where-Object {
+            $_.'@odata.type' -eq '#microsoft.graph.directoryRole' -and
+            $_.displayName -match 'Global Administrator|Privileged Role Administrator'
+        })
+        return ($adminRoles.Count -gt 0)
+    } catch {
+        return $false
+    }
+}
+
+function Initialize-AAM365AdminSignIn {
+    param([string]$TenantHint)
+
+    if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
+        Write-Host "    [WARN] Azure CLI is not installed or not in PATH." -ForegroundColor Yellow
+        return $false
+    }
+
+    $script:AAM365AzConfigDir = Join-Path $PSScriptRoot '.claudia\az-m365-admin'
+    if (-not (Test-Path -LiteralPath $script:AAM365AzConfigDir)) {
+        New-Item -ItemType Directory -Path $script:AAM365AzConfigDir -Force | Out-Null
+    }
+
+    Write-Host ""
+    Write-Host "    Starting separate Microsoft 365 admin sign-in..." -ForegroundColor Cyan
+    Write-Host "    This uses an isolated Azure CLI profile under .claudia, so your Azure subscription sign-in is preserved." -ForegroundColor Gray
+    $oldConfigDir = $env:AZURE_CONFIG_DIR
+    $env:AZURE_CONFIG_DIR = $script:AAM365AzConfigDir
+    try {
+        az logout 2>$null | Out-Null
+        & az login --tenant $TenantHint --allow-no-subscriptions --use-device-code | Out-Null
+    } finally {
+        if ($null -ne $oldConfigDir) { $env:AZURE_CONFIG_DIR = $oldConfigDir }
+        else { Remove-Item Env:\AZURE_CONFIG_DIR -ErrorAction SilentlyContinue }
+    }
+
+    $acctJson = Invoke-AAM365Az -Arguments @('account','show','-o','json') 2>$null
+    $acct = $null
+    if ($acctJson) { try { $acct = $acctJson | ConvertFrom-Json } catch {} }
+    if ($acct -and $acct.user) {
+        Write-Host "    [OK] Microsoft 365 admin profile signed in as: $($acct.user.name)" -ForegroundColor Green
+    }
+
+    if (Test-AAM365AdminProfileHasTenantAdminRole) {
+        Write-Host "    [OK] This account has a tenant admin role for Microsoft 365/Entra setup." -ForegroundColor Green
+        return $true
+    }
+
+    Write-Host "    [WARN] The separate Microsoft 365 account still does not appear to have Global Administrator or Privileged Role Administrator." -ForegroundColor Yellow
+    return $false
+}
+
 function Select-AASubscription {
     param([string]$Current)
 
@@ -707,6 +787,10 @@ if (($needsSetup -or $script:ForceConfigurationPrompt) -and -not $DryRun -and -n
         } else {
             Write-Host "    [WARN] This account does not appear to have Global Administrator or Privileged Role Administrator." -ForegroundColor Yellow
             Write-Host "           Step 1 user creation, Step 2 license assignment, and Step 3 app consent will be blocked until a tenant admin account is used or this account is granted the role." -ForegroundColor DarkYellow
+            $separateM365 = if ($Auto) { 'N' } else { Read-Host "    Sign in with a separate Microsoft 365/Entra admin account now? (Y/n)" }
+            if ($separateM365 -notin @('n','N','no','NO')) {
+                Initialize-AAM365AdminSignIn -TenantHint $config.tenant.domain | Out-Null
+            }
         }
     }
 
@@ -1064,6 +1148,7 @@ if ((Test-AAInstallStep '0') -and -not $SkipPrerequisites) {
     Write-Host "=== Step 0: Checking prerequisites ===" -ForegroundColor Cyan
     $prereqArgs = @('-ConfigPath', $ConfigPath)
     if ($RegisterProviders) { $prereqArgs += '-RegisterProviders' }
+    if ($script:AAM365AzConfigDir) { $prereqArgs += @('-M365AzureConfigDir', $script:AAM365AzConfigDir) }
     $prereq = & (Join-Path $PSScriptRoot 'prerequisites\Test-Prerequisites.ps1') @prereqArgs
     if (-not $prereq.AllPassed) {
         Show-AAPrerequisiteGuidance -PrerequisiteResult $prereq
@@ -1123,7 +1208,18 @@ if (Test-AAInstallStep '1') {
             Write-Host "  [OK] Using $($agents.Count) agents from Installation_definitions.json." -ForegroundColor Green
             Write-Host "       Run tools\\Add-StorylineAgents.ps1 to append storyline expansions without replacing the original cast." -ForegroundColor Gray
         } else {
-            $selectedAgents = & (Join-Path $PSScriptRoot 'modules\Select-ExistingUsers.ps1') -Domain $domain
+            if ($script:AAM365AzConfigDir) {
+                $oldConfigDir = $env:AZURE_CONFIG_DIR
+                $env:AZURE_CONFIG_DIR = $script:AAM365AzConfigDir
+                try {
+                    $selectedAgents = & (Join-Path $PSScriptRoot 'modules\Select-ExistingUsers.ps1') -Domain $domain
+                } finally {
+                    if ($null -ne $oldConfigDir) { $env:AZURE_CONFIG_DIR = $oldConfigDir }
+                    else { Remove-Item Env:\AZURE_CONFIG_DIR -ErrorAction SilentlyContinue }
+                }
+            } else {
+                $selectedAgents = & (Join-Path $PSScriptRoot 'modules\Select-ExistingUsers.ps1') -Domain $domain
+            }
             if (-not $selectedAgents -or $selectedAgents.Count -eq 0) {
                 Write-Host "  [ERROR] No users selected. Aborting." -ForegroundColor Red
                 return
@@ -1180,7 +1276,11 @@ if (Test-AAInstallStep '1') {
                 $resetOk = 0
                 foreach ($agent in $agents) {
                     $upn = Get-AgentUpn -Agent $agent -Domain $domain
-                    az ad user update --id $upn --password $agentPassword --force-change-password-next-sign-in false -o none 2>$null
+                    if ($script:AAM365AzConfigDir) {
+                        Invoke-AAM365Az -Arguments @('ad','user','update','--id',$upn,'--password',$agentPassword,'--force-change-password-next-sign-in','false','-o','none') 2>$null | Out-Null
+                    } else {
+                        az ad user update --id $upn --password $agentPassword --force-change-password-next-sign-in false -o none 2>$null
+                    }
                     if ($LASTEXITCODE -eq 0) { $resetOk++ }
                 }
                 Write-Host " [OK] $resetOk/$($agents.Count) passwords reset" -ForegroundColor Green
@@ -1203,13 +1303,22 @@ if (Test-AAInstallStep '1') {
 
             if ($DryRun) { Write-Host " [DRY-RUN]" -ForegroundColor DarkYellow; continue }
 
-            $existing = az ad user show --id $upn -o json 2>$null | ConvertFrom-Json -ErrorAction SilentlyContinue
+            $existingJson = if ($script:AAM365AzConfigDir) {
+                Invoke-AAM365Az -Arguments @('ad','user','show','--id',$upn,'-o','json') 2>$null
+            } else {
+                az ad user show --id $upn -o json 2>$null
+            }
+            $existing = $existingJson | ConvertFrom-Json -ErrorAction SilentlyContinue
             if ($existing) {
                 Write-Host " [EXISTS]" -ForegroundColor DarkYellow
                 $existCount++
             } else {
-                $createErr = az ad user create --display-name $agent.displayName --user-principal-name $upn `
-                    --password $agentPassword --force-change-password-next-sign-in false -o json 2>&1
+                $createErr = if ($script:AAM365AzConfigDir) {
+                    Invoke-AAM365Az -Arguments @('ad','user','create','--display-name',$agent.displayName,'--user-principal-name',$upn,'--password',$agentPassword,'--force-change-password-next-sign-in','false','-o','json') 2>&1
+                } else {
+                    az ad user create --display-name $agent.displayName --user-principal-name $upn `
+                        --password $agentPassword --force-change-password-next-sign-in false -o json 2>&1
+                }
                 if ($LASTEXITCODE -ne 0) {
                     Write-Host " [FAIL] $createErr" -ForegroundColor Red
                 } else {
@@ -1220,12 +1329,16 @@ if (Test-AAInstallStep '1') {
         }
 
         # Set usage location + department + jobTitle via Graph PATCH
-        $gt = az account get-access-token --resource https://graph.microsoft.com --query accessToken -o tsv 2>$null
+        $gt = Get-AAGraphAccessToken
         $graphHeaders = @{Authorization="Bearer $gt"; 'Content-Type'='application/json'}
         foreach ($agent in $agents) {
             $upn = Get-AgentUpn -Agent $agent -Domain $domain
             if (-not $DryRun) {
-                $userId = az ad user show --id $upn --query id -o tsv 2>$null
+                $userId = if ($script:AAM365AzConfigDir) {
+                    Invoke-AAM365Az -Arguments @('ad','user','show','--id',$upn,'--query','id','-o','tsv') 2>$null
+                } else {
+                    az ad user show --id $upn --query id -o tsv 2>$null
+                }
                 if ($userId) {
                     $body = @{usageLocation='FR'; department=$agent.department; jobTitle=$agent.jobTitle} | ConvertTo-Json
                     Invoke-RestMethod -Method PATCH -Uri "https://graph.microsoft.com/v1.0/users/$userId" `
@@ -1254,7 +1367,11 @@ if (Test-AAInstallStep '1') {
                     $resetOk = 0
                     foreach ($agent in $agents) {
                         $upn = Get-AgentUpn -Agent $agent -Domain $domain
-                        az ad user update --id $upn --password $agentPassword --force-change-password-next-sign-in false -o none 2>$null
+                        if ($script:AAM365AzConfigDir) {
+                            Invoke-AAM365Az -Arguments @('ad','user','update','--id',$upn,'--password',$agentPassword,'--force-change-password-next-sign-in','false','-o','none') 2>$null | Out-Null
+                        } else {
+                            az ad user update --id $upn --password $agentPassword --force-change-password-next-sign-in false -o none 2>$null
+                        }
                         if ($LASTEXITCODE -eq 0) { $resetOk++ }
                     }
                     Write-Host " [OK] $resetOk/$($agents.Count) passwords reset" -ForegroundColor Green
@@ -1292,7 +1409,7 @@ if (Test-AAInstallStep '2') {
     Write-Host "=== Step 2: Assigning licenses + MFA exclusion ===" -ForegroundColor Cyan
 
     if (-not $DryRun) {
-        $gt = az account get-access-token --resource https://graph.microsoft.com --query accessToken -o tsv 2>$null
+        $gt = Get-AAGraphAccessToken
         $gh = @{Authorization="Bearer $gt"; 'Content-Type'='application/json'}
 
         # Find best available license SKU (E3, E5, E7, or equivalent)
@@ -1433,11 +1550,28 @@ if (Test-AAInstallStep '3') {
     Write-Host "=== Step 3: Registering Entra app (app-claudia-dataagent) ===" -ForegroundColor Cyan
 
     if (-not $DryRun) {
-        & (Join-Path $PSScriptRoot 'modules\Register-AgentApp.ps1') -Domain $domain
+        if ($script:AAM365AzConfigDir) {
+            $oldConfigDir = $env:AZURE_CONFIG_DIR
+            $env:AZURE_CONFIG_DIR = $script:AAM365AzConfigDir
+            try {
+                & (Join-Path $PSScriptRoot 'modules\Register-AgentApp.ps1') -Domain $domain
+            } finally {
+                if ($null -ne $oldConfigDir) { $env:AZURE_CONFIG_DIR = $oldConfigDir }
+                else { Remove-Item Env:\AZURE_CONFIG_DIR -ErrorAction SilentlyContinue }
+            }
+        } else {
+            & (Join-Path $PSScriptRoot 'modules\Register-AgentApp.ps1') -Domain $domain
+        }
     } else {
         Write-Host "  [DRY-RUN] Would register app with delegated scopes for ROPC" -ForegroundColor DarkYellow
     }
-    $appDataAgentId = if (-not $DryRun) { az ad app list --display-name 'app-claudia-dataagent' --query "[0].appId" -o tsv 2>$null } else { $null }
+    $appDataAgentId = if (-not $DryRun) {
+        if ($script:AAM365AzConfigDir) {
+            Invoke-AAM365Az -Arguments @('ad','app','list','--display-name','app-claudia-dataagent','--query','[0].appId','-o','tsv') 2>$null
+        } else {
+            az ad app list --display-name 'app-claudia-dataagent' --query "[0].appId" -o tsv 2>$null
+        }
+    } else { $null }
     Set-AAInstallationStepDefinition -Path $installationDefinitionsPath -Step '3' -Value ([ordered]@{
         activity = 'Register app-claudia-dataagent'
         completedAt = (Get-Date).ToString('o')
@@ -1503,7 +1637,14 @@ if (Test-AAInstallStep '4a') {
         Write-Host "    [E] Use existing resources (enter IDs)" -ForegroundColor Gray
         $m365Mode = if ($Auto) { 'C' } else { Read-Host "    Choice (C/E)" }
         $m365ModeStr = if ($m365Mode -eq 'E') { 'existing' } else { 'create' }
-        & (Join-Path $PSScriptRoot 'modules\Provision-M365Collaboration.ps1') -Config $config -Mode $m365ModeStr
+        $oldGraphToken = $env:CLAUDIA_GRAPH_TOKEN
+        if ($script:AAM365AzConfigDir) { $env:CLAUDIA_GRAPH_TOKEN = Get-AAGraphAccessToken }
+        try {
+            & (Join-Path $PSScriptRoot 'modules\Provision-M365Collaboration.ps1') -Config $config -Mode $m365ModeStr
+        } finally {
+            if ($null -ne $oldGraphToken) { $env:CLAUDIA_GRAPH_TOKEN = $oldGraphToken }
+            else { Remove-Item Env:\CLAUDIA_GRAPH_TOKEN -ErrorAction SilentlyContinue }
+        }
     } else {
         Write-Host "  [DRY-RUN] Would provision SharePoint site + Teams team" -ForegroundColor DarkYellow
     }
@@ -1602,7 +1743,14 @@ if (Test-AAInstallStep '5') {
             Write-Host "  No -AgentPassword provided. Existing per-agent Key Vault secrets will be preserved." -ForegroundColor Cyan
             Write-Host "  Provide -AgentPassword only when intentionally writing one shared password to every agent secret." -ForegroundColor Gray
         }
-        & (Join-Path $PSScriptRoot 'modules\Deploy-Runbook.ps1') -Config $config -AgentPassword $agentPassword
+        $oldM365ConfigDir = $env:CLAUDIA_M365_AZURE_CONFIG_DIR
+        if ($script:AAM365AzConfigDir) { $env:CLAUDIA_M365_AZURE_CONFIG_DIR = $script:AAM365AzConfigDir }
+        try {
+            & (Join-Path $PSScriptRoot 'modules\Deploy-Runbook.ps1') -Config $config -AgentPassword $agentPassword
+        } finally {
+            if ($null -ne $oldM365ConfigDir) { $env:CLAUDIA_M365_AZURE_CONFIG_DIR = $oldM365ConfigDir }
+            else { Remove-Item Env:\CLAUDIA_M365_AZURE_CONFIG_DIR -ErrorAction SilentlyContinue }
+        }
     } else {
         Write-Host "  [DRY-RUN] Would preserve/write Key Vault secrets, update Automation variables, and publish runbook" -ForegroundColor DarkYellow
     }

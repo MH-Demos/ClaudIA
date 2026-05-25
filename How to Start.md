@@ -72,6 +72,8 @@ For the simplest deployment, use one account that has both:
 
 An Azure `Account admin` or subscription owner from another tenant is not automatically a Microsoft 365 administrator in the demo tenant. If the subscription was created in another directory, move or associate the subscription with the demo tenant before setup so it appears under the target tenant during `az login --tenant <tenant-domain>`.
 
+If your organization separates Azure administration from Microsoft 365 administration, ClaudIA can prompt for a separate Microsoft 365/Entra admin sign-in. The installer keeps this sign-in in an isolated local Azure CLI profile under `.claudia/az-m365-admin` so the Azure subscription sign-in remains active for Azure resource deployment. Do not commit the `.claudia` folder.
+
 Register providers before deployment:
 
 ```powershell
@@ -168,6 +170,8 @@ If you manage several tenants, always start with a fresh Azure CLI session for t
 If Azure CLI says the selected account does not exist in the tenant, use a different account from the target tenant or invite the external account into the tenant first. If `az login` succeeds but shows no subscriptions, assign Azure RBAC to that signed-in account, then run the installer again.
 
 If prerequisites report that the deploying user has no admin directory role, Step 1 has not run yet. That is intentional: ClaudIA cannot create users, assign licenses, create the ROPC app, or grant consent until the signed-in account has tenant admin rights.
+
+When prompted, sign in with a separate Global Administrator or Privileged Role Administrator if the Azure subscription account is not also a Microsoft 365 admin.
 
 ## 6. Deploy Core ClaudIA
 

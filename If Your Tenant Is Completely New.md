@@ -60,7 +60,9 @@ The setup account should have:
 | Azure subscription | Owner or Contributor on the target subscription or resource group. |
 | Azure Key Vault | Key Vault Administrator or Secrets Officer during setup. |
 
-For the easiest first deployment, use the same account for both the Azure and Microsoft 365 sides. That account should be able to deploy Azure resources and administer the target tenant. Split-account setup is possible only if you deliberately run the relevant steps with the right identity, and it is easier to get wrong.
+For the easiest first deployment, use the same account for both the Azure and Microsoft 365 sides. That account should be able to deploy Azure resources and administer the target tenant.
+
+If Azure and Microsoft 365 are administered by different people, use the installer prompt to sign in with a separate Microsoft 365/Entra admin account. ClaudIA stores that second sign-in in a local isolated Azure CLI profile under `.claudia/az-m365-admin`, while the original Azure account remains available for subscription and resource group deployment.
 
 If the subscription owner account is from a different tenant or organization, add that account to the demo tenant first:
 

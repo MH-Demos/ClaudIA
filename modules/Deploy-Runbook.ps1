@@ -39,6 +39,21 @@
 param($Config, [string]$AgentPassword)
 . (Join-Path $PSScriptRoot 'Common.ps1')
 
+function Invoke-M365Az {
+    param([Parameter(Mandatory)][string[]]$Arguments)
+    if (-not $env:CLAUDIA_M365_AZURE_CONFIG_DIR) {
+        return (& az @Arguments)
+    }
+    $oldConfigDir = $env:AZURE_CONFIG_DIR
+    $env:AZURE_CONFIG_DIR = $env:CLAUDIA_M365_AZURE_CONFIG_DIR
+    try {
+        & az @Arguments
+    } finally {
+        if ($null -ne $oldConfigDir) { $env:AZURE_CONFIG_DIR = $oldConfigDir }
+        else { Remove-Item Env:\AZURE_CONFIG_DIR -ErrorAction SilentlyContinue }
+    }
+}
+
 $rg = $Config.infrastructure.resourceGroup
 $aaName = $Config.infrastructure.automationAccountName
 $sub = $Config.tenant.subscriptionId
@@ -90,8 +105,9 @@ $t = az account get-access-token --query accessToken -o tsv 2>$null
 $h = @{Authorization="Bearer $t"; 'Content-Type'='application/json'}
 $aaUri = "https://management.azure.com/subscriptions/${sub}/resourceGroups/${rg}/providers/Microsoft.Automation/automationAccounts/${aaName}"
 
-# Get app registration details
-$appId = az ad app list --display-name 'app-claudia-dataagent' --query "[0].appId" -o tsv 2>$null
+# Get app registration details. App operations may require the separate M365
+# admin profile when Azure subscription admin and tenant admin are different.
+$appId = Invoke-M365Az -Arguments @('ad','app','list','--display-name','app-claudia-dataagent','--query','[0].appId','-o','tsv') 2>$null
 $tenantId = az account show --query tenantId -o tsv 2>$null
 if (-not $appId) { throw "app-claudia-dataagent was not found. Run Step 3 first." }
 
@@ -106,7 +122,7 @@ try {
 }
 
 # Get client secret (user must provide or we generate a new one)
-$clientSecret = az ad app credential reset --id $appId --display-name 'agent-deploy' --years 1 --query password -o tsv 2>$null
+$clientSecret = Invoke-M365Az -Arguments @('ad','app','credential','reset','--id',$appId,'--display-name','agent-deploy','--years','1','--query','password','-o','tsv') 2>$null
 
 # Validate Key Vault RBAC. The runbook reads secrets with the Automation Managed
 # Identity. app-claudia-dataagent is also granted Secrets User for admin validation and

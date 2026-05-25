@@ -116,6 +116,8 @@ or register the providers manually with the commands printed by the prerequisite
 
 **Fix**: Use a single deployment account with both Azure RBAC and tenant admin rights, or grant the current account `Global Administrator` or `Privileged Role Administrator` in the demo tenant for setup. Without this, ClaudIA cannot create agent users, assign licenses, create/admin-consent the Entra app, or configure tenant-level Microsoft 365 services.
 
+If Azure and Microsoft 365 are managed by different accounts, answer yes when the installer asks to sign in with a separate Microsoft 365/Entra admin account. ClaudIA keeps that admin sign-in in `.claudia/az-m365-admin` and continues using the original Azure account for subscription deployment.
+
 Step 1 runs only after prerequisites are fixed or explicitly bypassed. If this check fails, agent users have not been created yet.
 
 ### The resource group prompt received a subscription ID

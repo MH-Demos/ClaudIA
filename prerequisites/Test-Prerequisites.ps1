@@ -21,6 +21,8 @@
     Do not validate Node/npm and BrowserAgents dependencies.
 .PARAMETER AsJson
     Emit the final result object as JSON.
+.PARAMETER M365AzureConfigDir
+    Optional isolated Azure CLI profile directory for a separate Microsoft 365/Entra admin account.
 .EXAMPLE
     .\prerequisites\Test-Prerequisites.ps1
 .EXAMPLE
@@ -35,7 +37,8 @@ param(
     [switch]$Offline,
     [switch]$RegisterProviders,
     [switch]$SkipBrowserAgents,
-    [switch]$AsJson
+    [switch]$AsJson,
+    [string]$M365AzureConfigDir
 )
 
 if ($AsJson) {
@@ -163,6 +166,23 @@ function Invoke-AzText {
     $output = & az @Arguments 2>$null
     if ($LASTEXITCODE -ne 0) { return $null }
     return (($output | Out-String).Trim())
+}
+
+function Invoke-M365AzText {
+    param([string[]]$Arguments)
+    if (-not $M365AzureConfigDir) { return (Invoke-AzText -Arguments $Arguments) }
+    $oldConfigDir = $env:AZURE_CONFIG_DIR
+    $env:AZURE_CONFIG_DIR = $M365AzureConfigDir
+    try {
+        & az @Arguments 2>$null
+    } finally {
+        if ($null -ne $oldConfigDir) { $env:AZURE_CONFIG_DIR = $oldConfigDir }
+        else { Remove-Item Env:\AZURE_CONFIG_DIR -ErrorAction SilentlyContinue }
+    }
+}
+
+function Get-M365GraphToken {
+    Invoke-M365AzText -Arguments @('account','get-access-token','--resource','https://graph.microsoft.com','--query','accessToken','-o','tsv')
 }
 
 function Invoke-AzJson {
@@ -400,7 +420,7 @@ if ($Offline) {
         }
 
         Invoke-Check 'Azure CLI / Subscription' 'Microsoft Graph token can be acquired' {
-            $token = Invoke-AzText -Arguments @('account','get-access-token','--resource','https://graph.microsoft.com','--query','accessToken','-o','tsv')
+            $token = Get-M365GraphToken
             if ($token) { 'Graph token acquired from Azure CLI context' }
         } "Run az login again using the target tenant admin account."
 
@@ -442,7 +462,7 @@ if ($Offline) {
         $copilotCount = if ($config -and $config.agents) { @($config.agents | Where-Object { $_.copilotLicense }).Count } else { 0 }
 
         Invoke-Check 'Microsoft 365 Tenant' "M365 licenses available (agents: $agentCount)" {
-            $token = Invoke-AzText -Arguments @('account','get-access-token','--resource','https://graph.microsoft.com','--query','accessToken','-o','tsv')
+            $token = Get-M365GraphToken
             if (-not $token) { return $null }
             $headers = @{ Authorization = "Bearer $token" }
             $skus = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/subscribedSkus' -Headers $headers -ErrorAction Stop).value
@@ -456,7 +476,7 @@ if ($Offline) {
 
         if ($copilotCount -gt 0) {
             Invoke-Check 'Microsoft 365 Tenant' "Copilot licenses available or assignable (agents: $copilotCount)" {
-                $token = Invoke-AzText -Arguments @('account','get-access-token','--resource','https://graph.microsoft.com','--query','accessToken','-o','tsv')
+                $token = Get-M365GraphToken
                 if (-not $token) { return $null }
                 $headers = @{ Authorization = "Bearer $token" }
                 $skus = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/subscribedSkus' -Headers $headers -ErrorAction Stop).value
@@ -474,7 +494,7 @@ if ($Offline) {
         }
 
         Invoke-Check 'Microsoft 365 Tenant' 'Deploying user has admin directory role' {
-            $token = Invoke-AzText -Arguments @('account','get-access-token','--resource','https://graph.microsoft.com','--query','accessToken','-o','tsv')
+            $token = Get-M365GraphToken
             if (-not $token) { return $null }
             $headers = @{ Authorization = "Bearer $token" }
             $roles = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/me/memberOf' -Headers $headers -ErrorAction Stop).value
