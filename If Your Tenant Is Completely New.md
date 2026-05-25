@@ -60,6 +60,8 @@ The setup account should have:
 | Azure subscription | Owner or Contributor on the target subscription or resource group. |
 | Azure Key Vault | Key Vault Administrator or Secrets Officer during setup. |
 
+For the easiest first deployment, use the same account for both the Azure and Microsoft 365 sides. That account should be able to deploy Azure resources and administer the target tenant. Split-account setup is possible only if you deliberately run the relevant steps with the right identity, and it is easier to get wrong.
+
 If the subscription owner account is from a different tenant or organization, add that account to the demo tenant first:
 
 1. Invite the account as an external user in Microsoft Entra ID.
@@ -68,6 +70,8 @@ If the subscription owner account is from a different tenant or organization, ad
 4. Sign in with `az login --tenant contoso.onmicrosoft.com` and confirm the subscription is visible.
 
 Being able to sign in to Azure is not enough. The signed-in account must both exist in the target Entra tenant and have Azure RBAC on the subscription that ClaudIA will deploy to.
+
+If the subscription was created under another directory, change the subscription directory to the demo tenant before installation. Otherwise `az login --tenant <demo-tenant>` can succeed while `az account list` still shows no usable subscription.
 
 Run:
 
@@ -91,6 +95,14 @@ az account list -o table
 Only subscriptions from the target tenant should be selected. During interactive setup, ClaudIA offers to sign out from cached Azure CLI sessions and sign in to the tenant domain you entered.
 
 If Azure CLI returns `Selected user account does not exist in tenant`, the account was not yet accepted into the target tenant. Invite it as an external user or use a native target-tenant admin account. If Azure CLI returns `No subscriptions found`, assign Azure RBAC to that account and retry before continuing.
+
+For a brand-new subscription, register Azure providers before deployment or run the installer with provider registration enabled:
+
+```powershell
+.\Install-ClaudIA.ps1 -RegisterProviders
+```
+
+The installer stops before Step 1 when prerequisites fail. If you see provider or admin-role failures, user creation has not started yet; fix those items first, then rerun the installer.
 
 ## 2. Security Defaults And Conditional Access
 

@@ -88,6 +88,36 @@ az account list -o table
 
 Only continue when the target subscription appears in `az account list`.
 
+If the account is an Azure subscription owner from another tenant, also confirm the subscription directory has been changed or associated to the demo tenant. Adding the account as an external user is necessary, but it does not by itself move the subscription into the target tenant.
+
+### Prerequisites fail because resource providers are not registered
+
+**Symptom**: The prerequisite check reports failures such as `Microsoft.KeyVault`, `Microsoft.CognitiveServices`, `Microsoft.Automation`, or `Microsoft.Storage`.
+
+**Cause**: New Azure subscriptions often have required resource providers in `NotRegistered` state.
+
+**Fix**: Let ClaudIA start provider registration:
+
+```powershell
+.\Install-ClaudIA.ps1 -RegisterProviders
+```
+
+or register the providers manually with the commands printed by the prerequisite check. Some providers can take a few minutes to finish registration.
+
+### The deploying user has no admin directory role
+
+**Symptom**:
+
+```text
+[FAIL] Deploying user has admin directory role
+```
+
+**Cause**: The signed-in account can access Azure but is not a Microsoft 365/Entra deployment administrator in the target tenant.
+
+**Fix**: Use a single deployment account with both Azure RBAC and tenant admin rights, or grant the current account `Global Administrator` or `Privileged Role Administrator` in the demo tenant for setup. Without this, ClaudIA cannot create agent users, assign licenses, create/admin-consent the Entra app, or configure tenant-level Microsoft 365 services.
+
+Step 1 runs only after prerequisites are fixed or explicitly bypassed. If this check fails, agent users have not been created yet.
+
 ### The resource group prompt received a subscription ID
 
 **Symptom**: The environment summary shows the resource group as a GUID, or the installer warns that the resource group must be a name.

@@ -14,7 +14,7 @@
     "openAiAccountName": "oai-claudia-lab",
     "openAiModel": "gpt-4.1-mini",
     "openAiTpm": 30,
-    "openAiImageModel": "",
+    "openAiImageModel": "Dall-e-3",
     "workbookEnabled": true,
     "fabricEnabled": false,
     "keyVaultName": "kv-claudia-lab",
@@ -161,7 +161,7 @@
     }
   ],
   "features": {
-    "userMode": "existing",
+    "userMode": "create",
     "sitPrecision": true,
     "multiTurnEmailThreads": true,
     "copilotQueries": true,

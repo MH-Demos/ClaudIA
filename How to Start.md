@@ -63,6 +63,15 @@ Do not paste the Azure subscription ID into the resource group field. The subscr
 
 If the Azure subscription is owned by an account from another organization, the account must also exist in the demo tenant and have Azure RBAC on the subscription. Invite the account as an external user in Microsoft Entra ID, have the user accept the invitation, and assign Owner or Contributor on the target subscription or resource group before running the installer.
 
+For the simplest deployment, use one account that has both:
+
+| Plane | Required access |
+| --- | --- |
+| Azure | Owner or Contributor on the target subscription or resource group. |
+| Microsoft 365 / Entra | Global Administrator or Privileged Role Administrator for first setup. |
+
+An Azure `Account admin` or subscription owner from another tenant is not automatically a Microsoft 365 administrator in the demo tenant. If the subscription was created in another directory, move or associate the subscription with the demo tenant before setup so it appears under the target tenant during `az login --tenant <tenant-domain>`.
+
 Register providers before deployment:
 
 ```powershell
@@ -73,6 +82,12 @@ az provider register -n Microsoft.OperationalInsights --wait
 az provider register -n Microsoft.Kusto --wait
 az provider register -n Microsoft.Web --wait
 az provider register -n Microsoft.Storage --wait
+```
+
+For a new subscription, the installer can also trigger provider registration during prerequisite checks:
+
+```powershell
+.\Install-ClaudIA.ps1 -RegisterProviders
 ```
 
 ## 3. Clone And Prepare
@@ -121,6 +136,7 @@ Start from [config/agents.json](config/agents.json). Replace public placeholders
 | `infrastructure.resourceGroup` | Resource group for ClaudIA. |
 | `infrastructure.keyVaultName` | Your Key Vault name. |
 | `infrastructure.openAiAccountName` | Your Azure OpenAI account or deployment host. |
+| `infrastructure.openAiImageModel` | Optional image model. The default is `Dall-e-3`; keep it unless you know your region uses a different model name. |
 | `adx.*` | Your ADX cluster, database, table, and app identity values if ADX is enabled. |
 | `activityStoryMap.*` | Your storage, function app, API, and optional Front Door values. |
 | `agents[*].userPrincipalName` | Persona users in your lab tenant. |
@@ -150,6 +166,8 @@ Fix all prerequisite failures before running the installer.
 If you manage several tenants, always start with a fresh Azure CLI session for the demo tenant. The installer also offers to clear cached Azure CLI sessions and sign in again after you enter the tenant domain. This prevents subscriptions from unrelated tenants from appearing in the selection list.
 
 If Azure CLI says the selected account does not exist in the tenant, use a different account from the target tenant or invite the external account into the tenant first. If `az login` succeeds but shows no subscriptions, assign Azure RBAC to that signed-in account, then run the installer again.
+
+If prerequisites report that the deploying user has no admin directory role, Step 1 has not run yet. That is intentional: ClaudIA cannot create users, assign licenses, create the ROPC app, or grant consent until the signed-in account has tenant admin rights.
 
 ## 6. Deploy Core ClaudIA
 

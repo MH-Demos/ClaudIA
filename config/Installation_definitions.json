@@ -18,7 +18,7 @@
     "openAiAccountName": "oai-claudia-lab",
     "openAiModel": "gpt-4.1-mini",
     "openAiModelVersion": "2025-04-14",
-    "openAiImageModel": "",
+    "openAiImageModel": "Dall-e-3",
     "openAiImageModelVersion": "",
     "openAiTpm": 30,
     "fabricEnabled": false,
@@ -599,7 +599,7 @@
     "1": {
       "activity": "Create or select agent users",
       "completedAt": "2026-05-19T11:59:50.0763397-05:00",
-      "userMode": "existing",
+      "userMode": "create",
       "agentCount": 13,
       "agents": [
         {
@@ -1053,7 +1053,7 @@
       "openAiAccountName": "oai-claudia-lab",
       "openAiModel": "gpt-4.1-mini",
       "openAiModelVersion": "2025-04-14",
-      "openAiImageModel": "",
+      "openAiImageModel": "Dall-e-3",
       "openAiImageModelVersion": "",
       "adx": {
         "enabled": true,

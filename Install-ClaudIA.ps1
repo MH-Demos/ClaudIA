@@ -24,6 +24,9 @@
 .PARAMETER UseExistingUsers
     Skip user creation and instead pick existing Entra ID users interactively.
     Equivalent to setting features.userMode = "existing" in agents.json.
+.PARAMETER RegisterProviders
+    Ask the prerequisite checker to register missing Azure resource providers.
+    Use this for new Azure subscriptions before first deployment.
 .EXAMPLE
     .\Install-ClaudIA.ps1
     .\Install-ClaudIA.ps1 -UseExistingUsers
@@ -98,6 +101,7 @@ param(
     [switch]$DryRun,
     [switch]$UseExistingUsers,
     [switch]$UseInstallationDefinitions,
+    [switch]$RegisterProviders,
     [switch]$Auto,
     [string]$AgentPassword
 )
@@ -448,6 +452,34 @@ function Read-AAResourceGroupName {
     }
 }
 
+function Show-AAPrerequisiteGuidance {
+    param($PrerequisiteResult)
+
+    $failed = @($PrerequisiteResult.Results | Where-Object { $_.Status -eq 'Fail' })
+    if ($failed.Count -eq 0) { return }
+
+    $failedNames = @($failed | ForEach-Object { [string]$_.Name })
+    Write-Host ""
+    Write-Host "  What blocked the deployment:" -ForegroundColor Yellow
+
+    $providerFailures = @($failed | Where-Object { $_.Category -eq 'Azure Resource Providers' })
+    if ($providerFailures.Count -gt 0) {
+        Write-Host "    - Azure resource providers are not registered in this new subscription." -ForegroundColor Gray
+        Write-Host "      Fix: rerun with .\Install-ClaudIA.ps1 -RegisterProviders, or run the az provider register commands shown above." -ForegroundColor DarkYellow
+    }
+
+    if ($failedNames -contains 'Deploying user has admin directory role') {
+        Write-Host "    - The current Azure CLI account can access the Azure subscription but is not a Microsoft 365/Entra deployment admin." -ForegroundColor Gray
+        Write-Host "      ClaudIA Step 1 cannot create users, Step 2 cannot assign licenses, and Step 3 cannot grant app consent without tenant admin rights." -ForegroundColor Gray
+        Write-Host "      Easiest fix: use one deployment account that has Azure Owner/Contributor plus Global Administrator or Privileged Role Administrator in the target tenant." -ForegroundColor DarkYellow
+    }
+
+    if ($failedNames -contains 'Azure CLI logged in') {
+        Write-Host "    - Azure CLI is not logged in to a usable account." -ForegroundColor Gray
+        Write-Host "      Fix: az logout; az login --tenant <tenant-domain>; az account list -o table." -ForegroundColor DarkYellow
+    }
+}
+
 function New-AAShortSuffix {
     param([string]$Seed)
 
@@ -520,6 +552,30 @@ function Invoke-AAAzureCliLogin {
         Write-Host "           If you selected an external account, add it as a guest/member in Entra ID, accept the invitation, and assign Owner or Contributor on the Azure subscription." -ForegroundColor DarkYellow
     }
     return $script:AATargetTenantId
+}
+
+function Get-AACurrentAzureCliAccount {
+    if (-not (Get-Command az -ErrorAction SilentlyContinue)) { return $null }
+    $acctJson = az account show -o json 2>$null
+    if (-not $acctJson) { return $null }
+    try { return ($acctJson | ConvertFrom-Json) } catch { return $null }
+}
+
+function Test-AACurrentUserHasTenantAdminRole {
+    if (-not (Get-Command az -ErrorAction SilentlyContinue)) { return $false }
+    $token = az account get-access-token --resource https://graph.microsoft.com --query accessToken -o tsv 2>$null
+    if (-not $token) { return $false }
+    $headers = @{ Authorization = "Bearer $token" }
+    try {
+        $roles = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/me/memberOf' -Headers $headers -ErrorAction Stop).value
+        $adminRoles = @($roles | Where-Object {
+            $_.'@odata.type' -eq '#microsoft.graph.directoryRole' -and
+            $_.displayName -match 'Global Administrator|Privileged Role Administrator'
+        })
+        return ($adminRoles.Count -gt 0)
+    } catch {
+        return $false
+    }
 }
 
 function Select-AASubscription {
@@ -640,6 +696,20 @@ if (($needsSetup -or $script:ForceConfigurationPrompt) -and -not $DryRun -and -n
     if (-not $newSubId) { return }
     if ($newSubId -ne $config.tenant.subscriptionId) { $config.tenant.subscriptionId = $newSubId; $configChanged = $true }
 
+    $activeAccount = Get-AACurrentAzureCliAccount
+    if ($activeAccount -and $activeAccount.user) {
+        Write-Host ""
+        Write-Host "  --- Deployment Account Check ---" -ForegroundColor White
+        Write-Host "    Signed in as: $($activeAccount.user.name)" -ForegroundColor Gray
+        Write-Host "    ClaudIA's easiest setup uses one account with both Azure RBAC and Microsoft 365/Entra admin rights." -ForegroundColor Gray
+        if (Test-AACurrentUserHasTenantAdminRole) {
+            Write-Host "    [OK] This account has a tenant admin role for user/app setup." -ForegroundColor Green
+        } else {
+            Write-Host "    [WARN] This account does not appear to have Global Administrator or Privileged Role Administrator." -ForegroundColor Yellow
+            Write-Host "           Step 1 user creation, Step 2 license assignment, and Step 3 app consent will be blocked until a tenant admin account is used or this account is granted the role." -ForegroundColor DarkYellow
+        }
+    }
+
     Write-Host "    Location [$($config.tenant.location)]: " -NoNewline
     $newLoc = Read-Host
     if ($newLoc -and $newLoc -ne $config.tenant.location) { $config.tenant.location = $newLoc; $configChanged = $true }
@@ -716,6 +786,9 @@ if (($needsSetup -or $script:ForceConfigurationPrompt) -and -not $DryRun -and -n
     if ($script:ForceConfigurationPrompt) {
         Set-AAConfigProperty -Object $config.infrastructure -Name openAiAccountName -Value (New-AADefaultOpenAiName -Config $config)
         Set-AAConfigProperty -Object $config.infrastructure -Name keyVaultName -Value (New-AADefaultKeyVaultName -Config $config)
+        if (-not $config.infrastructure.openAiImageModel) {
+            Set-AAConfigProperty -Object $config.infrastructure -Name openAiImageModel -Value 'Dall-e-3'
+        }
         $configChanged = $true
     }
 
@@ -989,8 +1062,11 @@ if (-not $DryRun -and $domain -notmatch 'REPLACE_WITH') {
 # ============================================================================
 if ((Test-AAInstallStep '0') -and -not $SkipPrerequisites) {
     Write-Host "=== Step 0: Checking prerequisites ===" -ForegroundColor Cyan
-    $prereq = & (Join-Path $PSScriptRoot 'prerequisites\Test-Prerequisites.ps1') -ConfigPath $ConfigPath
+    $prereqArgs = @('-ConfigPath', $ConfigPath)
+    if ($RegisterProviders) { $prereqArgs += '-RegisterProviders' }
+    $prereq = & (Join-Path $PSScriptRoot 'prerequisites\Test-Prerequisites.ps1') @prereqArgs
     if (-not $prereq.AllPassed) {
+        Show-AAPrerequisiteGuidance -PrerequisiteResult $prereq
         Write-Host ""
         Write-Host "[BLOCKED] Fix prerequisite failures before continuing." -ForegroundColor Red
         $continue = if ($Auto) { 'y' } else { Read-Host "  Continue anyway? (y/N)" }
