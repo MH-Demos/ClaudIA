@@ -60,6 +60,15 @@ The setup account should have:
 | Azure subscription | Owner or Contributor on the target subscription or resource group. |
 | Azure Key Vault | Key Vault Administrator or Secrets Officer during setup. |
 
+If the subscription owner account is from a different tenant or organization, add that account to the demo tenant first:
+
+1. Invite the account as an external user in Microsoft Entra ID.
+2. Have the user accept the invitation.
+3. Assign Owner or Contributor on the target Azure subscription or on the ClaudIA resource group.
+4. Sign in with `az login --tenant contoso.onmicrosoft.com` and confirm the subscription is visible.
+
+Being able to sign in to Azure is not enough. The signed-in account must both exist in the target Entra tenant and have Azure RBAC on the subscription that ClaudIA will deploy to.
+
 Run:
 
 ```powershell
@@ -68,6 +77,8 @@ az account show --query "{tenant:tenantId, subscription:id, name:name}" -o table
 ```
 
 If the Azure subscription is brand new, it may not contain any resource groups. That is expected. ClaudIA asks for a resource group name and creates it during Azure infrastructure deployment. If your environment already has an approved resource group, enter that existing name instead.
+
+Use a resource group name such as `rg-claudia-lab`. Do not paste the subscription ID into the resource group prompt. A subscription ID is a GUID; a resource group is a human-readable Azure container name.
 
 If the workstation has been used with several tenants, clear the Azure CLI cache before setup:
 
@@ -78,6 +89,8 @@ az account list -o table
 ```
 
 Only subscriptions from the target tenant should be selected. During interactive setup, ClaudIA offers to sign out from cached Azure CLI sessions and sign in to the tenant domain you entered.
+
+If Azure CLI returns `Selected user account does not exist in tenant`, the account was not yet accepted into the target tenant. Invite it as an external user or use a native target-tenant admin account. If Azure CLI returns `No subscriptions found`, assign Azure RBAC to that account and retry before continuing.
 
 ## 2. Security Defaults And Conditional Access
 

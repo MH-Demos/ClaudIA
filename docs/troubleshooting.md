@@ -49,6 +49,53 @@ Get-ChildItem -Recurse -Filter *.ps1 | Unblock-File
 .\Install-ClaudIA.ps1
 ```
 
+### Azure CLI says the selected account does not exist in the tenant
+
+**Symptom**:
+
+```text
+Selected user account does not exist in tenant 'Your Demo Tenant' and cannot access the application '04b07795-8ddb-461a-bbee-02f9e1bf7b46' in that tenant.
+```
+
+**Cause**: The Azure account selected in device-code login is not a user in the target Entra tenant. This is common when the Azure subscription owner belongs to another organization.
+
+**Fix**:
+
+1. Invite the account as an external user in the target Entra tenant.
+2. Have the user accept the invitation.
+3. Assign Owner or Contributor on the target Azure subscription or resource group.
+4. Run the installer again and sign in to the target tenant.
+
+When possible, use a native target-tenant administrator for first-time setup.
+
+### Azure CLI login succeeds but no subscriptions are visible
+
+**Symptom**:
+
+```text
+ERROR: No subscriptions found for user@example.com.
+```
+
+**Cause**: The account may exist in the tenant but does not have Azure RBAC on the target subscription.
+
+**Fix**: Assign Owner or Contributor on the target subscription or on the ClaudIA resource group, then verify:
+
+```powershell
+az logout
+az login --tenant contoso.onmicrosoft.com
+az account list -o table
+```
+
+Only continue when the target subscription appears in `az account list`.
+
+### The resource group prompt received a subscription ID
+
+**Symptom**: The environment summary shows the resource group as a GUID, or the installer warns that the resource group must be a name.
+
+**Cause**: The Azure subscription ID was pasted into the resource group field.
+
+**Fix**: Use the subscription GUID only for the subscription field. Use a resource group name such as `rg-claudia-lab` for the resource group field. A brand-new subscription does not need an existing resource group; ClaudIA creates the resource group during Azure deployment.
+
 ### ROPC returns 400 Bad Request
 
 **Symptom**: `AADSTS50126: Invalid username or password`

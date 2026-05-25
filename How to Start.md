@@ -59,6 +59,10 @@ For a completely new tenant, also validate Security Defaults, Conditional Access
 
 A new Azure subscription can start completely empty. You do not need to create a resource group manually before running ClaudIA. During setup, choose a resource group name such as `rg-claudia-lab`; Step 4 creates it if it does not already exist. If your organization requires pre-created resource groups, create it first and enter that name in the wizard.
 
+Do not paste the Azure subscription ID into the resource group field. The subscription ID is a GUID such as `11111111-1111-1111-1111-111111111111`; the resource group is a name such as `rg-claudia-lab`.
+
+If the Azure subscription is owned by an account from another organization, the account must also exist in the demo tenant and have Azure RBAC on the subscription. Invite the account as an external user in Microsoft Entra ID, have the user accept the invitation, and assign Owner or Contributor on the target subscription or resource group before running the installer.
+
 Register providers before deployment:
 
 ```powershell
@@ -144,6 +148,8 @@ az account set --subscription 11111111-1111-1111-1111-111111111111
 Fix all prerequisite failures before running the installer.
 
 If you manage several tenants, always start with a fresh Azure CLI session for the demo tenant. The installer also offers to clear cached Azure CLI sessions and sign in again after you enter the tenant domain. This prevents subscriptions from unrelated tenants from appearing in the selection list.
+
+If Azure CLI says the selected account does not exist in the tenant, use a different account from the target tenant or invite the external account into the tenant first. If `az login` succeeds but shows no subscriptions, assign Azure RBAC to that signed-in account, then run the installer again.
 
 ## 6. Deploy Core ClaudIA
 

@@ -409,6 +409,45 @@ function Set-AAConfigProperty {
     }
 }
 
+function Test-AAGuid {
+    param([string]$Value)
+    if (-not $Value) { return $false }
+    $parsed = [Guid]::Empty
+    return [Guid]::TryParse($Value, [ref]$parsed)
+}
+
+function Test-AAResourceGroupName {
+    param([string]$Value)
+    if (-not $Value) { return $false }
+    if (Test-AAGuid -Value $Value) { return $false }
+    if ($Value.Length -gt 90) { return $false }
+    if ($Value -notmatch '^[A-Za-z0-9_\-\.\(\)]+$') { return $false }
+    if ($Value.EndsWith('.')) { return $false }
+    return $true
+}
+
+function Read-AAResourceGroupName {
+    param([string]$Current, [string]$SubscriptionId)
+
+    while ($true) {
+        Write-Host "    Resource group [$Current]: " -NoNewline
+        $value = Read-Host
+        if (-not $value) { $value = $Current }
+
+        if ($value -eq $SubscriptionId -or (Test-AAGuid -Value $value)) {
+            Write-Host "    [ERROR] Resource group must be a name like 'rg-claudia-lab', not a subscription ID." -ForegroundColor Red
+            continue
+        }
+
+        if (-not (Test-AAResourceGroupName -Value $value)) {
+            Write-Host "    [ERROR] Resource group names can use letters, numbers, underscores, hyphens, periods, and parentheses; max 90 characters; cannot end with a period." -ForegroundColor Red
+            continue
+        }
+
+        return $value
+    }
+}
+
 function New-AAShortSuffix {
     param([string]$Seed)
 
@@ -468,7 +507,8 @@ function Invoke-AAAzureCliLogin {
         az logout 2>$null | Out-Null
     }
     Write-Host "    Azure CLI needs a sign-in for the target demo tenant." -ForegroundColor Cyan
-    Write-Host "    A device-code login will open. Use the tenant admin account for this lab." -ForegroundColor Gray
+    Write-Host "    A device-code login will open. Use a target-tenant admin account when possible." -ForegroundColor Gray
+    Write-Host "    External users must already be invited into this tenant and assigned Azure RBAC on the subscription." -ForegroundColor Gray
     & az login @tenantArg --use-device-code | Out-Null
 
     $activeTenantId = az account show --query tenantId -o tsv 2>$null
@@ -477,6 +517,7 @@ function Invoke-AAAzureCliLogin {
         Write-Host "    [OK] Azure CLI active tenant: $script:AATargetTenantId" -ForegroundColor Green
     } else {
         Write-Host "    [WARN] Could not determine Azure CLI active tenant. Subscription filtering may be limited." -ForegroundColor Yellow
+        Write-Host "           If you selected an external account, add it as a guest/member in Entra ID, accept the invitation, and assign Owner or Contributor on the Azure subscription." -ForegroundColor DarkYellow
     }
     return $script:AATargetTenantId
 }
@@ -518,8 +559,16 @@ function Select-AASubscription {
 
     if ($accounts.Count -eq 0) {
         Write-Host "    [WARN] Azure CLI still has no visible subscriptions." -ForegroundColor Yellow
-        Write-Host "           You can paste the subscription ID, but Step 4 will fail unless this account can access it." -ForegroundColor DarkYellow
-        return Read-ConfigValue -Label "Azure subscription ID" -Current $Current -Hint "e.g. 84000b2d-4410-4243-bf7e-f813b43bc2bd"
+        Write-Host "           The signed-in account must exist in the target tenant and have Azure RBAC on the subscription." -ForegroundColor DarkYellow
+        Write-Host "           Recommended fix: invite the account to the tenant, accept the invitation, assign Owner or Contributor, then run the installer again." -ForegroundColor DarkYellow
+        $manualChoice = if ($Auto) { 'N' } else { Read-Host "    Type a subscription ID manually anyway? Step 4 will fail without access. (y/N)" }
+        if ($manualChoice -notin @('y','Y','yes','YES')) { return $null }
+        $manualSub = Read-ConfigValue -Label "Azure subscription ID" -Current $Current -Hint "e.g. 84000b2d-4410-4243-bf7e-f813b43bc2bd"
+        if ($manualSub -and -not (Test-AAGuid -Value $manualSub)) {
+            Write-Host "    [ERROR] Subscription ID must be a GUID." -ForegroundColor Red
+            return $null
+        }
+        return $manualSub
     }
 
     Write-Host "    Available Azure subscriptions:" -ForegroundColor Gray
@@ -541,7 +590,11 @@ function Select-AASubscription {
     $match = $accounts | Where-Object { $_.id -eq $selection -or $_.name -eq $selection } | Select-Object -First 1
     if ($match) { return [string]$match.id }
 
-    Write-Host "    [WARN] Subscription '$selection' is not in az account list. It will be saved, but Step 4 will fail unless you login to it." -ForegroundColor Yellow
+    if (-not (Test-AAGuid -Value $selection)) {
+        Write-Host "    [ERROR] Enter a number from the list, an exact subscription name from the list, or a subscription GUID." -ForegroundColor Red
+        return $null
+    }
+    Write-Host "    [WARN] Subscription '$selection' is not in az account list. It will be saved, but Step 4 will fail unless this account can access it." -ForegroundColor Yellow
     return $selection
 }
 
@@ -647,18 +700,17 @@ if (($needsSetup -or $script:ForceConfigurationPrompt) -and -not $DryRun -and -n
     Write-Host "  A new Azure subscription does not need an existing resource group." -ForegroundColor Gray
     Write-Host "  If the resource group below does not exist, ClaudIA will create it in Step 4." -ForegroundColor Gray
 
-    $infraFields = @(
-        @{ Key='resourceGroup';        Label='Resource group';        Default=$config.infrastructure.resourceGroup },
-        @{ Key='automationAccountName'; Label='Automation account';   Default=$config.infrastructure.automationAccountName }
-    )
+    $newResourceGroup = Read-AAResourceGroupName -Current $config.infrastructure.resourceGroup -SubscriptionId $config.tenant.subscriptionId
+    if ($newResourceGroup -and $newResourceGroup -ne $config.infrastructure.resourceGroup) {
+        Set-AAConfigProperty -Object $config.infrastructure -Name resourceGroup -Value $newResourceGroup
+        $configChanged = $true
+    }
 
-    foreach ($field in $infraFields) {
-        Write-Host "    $($field.Label) [$($field.Default)]: " -NoNewline
-        $val = Read-Host
-        if ($val -and $val -ne $field.Default) {
-            Set-AAConfigProperty -Object $config.infrastructure -Name $field.Key -Value $val
-            $configChanged = $true
-        }
+    Write-Host "    Automation account [$($config.infrastructure.automationAccountName)]: " -NoNewline
+    $newAutomationAccount = Read-Host
+    if ($newAutomationAccount -and $newAutomationAccount -ne $config.infrastructure.automationAccountName) {
+        Set-AAConfigProperty -Object $config.infrastructure -Name automationAccountName -Value $newAutomationAccount
+        $configChanged = $true
     }
 
     if ($script:ForceConfigurationPrompt) {
