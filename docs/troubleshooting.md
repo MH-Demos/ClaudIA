@@ -4,6 +4,51 @@
 
 ## Common Issues
 
+### PowerShell says the script is not digitally signed
+
+**Symptom**:
+
+```text
+File ...\Install-ClaudIA.ps1 cannot be loaded. The file is not digitally signed.
+```
+
+or the first script runs, but a helper file fails:
+
+```text
+File ...\modules\Common.ps1 cannot be loaded. The file is not digitally signed.
+```
+
+**Cause**: Windows marked one or more downloaded `.ps1` files with the internet zone. This commonly happens after downloading a ZIP, copying files from a browser download, or synchronizing from another machine.
+
+**Fix**: Open PowerShell in the ClaudIA repository root and unblock all PowerShell files:
+
+```powershell
+cd C:\MyDev\ClaudIA
+Get-ChildItem -Recurse -Filter *.ps1 | Unblock-File
+.\Install-ClaudIA.ps1
+```
+
+If your organization enforces `AllSigned` execution policy, unblocking files is not enough. Use a lab workstation where local scripts are allowed, or ask your administrator to approve a temporary lab execution policy for this repository.
+
+### The installer cannot find modules\Common.ps1
+
+**Symptom**:
+
+```text
+The term '...\modules\Common.ps1' is not recognized
+```
+
+**Cause**: Only `Install-ClaudIA.ps1` was downloaded or copied. ClaudIA must be run from the full repository root.
+
+**Fix**: Clone or download the complete repository, then run the installer from the folder that contains `modules`, `config`, `tools`, and `Install-ClaudIA.ps1`.
+
+```powershell
+git clone https://github.com/MH-Demos/ClaudIA.git C:\MyDev\ClaudIA
+cd C:\MyDev\ClaudIA
+Get-ChildItem -Recurse -Filter *.ps1 | Unblock-File
+.\Install-ClaudIA.ps1
+```
+
 ### ROPC returns 400 Bad Request
 
 **Symptom**: `AADSTS50126: Invalid username or password`

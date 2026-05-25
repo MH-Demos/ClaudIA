@@ -104,7 +104,104 @@ param(
 
 $ErrorActionPreference = 'Stop'
 if (-not $ConfigPath) { $ConfigPath = Join-Path $PSScriptRoot 'config\agents.json' }
-. (Join-Path $PSScriptRoot 'modules\Common.ps1')
+
+function Test-AARepositoryStructure {
+    $requiredPaths = @(
+        'modules\Common.ps1',
+        'modules\Deploy-AzureInfra.ps1',
+        'modules\Deploy-Runbook.ps1',
+        'modules\Invoke-AgentRunbook.ps1',
+        'prerequisites\Test-Prerequisites.ps1',
+        'config\agents.json',
+        'config\locales',
+        'tools'
+    )
+
+    $missing = @()
+    foreach ($relativePath in $requiredPaths) {
+        $fullPath = Join-Path $PSScriptRoot $relativePath
+        if (-not (Test-Path -LiteralPath $fullPath)) { $missing += $relativePath }
+    }
+
+    if ($missing.Count -gt 0) {
+        Write-Host ""
+        Write-Host "[ERROR] ClaudIA repository structure is incomplete." -ForegroundColor Red
+        Write-Host "        It looks like you may be running only Install-ClaudIA.ps1 or a partial download." -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "Missing required paths:" -ForegroundColor Yellow
+        foreach ($item in $missing) { Write-Host "  - $item" -ForegroundColor Gray }
+        Write-Host ""
+        Write-Host "Fix:" -ForegroundColor Cyan
+        Write-Host "  1. Clone or download the full repository." -ForegroundColor Gray
+        Write-Host "  2. Open PowerShell in the repository root, the folder that contains modules, config, tools, and Install-ClaudIA.ps1." -ForegroundColor Gray
+        Write-Host "  3. Run:" -ForegroundColor Gray
+        Write-Host "     Get-ChildItem -Recurse -Filter *.ps1 | Unblock-File" -ForegroundColor White
+        Write-Host "     .\Install-ClaudIA.ps1" -ForegroundColor White
+        Write-Host ""
+        Write-Host "Example:" -ForegroundColor Cyan
+        Write-Host "  cd C:\MyDev\ClaudIA" -ForegroundColor White
+        Write-Host "  .\Install-ClaudIA.ps1" -ForegroundColor White
+        exit 1
+    }
+}
+
+function Get-AABlockedPowerShellFiles {
+    $blocked = @()
+    Get-ChildItem -LiteralPath $PSScriptRoot -Recurse -Force -File -Filter '*.ps1' |
+        Where-Object { $_.FullName -notmatch '\\.git\\' } |
+        ForEach-Object {
+            try {
+                $stream = Get-Item -LiteralPath $_.FullName -Stream Zone.Identifier -ErrorAction SilentlyContinue
+                if ($stream) { $blocked += $_ }
+            } catch {
+                # Some filesystems do not expose alternate data streams.
+            }
+        }
+    return $blocked
+}
+
+function Invoke-AAUnblockProjectFiles {
+    $blocked = @(Get-AABlockedPowerShellFiles)
+    if ($blocked.Count -eq 0) { return }
+
+    Write-Host ""
+    Write-Host "[WARN] Windows marked $($blocked.Count) ClaudIA PowerShell script(s) as downloaded from the internet." -ForegroundColor Yellow
+    Write-Host "       PowerShell may block unsigned helper scripts such as modules\Common.ps1." -ForegroundColor DarkYellow
+    Write-Host ""
+    Write-Host "Recommended fix:" -ForegroundColor Cyan
+    Write-Host "  Get-ChildItem -Recurse -Filter *.ps1 | Unblock-File" -ForegroundColor White
+    Write-Host ""
+
+    $choice = if ($Auto) { 'Y' } else { Read-Host "  Unblock all ClaudIA .ps1 files now? (Y/n)" }
+    if ($choice -in @('n','N','no','NO')) {
+        Write-Host "  Continuing without unblocking. If the next step fails with a digital signature error, run the command above." -ForegroundColor Yellow
+        return
+    }
+
+    foreach ($file in $blocked) {
+        try { Unblock-File -LiteralPath $file.FullName -ErrorAction Stop }
+        catch { Write-Host "  [WARN] Could not unblock $($file.FullName): $($_.Exception.Message)" -ForegroundColor Yellow }
+    }
+    Write-Host "  [OK] ClaudIA PowerShell files were unblocked." -ForegroundColor Green
+}
+
+Test-AARepositoryStructure
+Invoke-AAUnblockProjectFiles
+
+try {
+    . (Join-Path $PSScriptRoot 'modules\Common.ps1')
+} catch {
+    Write-Host ""
+    Write-Host "[ERROR] Could not load modules\Common.ps1." -ForegroundColor Red
+    Write-Host "        $($_.Exception.Message)" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "If this is a digital signature or execution policy error, run:" -ForegroundColor Cyan
+    Write-Host "  Get-ChildItem -Recurse -Filter *.ps1 | Unblock-File" -ForegroundColor White
+    Write-Host ""
+    Write-Host "Then run the installer again:" -ForegroundColor Cyan
+    Write-Host "  .\Install-ClaudIA.ps1" -ForegroundColor White
+    exit 1
+}
 
 $script:AADeploymentResults = @()
 $script:StepParameterSupplied = $PSBoundParameters.ContainsKey('Step')

@@ -91,6 +91,20 @@ Get-ChildItem -Recurse -Filter *.ps1 | Unblock-File
 
 Do not run validation from an older working copy such as `purview-autonomous-agents-master\M365-Autonomous-IA` unless you intentionally want to validate that legacy version.
 
+Do not download only `Install-ClaudIA.ps1`. The installer depends on the full repository structure, including `modules`, `config`, `tools`, `prerequisites`, `Images`, and documentation files.
+
+If PowerShell shows a message like `is not digitally signed` or `cannot be loaded`, unblock the downloaded scripts from the repository root:
+
+```powershell
+Get-ChildItem -Recurse -Filter *.ps1 | Unblock-File
+```
+
+Then run:
+
+```powershell
+.\Install-ClaudIA.ps1
+```
+
 ## 4. Configure The Lab
 
 Start from [config/agents.json](config/agents.json). Replace public placeholders with your lab values:
