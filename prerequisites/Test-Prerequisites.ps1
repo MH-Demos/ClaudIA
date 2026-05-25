@@ -431,9 +431,10 @@ if ($Offline) {
                 if ($state -eq 'Registered') {
                     "$provider is Registered"
                 } elseif ($RegisterProviders) {
-                    Write-Host "    Registering $provider..." -ForegroundColor DarkYellow
-                    Invoke-AzText -Arguments @('provider','register','--namespace',$provider,'--only-show-errors') | Out-Null
-                    "$provider registration started"
+                    Write-Host "    Registering $provider and waiting for completion..." -ForegroundColor DarkYellow
+                    Invoke-AzText -Arguments @('provider','register','--namespace',$provider,'--wait','--only-show-errors') | Out-Null
+                    $state = Invoke-AzText -Arguments @('provider','show','--namespace',$provider,'--query','registrationState','-o','tsv')
+                    if ($state -eq 'Registered') { "$provider is Registered" }
                 }
             } "Run: az provider register --namespace $provider --wait"
         }

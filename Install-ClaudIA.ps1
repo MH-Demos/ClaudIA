@@ -465,7 +465,8 @@ function Show-AAPrerequisiteGuidance {
     $providerFailures = @($failed | Where-Object { $_.Category -eq 'Azure Resource Providers' })
     if ($providerFailures.Count -gt 0) {
         Write-Host "    - Azure resource providers are not registered in this new subscription." -ForegroundColor Gray
-        Write-Host "      Fix: rerun with .\Install-ClaudIA.ps1 -RegisterProviders, or run the az provider register commands shown above." -ForegroundColor DarkYellow
+        Write-Host "      Resource providers are registered at subscription scope; a resource group is not required yet." -ForegroundColor Gray
+        Write-Host "      Fix: let ClaudIA register them now, rerun with .\Install-ClaudIA.ps1 -RegisterProviders, or run the az provider register commands shown above." -ForegroundColor DarkYellow
     }
 
     if ($failedNames -contains 'Deploying user has admin directory role') {
@@ -478,6 +479,15 @@ function Show-AAPrerequisiteGuidance {
         Write-Host "    - Azure CLI is not logged in to a usable account." -ForegroundColor Gray
         Write-Host "      Fix: az logout; az login --tenant <tenant-domain>; az account list -o table." -ForegroundColor DarkYellow
     }
+}
+
+function Test-AAOnlyProviderFailures {
+    param($PrerequisiteResult)
+
+    $failed = @($PrerequisiteResult.Results | Where-Object { $_.Status -eq 'Fail' })
+    if ($failed.Count -eq 0) { return $false }
+    $nonProviderFailures = @($failed | Where-Object { $_.Category -ne 'Azure Resource Providers' })
+    return ($nonProviderFailures.Count -eq 0)
 }
 
 function New-AAShortSuffix {
@@ -1154,19 +1164,41 @@ if ((Test-AAInstallStep '0') -and -not $SkipPrerequisites) {
     $prereq = & (Join-Path $PSScriptRoot 'prerequisites\Test-Prerequisites.ps1') @prereqParams
     if (-not $prereq.AllPassed) {
         Show-AAPrerequisiteGuidance -PrerequisiteResult $prereq
-        Write-Host ""
-        Write-Host "[BLOCKED] Fix prerequisite failures before continuing." -ForegroundColor Red
-        $continue = if ($Auto) { 'y' } else { Read-Host "  Continue anyway? (y/N)" }
-        if ($continue -ne 'y') { return }
+
+        if (-not $RegisterProviders -and (Test-AAOnlyProviderFailures -PrerequisiteResult $prereq)) {
+            Write-Host ""
+            Write-Host "  The only failed checks are Azure resource providers." -ForegroundColor Yellow
+            Write-Host "  ClaudIA can register them now. This may take several minutes in a new subscription." -ForegroundColor Gray
+            $registerNow = if ($Auto) { 'Y' } else { Read-Host "  Register missing Azure resource providers now and rerun prerequisites? (Y/n)" }
+            if ($registerNow -notin @('n','N','no','NO')) {
+                $prereqParams.RegisterProviders = $true
+                $prereq = & (Join-Path $PSScriptRoot 'prerequisites\Test-Prerequisites.ps1') @prereqParams
+                if ($prereq.AllPassed) {
+                    Write-Host ""
+                    Write-Host "  [OK] Azure resource providers are registered. Continuing deployment." -ForegroundColor Green
+                } else {
+                    Show-AAPrerequisiteGuidance -PrerequisiteResult $prereq
+                }
+            }
+        }
+
+        if (-not $prereq.AllPassed) {
+            Write-Host ""
+            Write-Host "[BLOCKED] Fix prerequisite failures before continuing." -ForegroundColor Red
+            $continue = if ($Auto) { 'y' } else { Read-Host "  Continue anyway? (y/N)" }
+            if ($continue -ne 'y') { return }
+        }
     }
-    Set-AAInstallationStepDefinition -Path $installationDefinitionsPath -Step '0' -Value ([ordered]@{
-        activity = 'Reset connections and validate prerequisites'
-        completedAt = (Get-Date).ToString('o')
-        connectionReset = $script:AAInstallationDefinitions.sessionReset
-        prerequisitesAllPassed = $prereq.AllPassed
-    })
-    Set-AADeploymentResult -Step '0' -MainActivity 'Prerequisite validation' -Status 'deployed' -Comments 'Completed; Copilot availability is warning/pending for existing users.'
-    Write-Host ""
+    if ($prereq.AllPassed) {
+        Set-AAInstallationStepDefinition -Path $installationDefinitionsPath -Step '0' -Value ([ordered]@{
+            activity = 'Reset connections and validate prerequisites'
+            completedAt = (Get-Date).ToString('o')
+            connectionReset = $script:AAInstallationDefinitions.sessionReset
+            prerequisitesAllPassed = $prereq.AllPassed
+        })
+        Set-AADeploymentResult -Step '0' -MainActivity 'Prerequisite validation' -Status 'deployed' -Comments 'Completed; Copilot availability is warning/pending for existing users.'
+        Write-Host ""
+    }
 } elseif ($SkipPrerequisites) {
     Set-AAInstallationStepDefinition -Path $installationDefinitionsPath -Step '0' -Value ([ordered]@{
         activity = 'Reset connections and validate prerequisites'
