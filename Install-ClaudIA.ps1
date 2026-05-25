@@ -490,6 +490,31 @@ function Test-AAOnlyProviderFailures {
     return ($nonProviderFailures.Count -eq 0)
 }
 
+function Update-AAAgentUpnDomains {
+    param(
+        [Parameter(Mandatory)]$Config,
+        [Parameter(Mandatory)][string]$Domain
+    )
+
+    if (-not $Config.agents) { return 0 }
+    $updated = 0
+    foreach ($agent in @($Config.agents)) {
+        if (-not $agent.sam) { continue }
+        $targetUpn = "$($agent.sam)@$Domain"
+        foreach ($propertyName in @('userPrincipalName','upn')) {
+            if (-not $agent.PSObject.Properties[$propertyName]) { continue }
+            $currentUpn = [string]$agent.$propertyName
+            if (-not $currentUpn) { continue }
+            $currentDomain = ($currentUpn -split '@')[-1]
+            if ($currentDomain -in @('contoso.example','example.com','example.test') -or $currentDomain -ne $Domain) {
+                Set-AAConfigProperty -Object $agent -Name $propertyName -Value $targetUpn
+                $updated++
+            }
+        }
+    }
+    return $updated
+}
+
 function New-AAShortSuffix {
     param([string]$Seed)
 
@@ -766,6 +791,11 @@ if (($needsSetup -or $script:ForceConfigurationPrompt) -and -not $DryRun -and -n
         -Hint "e.g. contoso.onmicrosoft.com"
     if (-not $newDomain) { return }
     if ($newDomain -ne $config.tenant.domain) { $config.tenant.domain = $newDomain; $configChanged = $true }
+    $updatedAgentUpns = Update-AAAgentUpnDomains -Config $config -Domain $config.tenant.domain
+    if ($updatedAgentUpns -gt 0) {
+        Write-Host "    [OK] Updated $updatedAgentUpns agent UPN value(s) to use $($config.tenant.domain)." -ForegroundColor Green
+        $configChanged = $true
+    }
 
     Write-Host ""
     Write-Host "  --- Azure CLI Sign-In ---" -ForegroundColor White

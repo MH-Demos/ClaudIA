@@ -4,8 +4,20 @@ function Get-AgentUpn {
         [Parameter(Mandatory)][string]$Domain
     )
 
-    if ($Agent.userPrincipalName) { return [string]$Agent.userPrincipalName }
-    if ($Agent.upn) { return [string]$Agent.upn }
+    if ($Agent.userPrincipalName) {
+        $configuredUpn = [string]$Agent.userPrincipalName
+        $configuredDomain = ($configuredUpn -split '@')[-1]
+        if ($configuredDomain -notin @('contoso.example','example.com','example.test')) {
+            return $configuredUpn
+        }
+    }
+    if ($Agent.upn) {
+        $configuredUpn = [string]$Agent.upn
+        $configuredDomain = ($configuredUpn -split '@')[-1]
+        if ($configuredDomain -notin @('contoso.example','example.com','example.test')) {
+            return $configuredUpn
+        }
+    }
     if ("$($Agent.sam)" -match '@') { return [string]$Agent.sam }
     return "$($Agent.sam)@$Domain"
 }

@@ -286,7 +286,7 @@
   "agents": [
     {
       "sam": "ana.rodriguez",
-      "userPrincipalName": "ana.rodriguez@contoso.example",
+      "userPrincipalName": "",
       "displayName": "Ana Rodriguez",
       "department": "HR",
       "jobTitle": "Analista de TI/Seguridad",
@@ -318,7 +318,7 @@
     },
     {
       "sam": "carlos.delgado",
-      "userPrincipalName": "carlos.delgado@contoso.example",
+      "userPrincipalName": "",
       "displayName": "Carlos Delgado",
       "department": "Finance",
       "jobTitle": "Analista de Datos",
@@ -350,7 +350,7 @@
     },
     {
       "sam": "david.chen",
-      "userPrincipalName": "david.chen@contoso.example",
+      "userPrincipalName": "",
       "displayName": "David Chen",
       "department": "Legal",
       "jobTitle": "Especialista en atención al cliente",
@@ -382,7 +382,7 @@
     },
     {
       "sam": "james.wilson",
-      "userPrincipalName": "james.wilson@contoso.example",
+      "userPrincipalName": "",
       "displayName": "James Wilson",
       "department": "Engineering",
       "jobTitle": "Director de Operaciones",
@@ -414,7 +414,7 @@
     },
     {
       "sam": "marcus.olsson",
-      "userPrincipalName": "marcus.olsson@contoso.example",
+      "userPrincipalName": "",
       "displayName": "Marcus Olsson",
       "department": "Sales",
       "jobTitle": "Gerente de Ciberseguridad",
@@ -446,7 +446,7 @@
     },
     {
       "sam": "alexander.meyer",
-      "userPrincipalName": "alexander.meyer@contoso.example",
+      "userPrincipalName": "",
       "displayName": "Alexander Meyer",
       "department": "HR",
       "jobTitle": "CEO",
@@ -478,7 +478,7 @@
     },
     {
       "sam": "diego.martinez",
-      "userPrincipalName": "diego.martinez@contoso.example",
+      "userPrincipalName": "",
       "displayName": "Diego Martinez",
       "department": "Finance",
       "jobTitle": "Gerente Comercial",
@@ -510,7 +510,7 @@
     },
     {
       "sam": "emily.johnson",
-      "userPrincipalName": "emily.johnson@contoso.example",
+      "userPrincipalName": "",
       "displayName": "Emily Johnson",
       "department": "Legal",
       "jobTitle": "Abogada Corporativa",
@@ -542,7 +542,7 @@
     },
     {
       "sam": "laura.gomez",
-      "userPrincipalName": "laura.gomez@contoso.example",
+      "userPrincipalName": "",
       "displayName": "Laura Gomez",
       "department": "Engineering",
       "jobTitle": "Analista de RRHH",
@@ -574,7 +574,7 @@
     },
     {
       "sam": "priya.sharma",
-      "userPrincipalName": "priya.sharma@contoso.example",
+      "userPrincipalName": "",
       "displayName": "Priya Sharma",
       "department": "Sales",
       "jobTitle": "Cientifica de Datos",
@@ -606,7 +606,7 @@
     },
     {
       "sam": "miguel.santos",
-      "userPrincipalName": "miguel.santos@contoso.example",
+      "userPrincipalName": "",
       "displayName": "Miguel Santos",
       "department": "TI / Infraestructura",
       "jobTitle": "Platform Engineer",
@@ -637,7 +637,7 @@
     },
     {
       "sam": "sofia.lopez",
-      "userPrincipalName": "sofia.lopez@contoso.example",
+      "userPrincipalName": "",
       "displayName": "Sofia Lopez",
       "department": "PMO",
       "jobTitle": "Project Manager",
@@ -668,7 +668,7 @@
     },
     {
       "sam": "devon.reyes",
-      "userPrincipalName": "devon.reyes@contoso.example",
+      "userPrincipalName": "",
       "displayName": "Devon Reyes",
       "department": "Operations Support",
       "jobTitle": "Business Operation Analyst",
@@ -698,3 +698,4 @@
     }
   ]
 }
+
