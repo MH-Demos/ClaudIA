@@ -2,6 +2,8 @@
 
 This guide explains how to reproduce ClaudIA from zero in a clean Microsoft 365 lab tenant and Azure subscription.
 
+If the tenant has never been configured for Microsoft 365 audit, Conditional Access, Purview, or demo users, read [If Your Tenant Is Completely New.md](If%20Your%20Tenant%20Is%20Completely%20New.md) before running the installer.
+
 ## 1. Local Workstation
 
 Use Windows with PowerShell 7. Run PowerShell as Administrator for the first setup.
@@ -52,6 +54,8 @@ Minimum cloud requirements:
 | Azure Data Explorer | Optional but recommended for storyline and activity analytics. |
 | Azure Functions and Storage Static Website | Required for the activity story map portal. |
 | Microsoft Playwright Testing or local Playwright | Optional browser-persona execution. |
+
+For a completely new tenant, also validate Security Defaults, Conditional Access, audit ingestion, user creation, persona photos, and the optional Activity Portal before running the full installer.
 
 Register providers before deployment:
 
@@ -166,6 +170,20 @@ Use these assets in order:
 
 When adding a new scenario, update the storyline, config, relevant scripts, and README links together.
 
+## Optional: Activity Portal, Photos, And Branding
+
+The Activity Portal is optional. Add it when the demo should include a public visual map, persona images, service icons, branding, and storyline navigation.
+
+For a new tenant:
+
+```powershell
+.\tools\Set-EntraUserPhotos.ps1 -WhatIf
+.\tools\Set-EntraUserPhotos.ps1
+.\tools\Publish-ActivityStoryMapAssets.ps1
+```
+
+Branding is driven by file names under `Images/Branding`, `Images/Characters`, and `Images/Services`. Replace images, keep names aligned with personas and services, then republish the Activity Portal assets.
+
 ## 9. Keep The Repo Public-Safe
 
 Before pushing:
@@ -184,4 +202,3 @@ Do not commit generated folders:
 - `out`
 - `.env`
 - `temp_*.json`
-

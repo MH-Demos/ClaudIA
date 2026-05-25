@@ -43,6 +43,7 @@ Run this check before publishing:
 | Path | Contents |
 | --- | --- |
 | [How to Start.md](How%20to%20Start.md) | End-to-end setup path for a new public user. |
+| [If Your Tenant Is Completely New.md](If%20Your%20Tenant%20Is%20Completely%20New.md) | Clean-tenant readiness guide for audit, Security Defaults, Conditional Access, demo users, photos, Activity Portal, and branding. |
 | [config](config) | Tenant, agent, locale, ADX, activity map, and installation definition templates. |
 | [modules](modules) | PowerShell modules used by the main installer. |
 | [tools](tools) | Operational tools for ADX, browser agents, story map publishing, costs, and validation. |
@@ -72,7 +73,7 @@ az account set --subscription 11111111-1111-1111-1111-111111111111
 .\Install-AutonomousAgents.ps1
 ```
 
-For the complete setup path, including local tools, Azure subscription requirements, Microsoft 365 licensing, Key Vault usage, browser agents, images, and storyline replication, use [How to Start.md](How%20to%20Start.md).
+For the complete setup path, including local tools, Azure subscription requirements, Microsoft 365 licensing, Key Vault usage, browser agents, images, and storyline replication, use [How to Start.md](How%20to%20Start.md). If the tenant is brand new, start with [If Your Tenant Is Completely New.md](If%20Your%20Tenant%20Is%20Completely%20New.md).
 
 ## Localization Strategy
 
@@ -126,4 +127,3 @@ When adding new work to this repository:
 3. Add setup steps to [How to Start.md](How%20to%20Start.md) when they affect new users.
 4. Keep sample configuration generic.
 5. Run `.\tools\Test-PublicRepoSafety.ps1` before publishing.
-
