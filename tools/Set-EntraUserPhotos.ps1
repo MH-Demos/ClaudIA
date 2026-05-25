@@ -4,7 +4,8 @@
 .DESCRIPTION
     Maps each agent in config\agents.json to an image in Images\Characters by
     displayName. The current Azure CLI session is used to get a Microsoft Graph
-    token. Use -WhatIf to validate mappings before uploading.
+    token, unless CLAUDIA_GRAPH_TOKEN is already set by the installer. Use
+    -WhatIf to validate mappings before uploading.
 #>
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
@@ -17,7 +18,8 @@ param(
 $ErrorActionPreference = 'Stop'
 
 function ConvertTo-ImageKey {
-    param([Parameter(Mandatory)][string]$Value)
+    param([string]$Value)
+    if ([string]::IsNullOrWhiteSpace($Value)) { return '' }
     $normalized = $Value.Normalize([Text.NormalizationForm]::FormD)
     $builder = [System.Text.StringBuilder]::new()
     foreach ($char in $normalized.ToCharArray()) {
@@ -38,10 +40,23 @@ function Get-ContentType {
     }
 }
 
+function Get-AgentUpn {
+    param(
+        [Parameter(Mandatory)]$Agent,
+        [Parameter(Mandatory)][string]$Domain
+    )
+
+    if ($Agent.userPrincipalName) { return [string]$Agent.userPrincipalName }
+    if ($Agent.upn) { return [string]$Agent.upn }
+    if ("$($Agent.sam)" -match '@') { return [string]$Agent.sam }
+    return "$($Agent.sam)@$Domain"
+}
+
 if (-not (Test-Path -LiteralPath $ConfigPath)) { throw "Config file not found: $ConfigPath" }
 if (-not (Test-Path -LiteralPath $ImagesPath)) { throw "Images folder not found: $ImagesPath" }
 
 $config = Get-Content -LiteralPath $ConfigPath -Raw -Encoding utf8 | ConvertFrom-Json
+$domain = [string]$config.tenant.domain
 $agents = @($config.agents)
 if ($Agent -and $Agent.Count -gt 0) {
     $wanted = @($Agent | ForEach-Object { ConvertTo-ImageKey $_ })
@@ -63,7 +78,11 @@ Get-ChildItem -LiteralPath $ImagesPath -File | Where-Object {
 
 $token = $null
 if (-not $WhatIfPreference) {
-    $token = az account get-access-token --resource-type ms-graph --query accessToken -o tsv 2>$null
+    $token = if ($env:CLAUDIA_GRAPH_TOKEN) {
+        $env:CLAUDIA_GRAPH_TOKEN
+    } else {
+        az account get-access-token --resource-type ms-graph --query accessToken -o tsv 2>$null
+    }
     if (-not $token) { throw 'Could not acquire Microsoft Graph token. Run az login first.' }
 }
 
@@ -72,7 +91,7 @@ $missing = 0
 
 foreach ($agentInfo in $agents) {
     $displayName = [string]$agentInfo.displayName
-    $upn = [string]$agentInfo.userPrincipalName
+    $upn = Get-AgentUpn -Agent $agentInfo -Domain $domain
     if (-not $displayName -or -not $upn) {
         Write-Warning 'Skipping agent with missing displayName or userPrincipalName.'
         continue

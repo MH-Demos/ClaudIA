@@ -75,6 +75,27 @@ $existingLabels = Get-Label -ErrorAction SilentlyContinue
 $existingNames = @($existingLabels | ForEach-Object { $_.DisplayName })
 Write-Host " found $($existingNames.Count) labels" -ForegroundColor Gray
 
+function Get-AAFirstLabel {
+    param(
+        [array]$Labels,
+        [Parameter(Mandatory)][string]$DisplayName
+    )
+
+    @($Labels | Where-Object { $_.DisplayName -eq $DisplayName } | Select-Object -First 1)[0]
+}
+
+function Get-AAFirstLabelGuid {
+    param($Label)
+
+    if (-not $Label) { return $null }
+    $guidValue = $Label.Guid
+    if ($guidValue -is [System.Collections.IEnumerable] -and -not ($guidValue -is [string])) {
+        $guidValue = @($guidValue | Select-Object -First 1)[0]
+    }
+    if ($guidValue) { return [string]$guidValue }
+    return $null
+}
+
 # ============================================================================
 # LABEL DEFINITIONS
 # ============================================================================
@@ -185,7 +206,7 @@ foreach ($def in $labelDefs) {
     Write-Host "  Label '$displayName'..." -NoNewline
 
     # Check if exists (match by DisplayName)
-    $exists = $existingLabels | Where-Object { $_.DisplayName -eq $displayName }
+    $exists = Get-AAFirstLabel -Labels @($existingLabels) -DisplayName $displayName
     if ($exists) {
         Write-Host " [EXISTS]" -ForegroundColor DarkYellow
         $skipped++
@@ -203,17 +224,22 @@ foreach ($def in $labelDefs) {
 
     # Sub-label: set ParentId
     if ($def.ParentName) {
-        $parent = $existingLabels | Where-Object { $_.DisplayName -eq $def.ParentName }
+        $parent = Get-AAFirstLabel -Labels @($existingLabels) -DisplayName $def.ParentName
         if (-not $parent) {
             # Parent was just created in this run -- retry with delay
             for ($retryP = 0; $retryP -lt 5; $retryP++) {
                 Start-Sleep -Seconds 3
-                $parent = Get-Label -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq $def.ParentName }
+                $parent = Get-AAFirstLabel -Labels @(Get-Label -ErrorAction SilentlyContinue) -DisplayName $def.ParentName
                 if ($parent) { break }
             }
         }
         if ($parent) {
-            $labelParams['ParentId'] = $parent.Guid
+            $parentGuid = Get-AAFirstLabelGuid -Label $parent
+            if (-not $parentGuid) {
+                Write-Host " [SKIP] Parent '$($def.ParentName)' has no usable GUID" -ForegroundColor Red
+                continue
+            }
+            $labelParams['ParentId'] = $parentGuid
         } else {
             Write-Host " [SKIP] Parent '$($def.ParentName)' not found after retries" -ForegroundColor Red
             continue

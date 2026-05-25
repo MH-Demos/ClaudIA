@@ -2576,7 +2576,8 @@ foreach ($agent in $activeAgents) {
 
     # -- Copilot M365 queries (Wave 2 agents with Copilot license) -----------
     $copilotCount = 0
-    if ((Test-ServiceRequested -Aliases @('copilot','microsoft 365 copilot','m365 copilot')) -and $copilotPrompts.ContainsKey($agent.Sam)) {
+    $copilotQueriesEnabled = $agentConfig.features.copilotQueries -ne $false
+    if ($copilotQueriesEnabled -and (Test-ServiceRequested -Aliases @('copilot','microsoft 365 copilot','m365 copilot')) -and $copilotPrompts.ContainsKey($agent.Sam)) {
         try {
             # Generate unique search queries via Azure OpenAI per persona
             $dayContext = "Today is $(Get-Date -Format 'dddd d MMMM yyyy'). Generate queries relevant to this period."

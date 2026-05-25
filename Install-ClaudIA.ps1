@@ -45,6 +45,10 @@
       Mode 'prompt': Asks which mode at runtime.
       -> Customize via -UseExistingUsers switch or features.userMode in agents.json.
 
+    Step 1b: PERSONA PROFILE PHOTOS
+      Optional: uploads Images/Characters profile photos to Entra users.
+      -> Calls tools/Set-EntraUserPhotos.ps1.
+
     Step 2: LICENSES + MFA EXCLUSION
       Assigns M365 E5 (all agents) + Copilot (Wave 2) licenses via Graph API.
       Creates grp-claudia-agent-mfa-exclusion security group and adds all agents.
@@ -91,6 +95,10 @@
     Step 8: DEPLOY ACTIVITY STORY MAP
       Deploys an Azure Storage static website and Azure Function backed by ADX.
       -> Calls modules/Deploy-ActivityStoryMap.ps1.
+
+    Step 9: BROWSERAGENT CLOUD AUTOMATION
+      Optional: creates regional Playwright Workspaces and Container Apps Jobs.
+      -> Calls tools/Deploy-BrowserAgentInfra.ps1 and tools/Deploy-BrowserAgentScheduledJobs.ps1.
 #>
 
 [CmdletBinding()]
@@ -231,6 +239,7 @@ function Test-AAInstallStep {
         '6c' { return $Step -eq 6 }
         '7' { return $Step -eq 7 }
         '8' { return $Step -eq 8 }
+        '9' { return $Step -eq 9 }
         default { return $false }
     }
 }
@@ -490,6 +499,20 @@ function Test-AAOnlyProviderFailures {
     return ($nonProviderFailures.Count -eq 0)
 }
 
+function Test-AAAutomationAccountAvailable {
+    param([Parameter(Mandatory)]$Config)
+
+    $aaName = [string]$Config.infrastructure.automationAccountName
+    $rg = [string]$Config.infrastructure.resourceGroup
+    if (-not $aaName -or -not $rg) { return $false }
+
+    $aa = az automation account show -n $aaName -g $rg --query id -o tsv 2>$null
+    if ($aa) { return $true }
+
+    $aaOther = az automation account list --query "[?name=='$aaName'].id | [0]" -o tsv 2>$null
+    return [bool]$aaOther
+}
+
 function Update-AAAgentUpnDomains {
     param(
         [Parameter(Mandatory)]$Config,
@@ -513,6 +536,49 @@ function Update-AAAgentUpnDomains {
         }
     }
     return $updated
+}
+
+function Set-AACopilotQueriesFeature {
+    param(
+        [Parameter(Mandatory)]$Config,
+        [Parameter(Mandatory)][bool]$Enabled
+    )
+
+    if (-not $Config.PSObject.Properties['features'] -or -not $Config.features) {
+        $Config | Add-Member -NotePropertyName features -NotePropertyValue ([PSCustomObject]@{}) -Force
+    }
+    Set-AAConfigProperty -Object $Config.features -Name copilotQueries -Value $Enabled
+}
+
+function Sync-AABrowserAgentConfig {
+    param([Parameter(Mandatory)]$Config)
+
+    if (-not $Config.PSObject.Properties['browserAgents'] -or -not $Config.browserAgents) { return }
+    Set-AAConfigProperty -Object $Config.browserAgents -Name subscriptionId -Value $Config.tenant.subscriptionId
+    Set-AAConfigProperty -Object $Config.browserAgents -Name resourceGroup -Value $Config.infrastructure.resourceGroup
+    if (-not $Config.browserAgents.location -or $Config.browserAgents.location -match 'REPLACE_WITH') {
+        Set-AAConfigProperty -Object $Config.browserAgents -Name location -Value 'eastus'
+    }
+}
+
+function Set-AABrowserWorkspaceResult {
+    param(
+        [Parameter(Mandatory)]$Config,
+        [Parameter(Mandatory)]$WorkspaceConfig,
+        [Parameter(Mandatory)]$Result
+    )
+
+    if (-not $Result.WorkspaceId) { return }
+    Set-AAConfigProperty -Object $WorkspaceConfig -Name workspaceId -Value ([string]$Result.WorkspaceId)
+    Set-AAConfigProperty -Object $WorkspaceConfig -Name dataplaneUri -Value ([string]$Result.DataplaneUri)
+    Set-AAConfigProperty -Object $WorkspaceConfig -Name playwrightServiceUrl -Value ([string]$Result.PlaywrightServiceUrl)
+
+    if ([string]$WorkspaceConfig.key -eq 'americas') {
+        Set-AAConfigProperty -Object $Config.browserAgents -Name workspaceName -Value ([string]$Result.WorkspaceName)
+        Set-AAConfigProperty -Object $Config.browserAgents -Name workspaceId -Value ([string]$Result.WorkspaceId)
+        Set-AAConfigProperty -Object $Config.browserAgents -Name dataplaneUri -Value ([string]$Result.DataplaneUri)
+        Set-AAConfigProperty -Object $Config.browserAgents -Name playwrightServiceUrl -Value ([string]$Result.PlaywrightServiceUrl)
+    }
 }
 
 function New-AAShortSuffix {
@@ -815,6 +881,7 @@ if (($needsSetup -or $script:ForceConfigurationPrompt) -and -not $DryRun -and -n
     $newSubId = Select-AASubscription -Current $config.tenant.subscriptionId
     if (-not $newSubId) { return }
     if ($newSubId -ne $config.tenant.subscriptionId) { $config.tenant.subscriptionId = $newSubId; $configChanged = $true }
+    Sync-AABrowserAgentConfig -Config $config
 
     $activeAccount = Get-AACurrentAzureCliAccount
     if ($activeAccount -and $activeAccount.user) {
@@ -897,6 +964,7 @@ if (($needsSetup -or $script:ForceConfigurationPrompt) -and -not $DryRun -and -n
     $newResourceGroup = Read-AAResourceGroupName -Current $config.infrastructure.resourceGroup -SubscriptionId $config.tenant.subscriptionId
     if ($newResourceGroup -and $newResourceGroup -ne $config.infrastructure.resourceGroup) {
         Set-AAConfigProperty -Object $config.infrastructure -Name resourceGroup -Value $newResourceGroup
+        Sync-AABrowserAgentConfig -Config $config
         $configChanged = $true
     }
 
@@ -1464,6 +1532,30 @@ if (Test-AAInstallStep '1') {
             }
         })
     })
+
+    if (-not $DryRun) {
+        Write-Host ""
+        Write-Host "=== Step 1b: Persona profile photos ===" -ForegroundColor Cyan
+        Write-Host "  Uploads Images\\Characters persona images to Entra user profile photos." -ForegroundColor Gray
+        Write-Host "  Photos improve Teams, Outlook, portal screenshots, and storyline recognition." -ForegroundColor Gray
+        $uploadPhotos = if ($Auto) { 'Y' } else { Read-Host "  Upload persona photos now? (Y/n)" }
+        if ($uploadPhotos -notin @('n','N','no','NO')) {
+            $oldGraphToken = $env:CLAUDIA_GRAPH_TOKEN
+            if ($script:AAM365AzConfigDir) { $env:CLAUDIA_GRAPH_TOKEN = Get-AAGraphAccessToken }
+            try {
+                & (Join-Path $PSScriptRoot 'tools\Set-EntraUserPhotos.ps1') -ConfigPath $ConfigPath -SkipMissing
+            } catch {
+                Write-Host "  [WARN] Persona photo upload did not complete: $($_.Exception.Message)" -ForegroundColor Yellow
+                Write-Host "         You can retry later with: .\tools\Set-EntraUserPhotos.ps1 -SkipMissing" -ForegroundColor DarkYellow
+            } finally {
+                if ($null -ne $oldGraphToken) { $env:CLAUDIA_GRAPH_TOKEN = $oldGraphToken }
+                else { Remove-Item Env:\CLAUDIA_GRAPH_TOKEN -ErrorAction SilentlyContinue }
+            }
+        } else {
+            Write-Host "  [SKIP] Persona photos can be uploaded later with .\tools\Set-EntraUserPhotos.ps1 -SkipMissing" -ForegroundColor DarkYellow
+        }
+        Write-Host ""
+    }
 }
 
 # ============================================================================
@@ -1475,6 +1567,9 @@ if (Test-AAInstallStep '2') {
     if (-not $DryRun) {
         $gt = Get-AAGraphAccessToken
         $gh = @{Authorization="Bearer $gt"; 'Content-Type'='application/json'}
+        $copilotAgents = @($agents | Where-Object { $_.copilotLicense -eq $true })
+        $copilotAssignedCount = 0
+        $copilotSkippedCount = 0
 
         # Find best available license SKU (E3, E5, E7, or equivalent)
         $skus = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/subscribedSkus" -Headers $gh).value
@@ -1526,7 +1621,11 @@ if (Test-AAInstallStep '2') {
                         Invoke-RestMethod -Method POST -Uri "https://graph.microsoft.com/v1.0/users/$userId/assignLicense" `
                             -Headers $gh -Body $copBody | Out-Null
                         Write-Host " + Copilot" -ForegroundColor Green
+                        $copilotAssignedCount++
                     } catch { Write-Host " + Copilot skipped" -ForegroundColor DarkYellow }
+                } elseif ($agent.copilotLicense) {
+                    $copilotSkippedCount++
+                    Write-Host " + Copilot unavailable" -ForegroundColor DarkYellow
                 } else {
                     Write-Host "" # newline
                 }
@@ -1535,6 +1634,20 @@ if (Test-AAInstallStep '2') {
             Write-Host "  [WARN] No E3/E5/E7 licenses found in tenant." -ForegroundColor Yellow
             Write-Host "         Agents will rely on tenant-wide service enablement." -ForegroundColor Yellow
             Write-Host "         If ROPC/Graph fails later, assign licenses manually." -ForegroundColor Yellow
+        }
+
+        if ($copilotAgents.Count -gt 0 -and $copilotAssignedCount -eq 0) {
+            Write-Host ""
+            Write-Host "  [WARN] No Microsoft 365 Copilot licenses were assigned to the $($copilotAgents.Count) configured Copilot agent(s)." -ForegroundColor Yellow
+            Write-Host "         ClaudIA can disable Copilot-specific tasks for now." -ForegroundColor Yellow
+            Write-Host "         Non-Copilot AI emulation, including ExternalAI scenarios through Azure AI Foundry, can remain enabled." -ForegroundColor Gray
+            $disableCopilot = if ($Auto) { 'Y' } else { Read-Host "  Disable Copilot-specific runbook tasks until Copilot licenses are available? (Y/n)" }
+            if ($disableCopilot -notin @('n','N','no','NO')) {
+                Set-AACopilotQueriesFeature -Config $config -Enabled:$false
+                $configChanged = $true
+                $config | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $ConfigPath -Encoding utf8
+                Write-Host "  [OK] features.copilotQueries set to false. Use tools\\Set-CopilotTasks.ps1 -Mode Enable after assigning Copilot licenses." -ForegroundColor Green
+            }
         }
 
         # Create/reuse MFA exclusion group
@@ -1666,6 +1779,13 @@ if (Test-AAInstallStep '4') {
         $config | ConvertTo-Json -Depth 30 | Set-Content $ConfigPath -Encoding utf8
         Initialize-AAInstallationDefinitions -Path $installationDefinitionsPath -Config $config -ConfigPath $ConfigPath `
             -RunLogPath $runLogPath -RunStamp $runStamp
+        if (-not (Test-AAAutomationAccountAvailable -Config $config)) {
+            Write-Host ""
+            Write-Host "  [ERROR] Step 4 did not leave Automation Account '$($config.infrastructure.automationAccountName)' available." -ForegroundColor Red
+            Write-Host "          Step 4a cannot create SharePoint/Teams collaboration assets because it stores IDs in Automation variables." -ForegroundColor Yellow
+            Write-Host "          Review the Step 4 error above, then rerun: .\Install-ClaudIA.ps1 -Step 4 -SkipPrerequisites" -ForegroundColor Yellow
+            return
+        }
     } else {
         Write-Host "  [DRY-RUN] Would create: Azure OpenAI, Automation Account, Key Vault access, and ADX telemetry" -ForegroundColor DarkYellow
     }
@@ -1697,6 +1817,20 @@ if (Test-AAInstallStep '4a') {
     Write-Host ""
 
     if (-not $DryRun) {
+        if (-not (Test-AAAutomationAccountAvailable -Config $config)) {
+            Write-Host "  [ERROR] Automation Account '$($config.infrastructure.automationAccountName)' was not found." -ForegroundColor Red
+            Write-Host "          Step 4a needs the Automation Account from Step 4 to store Teams and SharePoint IDs as Automation variables." -ForegroundColor Yellow
+            Write-Host "          Run Step 4 first and confirm Azure infrastructure completes successfully:" -ForegroundColor Yellow
+            Write-Host "          .\Install-ClaudIA.ps1 -Step 4 -SkipPrerequisites" -ForegroundColor Cyan
+            Write-Host ""
+            Set-AAInstallationStepDefinition -Path $installationDefinitionsPath -Step '4a' -Value ([ordered]@{
+                activity = 'M365 collaboration'
+                completedAt = (Get-Date).ToString('o')
+                status = 'blocked'
+                reason = 'Automation Account missing. Step 4 must complete before Step 4a.'
+            })
+            return
+        }
         Write-Host "    [C] Create new site + team (default)" -ForegroundColor Gray
         Write-Host "    [E] Use existing resources (enter IDs)" -ForegroundColor Gray
         $m365Mode = if ($Auto) { 'C' } else { Read-Host "    Choice (C/E)" }
@@ -1981,6 +2115,11 @@ if (Test-AAInstallStep '8') {
             if ($storyMapResult) {
                 Set-AAObjectProperty -Object $config -Name 'activityStoryMap' -Value $storyMapResult
             }
+            $deployFrontDoor = if ($Auto) { 'N' } else { Read-Host "  Enable Azure Front Door for the Activity Story Map? (y/N)" }
+            if ($deployFrontDoor -in @('y','Y','yes','YES')) {
+                & (Join-Path $PSScriptRoot 'tools\Enable-ActivityStoryMapFrontDoor.ps1') -ConfigPath $ConfigPath
+                $config = Get-Content -LiteralPath $ConfigPath -Raw | ConvertFrom-Json
+            }
         } else {
             Write-Host "  [SKIP] Activity Story Map skipped." -ForegroundColor DarkYellow
         }
@@ -2001,11 +2140,87 @@ if (Test-AAInstallStep '8') {
 }
 
 # ============================================================================
+# STEP 9: BROWSERAGENT CLOUD AUTOMATION (optional)
+# ============================================================================
+if (Test-AAInstallStep '9') {
+    Write-Host "=== Step 9: BrowserAgent Cloud Automation ===" -ForegroundColor Cyan
+    Write-Host "  Creates regional Azure Playwright Workspaces and scheduled Container Apps Jobs." -ForegroundColor Gray
+    Write-Host "  This is optional and requires BrowserAgents auth state under BrowserAgents\\.auth." -ForegroundColor Gray
+    Write-Host ""
+
+    $deployBrowserAgents = 'n'
+    if (-not $DryRun) {
+        $deployBrowserAgents = if ($Auto) { 'n' } else { Read-Host "  Deploy BrowserAgent cloud automation now? (y/N)" }
+        if ($deployBrowserAgents -in @('y','Y','yes','YES')) {
+            Sync-AABrowserAgentConfig -Config $config
+            $workspaceResults = @()
+            $regionalWorkspaces = @($config.browserAgents.regionalWorkspaces)
+            if ($regionalWorkspaces.Count -eq 0) { $regionalWorkspaces = @($config.browserAgents) }
+
+            foreach ($workspaceConfig in $regionalWorkspaces) {
+                $key = if ($workspaceConfig.key) { [string]$workspaceConfig.key } else { 'americas' }
+                $location = if ($workspaceConfig.location) { [string]$workspaceConfig.location } else { [string]$config.browserAgents.location }
+                $workspaceName = if ($workspaceConfig.workspaceName) { [string]$workspaceConfig.workspaceName } else { [string]$config.browserAgents.workspaceName }
+                Write-Host ""
+                Write-Host "  Deploying Playwright workspace '$key' ($workspaceName / $location)..." -ForegroundColor Cyan
+                $result = & (Join-Path $PSScriptRoot 'tools\Deploy-BrowserAgentInfra.ps1') `
+                    -ConfigPath $ConfigPath `
+                    -SubscriptionId $config.tenant.subscriptionId `
+                    -ResourceGroup $config.infrastructure.resourceGroup `
+                    -Location $location `
+                    -WorkspaceName $workspaceName
+                $resultObject = @($result | Where-Object { $_.PSObject.Properties['WorkspaceId'] } | Select-Object -Last 1)
+                if ($resultObject) {
+                    Set-AABrowserWorkspaceResult -Config $config -WorkspaceConfig $workspaceConfig -Result $resultObject
+                    $workspaceResults += $resultObject
+                }
+            }
+
+            $config | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $ConfigPath -Encoding utf8
+
+            $deployJobs = if ($Auto) { 'n' } else { Read-Host "  Deploy scheduled Container Apps Jobs for BrowserAgents? Requires .auth files. (y/N)" }
+            if ($deployJobs -in @('y','Y','yes','YES')) {
+                foreach ($workspaceConfig in @($config.browserAgents.regionalWorkspaces)) {
+                    $key = [string]$workspaceConfig.key
+                    $prefix = switch ($key) {
+                        'europe' { 'browseragents-eu' }
+                        'asia' { 'browseragents-asia' }
+                        default { 'browseragents' }
+                    }
+                    & (Join-Path $PSScriptRoot 'tools\Deploy-BrowserAgentScheduledJobs.ps1') `
+                        -ConfigPath $ConfigPath `
+                        -BrowserRegionKey $key `
+                        -JobNamePrefix $prefix `
+                        -SkipAgentsMissingAuth `
+                        -Deploy
+                }
+            } else {
+                Write-Host "  [SKIP] BrowserAgent scheduled jobs skipped. You can run tools\\Deploy-BrowserAgentScheduledJobs.ps1 later." -ForegroundColor DarkYellow
+            }
+        } else {
+            Write-Host "  [SKIP] BrowserAgent cloud automation skipped." -ForegroundColor DarkYellow
+        }
+    } else {
+        Write-Host "  [DRY-RUN] Would deploy regional Playwright Workspaces and optional Container Apps Jobs." -ForegroundColor DarkYellow
+    }
+
+    Set-AAInstallationStepDefinition -Path $installationDefinitionsPath -Step '9' -Value ([ordered]@{
+        activity = 'BrowserAgent cloud automation'
+        completedAt = (Get-Date).ToString('o')
+        dryRun = [bool]$DryRun
+        requested = ($deployBrowserAgents -in @('y','Y','yes','YES'))
+        regionalWorkspaces = $config.browserAgents.regionalWorkspaces
+    })
+    Write-Host ""
+}
+
+# ============================================================================
 # SUMMARY
 # ============================================================================
 $expectedResults = @(
     @{Step="0"; Activity="Prerequisite validation"; Runs=((Test-AAInstallStep '0') -and -not $SkipPrerequisites); SkipComment="Skipped by parameter or targeted step selection."},
     @{Step="1"; Activity="Create or select agent users"; Runs=(Test-AAInstallStep '1'); SkipComment="Skipped by targeted step selection."},
+    @{Step="1b"; Activity="Persona profile photos"; Runs=(Test-AAInstallStep '1'); SkipComment="Optional prompt inside Step 1."},
     @{Step="2"; Activity="Licenses and MFA exclusion"; Runs=(Test-AAInstallStep '2'); SkipComment="Skipped by targeted step selection."},
     @{Step="3"; Activity="Register app-claudia-dataagent"; Runs=(Test-AAInstallStep '3'); SkipComment="Skipped by targeted step selection."},
     @{Step="4"; Activity="Azure infrastructure and Key Vault"; Runs=(Test-AAInstallStep '4'); SkipComment="Skipped by targeted step selection."},
@@ -2017,7 +2232,8 @@ $expectedResults = @(
     @{Step="6b"; Activity="DSPM for AI policies"; Runs=(Test-AAInstallStep '6b'); SkipComment="Skipped by targeted step selection."},
     @{Step="6c"; Activity="Insider Risk Management"; Runs=(Test-AAInstallStep '6c'); SkipComment="Skipped by targeted step selection."},
     @{Step="7"; Activity="ClaudIA Activity Monitor workbook"; Runs=(Test-AAInstallStep '7'); SkipComment="Skipped by targeted step selection."},
-    @{Step="8"; Activity="Activity Story Map"; Runs=(Test-AAInstallStep '8'); SkipComment="Skipped by targeted step selection."}
+    @{Step="8"; Activity="Activity Story Map"; Runs=(Test-AAInstallStep '8'); SkipComment="Skipped by targeted step selection."},
+    @{Step="9"; Activity="BrowserAgent cloud automation"; Runs=(Test-AAInstallStep '9'); SkipComment="Optional BrowserAgent cloud layer skipped by targeted step selection or prompt."}
 )
 foreach ($item in $expectedResults) {
     if (-not ($script:AADeploymentResults | Where-Object { $_.Step -eq $item.Step })) {
@@ -2040,7 +2256,7 @@ $script:AADeploymentResults | Sort-Object {
     switch ($_.Step) {
         '0' { 0 } '1' { 1 } '2' { 2 } '3' { 3 } '4' { 4 }
         '4a' { 4.1 } '4b' { 4.2 } '4c' { 4.3 }
-        '5' { 5 } '6a' { 6.1 } '6b' { 6.2 } '6c' { 6.3 } '7' { 7 } '8' { 8 }
+        '5' { 5 } '6a' { 6.1 } '6b' { 6.2 } '6c' { 6.3 } '7' { 7 } '8' { 8 } '9' { 9 }
         default { 99 }
     }
 } | Format-Table -AutoSize

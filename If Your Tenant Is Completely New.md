@@ -182,10 +182,10 @@ The file base name should match `displayName` in [config/agents.json](config/age
 Upload photos:
 
 ```powershell
-.\tools\Set-EntraUserPhotos.ps1
+.\tools\Set-EntraUserPhotos.ps1 -SkipMissing
 ```
 
-The script uses the current Azure CLI session to call Microsoft Graph. The signed-in account must be allowed to update user profile photos.
+The installer also offers this upload after Step 1 creates or selects users. The script uses Microsoft Graph; the signed-in account must be allowed to update user profile photos. When the installer is using a separate Microsoft 365/Entra admin sign-in, it passes that Graph token to the photo upload step automatically.
 
 ## 6. Activity Portal Decision
 

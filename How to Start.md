@@ -57,6 +57,8 @@ Minimum cloud requirements:
 
 For a completely new tenant, also validate Security Defaults, Conditional Access, audit ingestion, user creation, persona photos, and the optional Activity Portal before running the full installer.
 
+Microsoft 365 Copilot licenses are optional for the base lab. If no Copilot licenses are available, the installer can disable only Copilot-specific runbook tasks while leaving the rest of ClaudIA active, including non-Copilot AI emulation such as ExternalAI scenarios through Azure AI Foundry.
+
 A new Azure subscription can start completely empty. You do not need to create a resource group manually before running ClaudIA. During setup, choose a resource group name such as `rg-claudia-lab`; Step 4 creates it if it does not already exist. If your organization requires pre-created resource groups, create it first and enter that name in the wizard.
 
 Do not paste the Azure subscription ID into the resource group field. The subscription ID is a GUID such as `11111111-1111-1111-1111-111111111111`; the resource group is a name such as `rg-claudia-lab`.
@@ -191,6 +193,13 @@ Expected deployment areas:
 | Azure | Automation, Key Vault, OpenAI, Log Analytics, Sentinel, ADX, storage, Functions, and optional Front Door. |
 | Runbooks | Scheduled agent execution and supporting operational tasks. |
 
+If Copilot licenses are added later, re-enable Copilot tasks:
+
+```powershell
+.\tools\Set-CopilotTasks.ps1 -Mode Enable
+.\tools\Publish-RunbookOnly.ps1
+```
+
 The wizard is designed to be re-run safely. Use dry run mode before changes when needed:
 
 ```powershell
@@ -235,6 +244,12 @@ For a new tenant:
 .\tools\Set-EntraUserPhotos.ps1 -WhatIf
 .\tools\Set-EntraUserPhotos.ps1
 .\tools\Publish-ActivityStoryMapAssets.ps1
+```
+
+The installer also offers to upload persona photos after Step 1 creates or selects users. If you skip that prompt, run it later:
+
+```powershell
+.\tools\Set-EntraUserPhotos.ps1 -SkipMissing
 ```
 
 Branding is driven by file names under `Images/Branding`, `Images/Characters`, and `Images/Services`. Replace images, keep names aligned with personas and services, then republish the Activity Portal assets.

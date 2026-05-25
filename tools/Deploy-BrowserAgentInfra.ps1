@@ -110,7 +110,7 @@ $serviceUrl = "wss://$Location.api.playwright.microsoft.com/playwrightworkspaces
 
 Write-Host ""
 Write-Host "BrowserAgent workspace ready:" -ForegroundColor Green
-[pscustomobject]@{
+$result = [pscustomobject]@{
     SubscriptionId = $SubscriptionId
     ResourceGroup = $ResourceGroup
     WorkspaceName = $WorkspaceName
@@ -118,6 +118,8 @@ Write-Host "BrowserAgent workspace ready:" -ForegroundColor Green
     DataplaneUri = $workspace.properties.dataplaneUri
     PlaywrightServiceUrl = $serviceUrl
     ProvisioningState = $workspace.properties.provisioningState
-} | Format-List
+}
+$result | Format-List
 
 Write-Host "Add PLAYWRIGHT_SERVICE_URL to BrowserAgents/.env when running tests." -ForegroundColor Yellow
+$result

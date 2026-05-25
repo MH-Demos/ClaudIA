@@ -142,6 +142,20 @@ The wizard now automates this via **Step 4c** (Fabric Provisioning):
 
 1. Ensure Copilot M365 licenses are available
 2. Set `copilotLicense: true` on the agents you want to use Copilot
+3. Enable Copilot-specific runbook tasks:
+
+```powershell
+.\tools\Set-CopilotTasks.ps1 -Mode Enable
+.\tools\Publish-RunbookOnly.ps1
+```
+
+To run the lab without Microsoft 365 Copilot licenses, disable only Copilot-specific tasks:
+
+```powershell
+.\tools\Set-CopilotTasks.ps1 -Mode Disable
+```
+
+This does not disable non-Copilot AI emulation. ExternalAI scenarios are controlled separately by `features.externalAiInteractions`.
 3. The wizard assigns licenses automatically
 4. Each licensed agent will run 3 AI-generated search queries per run
 

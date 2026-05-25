@@ -123,7 +123,13 @@ function Get-UtcCron {
 
 function Get-AgentList {
     param($Config, [string[]]$Selected)
-    $all = @($Config.agents | Where-Object { $_.sam -and $_.userPrincipalName })
+    $domain = [string]$Config.tenant.domain
+    $all = @($Config.agents | Where-Object { $_.sam } | ForEach-Object {
+        if (-not $_.userPrincipalName) {
+            $_ | Add-Member -NotePropertyName userPrincipalName -NotePropertyValue "$($_.sam)@$domain" -Force
+        }
+        $_
+    })
     if (-not $Selected -or $Selected.Count -eq 0) { return $all }
     $wanted = @{}
     foreach ($item in $Selected) { $wanted[$item.ToLowerInvariant()] = $true }
