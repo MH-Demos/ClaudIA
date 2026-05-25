@@ -365,7 +365,7 @@ if (($freshDefinitions -or (Test-AAInstallStep '0')) -and -not $SkipPrerequisite
     Write-Host "  Closing PowerShell cloud sessions before collecting installation data..." -ForegroundColor Gray
     $connectionReset = Close-AAConnections
     Set-AAInstallationDefinition -Path $installationDefinitionsPath -Section 'sessionReset' -Value $connectionReset
-    Write-Host "  [OK] Active PowerShell sessions reset. Azure CLI login cache preserved for az commands." -ForegroundColor Green
+    Write-Host "  [OK] Active PowerShell sessions reset. Azure CLI sign-in will be validated during tenant setup." -ForegroundColor Green
     Write-Host "  Installation definitions: $installationDefinitionsPath" -ForegroundColor Gray
     Write-Host ""
 }
@@ -446,12 +446,15 @@ function New-AADefaultKeyVaultName {
 }
 
 function Invoke-AAAzureCliLogin {
-    param([string]$TenantHint)
+    param(
+        [string]$TenantHint,
+        [switch]$ForceLogout
+    )
 
     if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
         Write-Host "    [WARN] Azure CLI is not installed or not in PATH." -ForegroundColor Yellow
         Write-Host "           Install it first: winget install Microsoft.AzureCLI" -ForegroundColor DarkYellow
-        return
+        return $null
     }
 
     $tenantArg = @()
@@ -460,9 +463,22 @@ function Invoke-AAAzureCliLogin {
     }
 
     Write-Host ""
-    Write-Host "    Azure CLI needs a fresh sign-in for the target demo tenant." -ForegroundColor Cyan
-    Write-Host "    A browser or device-code login will open. Use the tenant admin account for this lab." -ForegroundColor Gray
+    if ($ForceLogout) {
+        Write-Host "    Clearing cached Azure CLI sessions before target-tenant sign-in..." -ForegroundColor Cyan
+        az logout 2>$null | Out-Null
+    }
+    Write-Host "    Azure CLI needs a sign-in for the target demo tenant." -ForegroundColor Cyan
+    Write-Host "    A device-code login will open. Use the tenant admin account for this lab." -ForegroundColor Gray
     & az login @tenantArg --use-device-code | Out-Null
+
+    $activeTenantId = az account show --query tenantId -o tsv 2>$null
+    if ($activeTenantId) {
+        $script:AATargetTenantId = [string]$activeTenantId
+        Write-Host "    [OK] Azure CLI active tenant: $script:AATargetTenantId" -ForegroundColor Green
+    } else {
+        Write-Host "    [WARN] Could not determine Azure CLI active tenant. Subscription filtering may be limited." -ForegroundColor Yellow
+    }
+    return $script:AATargetTenantId
 }
 
 function Select-AASubscription {
@@ -474,14 +490,28 @@ function Select-AASubscription {
         try { $accounts = @($accountsJson | ConvertFrom-Json) } catch { $accounts = @() }
     }
 
+    if ($script:AATargetTenantId) {
+        $tenantAccounts = @($accounts | Where-Object { $_.tenantId -eq $script:AATargetTenantId })
+        if ($tenantAccounts.Count -gt 0) {
+            $accounts = $tenantAccounts
+        } elseif ($accounts.Count -gt 0) {
+            Write-Host "    [WARN] Azure CLI has subscriptions cached, but none match target tenant $script:AATargetTenantId." -ForegroundColor Yellow
+            Write-Host "           Sign in again with an account that can access the target tenant subscription." -ForegroundColor DarkYellow
+            $accounts = @()
+        }
+    }
+
     if ($accounts.Count -eq 0) {
         Write-Host "    [WARN] Azure CLI has no visible subscriptions." -ForegroundColor Yellow
         $loginChoice = if ($Auto) { 'Y' } else { Read-Host "    Sign in to Azure CLI now? (Y/n)" }
         if ($loginChoice -notin @('n','N','no','NO')) {
-            Invoke-AAAzureCliLogin -TenantHint $config.tenant.domain
+            Invoke-AAAzureCliLogin -TenantHint $config.tenant.domain -ForceLogout | Out-Null
             $accountsJson = az account list --query "[].{name:name,id:id,isDefault:isDefault,tenantId:tenantId}" -o json 2>$null
             if ($accountsJson) {
                 try { $accounts = @($accountsJson | ConvertFrom-Json) } catch { $accounts = @() }
+            }
+            if ($script:AATargetTenantId) {
+                $accounts = @($accounts | Where-Object { $_.tenantId -eq $script:AATargetTenantId })
             }
         }
     }
@@ -496,7 +526,7 @@ function Select-AASubscription {
     for ($i = 0; $i -lt $accounts.Count; $i++) {
         $marker = if ($accounts[$i].id -eq $Current) { 'current' } elseif ($accounts[$i].isDefault) { 'default' } else { '' }
         $suffix = if ($marker) { " [$marker]" } else { '' }
-        Write-Host "      [$($i + 1)] $($accounts[$i].name) - $($accounts[$i].id)$suffix" -ForegroundColor Gray
+        Write-Host "      [$($i + 1)] $($accounts[$i].name) - $($accounts[$i].id) (tenant $($accounts[$i].tenantId))$suffix" -ForegroundColor Gray
     }
 
     $promptDefault = if ($Current) { " [$Current]" } else { '' }
@@ -537,6 +567,21 @@ if (($needsSetup -or $script:ForceConfigurationPrompt) -and -not $DryRun -and -n
         -Hint "e.g. contoso.onmicrosoft.com"
     if (-not $newDomain) { return }
     if ($newDomain -ne $config.tenant.domain) { $config.tenant.domain = $newDomain; $configChanged = $true }
+
+    Write-Host ""
+    Write-Host "  --- Azure CLI Sign-In ---" -ForegroundColor White
+    Write-Host "    The subscription list must come from the tenant you just entered: $($config.tenant.domain)" -ForegroundColor Gray
+    Write-Host "    Cached Azure CLI sessions from other tenants can show unrelated subscriptions." -ForegroundColor Gray
+    $freshAzLogin = Read-Host "    Sign out from cached Azure CLI sessions and sign in to this tenant now? (Y/n)"
+    if ($freshAzLogin -notin @('n','N','no','NO')) {
+        $tenantIdFromLogin = Invoke-AAAzureCliLogin -TenantHint $config.tenant.domain -ForceLogout
+        if ($tenantIdFromLogin) {
+            Set-AAConfigProperty -Object $config.tenant -Name tenantId -Value $tenantIdFromLogin
+            $configChanged = $true
+        }
+    } else {
+        Write-Host "    [WARN] Continuing with current Azure CLI cache. Verify subscription tenant IDs carefully." -ForegroundColor Yellow
+    }
 
     $newSubId = Select-AASubscription -Current $config.tenant.subscriptionId
     if (-not $newSubId) { return }

@@ -143,6 +143,8 @@ az account set --subscription 11111111-1111-1111-1111-111111111111
 
 Fix all prerequisite failures before running the installer.
 
+If you manage several tenants, always start with a fresh Azure CLI session for the demo tenant. The installer also offers to clear cached Azure CLI sessions and sign in again after you enter the tenant domain. This prevents subscriptions from unrelated tenants from appearing in the selection list.
+
 ## 6. Deploy Core ClaudIA
 
 Run the wizard:

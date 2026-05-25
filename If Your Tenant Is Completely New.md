@@ -11,6 +11,7 @@ Recommended validation model:
 1. Sign in locally with an administrator account:
 
    ```powershell
+   az logout
    az login --tenant contoso.onmicrosoft.com
    az account set --subscription 11111111-1111-1111-1111-111111111111
    ```
@@ -67,6 +68,16 @@ az account show --query "{tenant:tenantId, subscription:id, name:name}" -o table
 ```
 
 If the Azure subscription is brand new, it may not contain any resource groups. That is expected. ClaudIA asks for a resource group name and creates it during Azure infrastructure deployment. If your environment already has an approved resource group, enter that existing name instead.
+
+If the workstation has been used with several tenants, clear the Azure CLI cache before setup:
+
+```powershell
+az logout
+az login --tenant contoso.onmicrosoft.com
+az account list -o table
+```
+
+Only subscriptions from the target tenant should be selected. During interactive setup, ClaudIA offers to sign out from cached Azure CLI sessions and sign in to the tenant domain you entered.
 
 ## 2. Security Defaults And Conditional Access
 
