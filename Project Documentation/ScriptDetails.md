@@ -27,6 +27,7 @@ Safe resume with existing state:
 .\Install-ClaudIA.ps1 -UseInstallationDefinitions -Step 7 -SkipPrerequisites
 .\Install-ClaudIA.ps1 -UseInstallationDefinitions -Step 8 -SkipPrerequisites
 .\Install-ClaudIA.ps1 -UseInstallationDefinitions -Step 9 -SkipPrerequisites
+.\Install-ClaudIA.ps1 -UseInstallationDefinitions -Step 10 -SkipPrerequisites
 ```
 
 Post-install validation:
@@ -50,6 +51,7 @@ Most scripts assume:
 - Access to Azure Resource Manager API.
 - Access to Key Vault for setting/getting secrets.
 - Access to ADX/Kusto for provisioning, ingestion, and query.
+- MDCA portal URL and API token only when using optional Step `10`.
 
 ## State Files
 
@@ -65,6 +67,7 @@ The current pattern is:
 - Key Vault stores real secret values.
 - Automation variables store non-secret configuration and secret names.
 - The runbook reads the secret name from Automation and resolves the value from Key Vault.
+- Optional MDCA Cloud Discovery settings follow the same model: Step `10` stores the portal URL and API token in Key Vault and leaves only secret names plus non-secret stream settings in `config/agents.json`.
 
 Do not manually edit an Automation password variable to store a plaintext secret. If credential drift occurs, use:
 
@@ -82,6 +85,7 @@ Do not manually edit an Automation password variable to store a plaintext secret
 | `modules/Register-AgentApp.ps1` | Tenant/domain | App registration and permissions | Azure CLI, Graph | Step `3`; consent may need privileged admin. |
 | `modules/Deploy-AzureInfra.ps1` | Effective config | RG, OpenAI, Automation, Key Vault, RBAC | Azure CLI, ARM REST | Step `4`; ADX is provisioned after it by a tool script. |
 | `tools/Deploy-AdxTelemetry.ps1` | Installation definitions/effective ADX config | ADX cluster, database, table, mapping, Key Vault secret, definitions | Azure CLI, ARM, Kusto | Called after Step `4`; can be rerun idempotently. |
+| `tools/Deploy-MdcaCloudDiscoveryConnector.ps1` | Effective config, MDCA URL/token prompt | Key Vault MDCA secrets, `agents.json` MDCA block | Azure CLI, Key Vault, MDCA API | Step `10`; optional pilot connector. |
 | `modules/Provision-M365Collaboration.ps1` | Agents/departments | Teams, SharePoint, channels/folders, Automation variables | Graph, Teams/SharePoint APIs | Step `4a`; rerun if departments or agents change. |
 | `modules/Provision-SensitivityLabels.ps1` | Config | Purview labels and label policy | ExchangeOnlineManagement/IPPS | Step `4b`; publishable labels only. |
 | `modules/Provision-Fabric.ps1` | Config | Fabric capacity/workspace/lakehouse variables | Fabric/Azure APIs | Step `4c`; currently disabled. |
@@ -107,6 +111,10 @@ Do not manually edit an Automation password variable to store a plaintext secret
 | `tools/List-AzureOpenAIModels.ps1` | Effective config | None, read-only | Azure CLI, Cognitive Services | Helps select model/version/quota. |
 | `tools/Set-AzureOpenAIName.ps1` | Config and definitions | Updates OpenAI account name | Filesystem only | Use before rerunning Step `4` if name conflicts. |
 | `tools/Test-InstallationDefinitionsConsistency.ps1` | Config and definitions | None, validation only | Filesystem | Use before runbook publish or troubleshooting. |
+| `tools/Manage-ExternalRecipients.ps1` | `agents.json` | `externalRecipients` list | Filesystem | Maintains approved external mailboxes for BrowserAgent OWA scenarios. |
+| `tools/Invoke-MdcaCloudDiscoveryIngestion.ps1` | `agents.json`, ADX, Key Vault | MDCA upload stream | Azure CLI, Key Vault, ADX, MDCA API | One-command ADX export plus MDCA upload after Step `10`. |
+| `tools/Test-MdcaCloudDiscoveryApi.ps1` | `agents.json`, Key Vault, env vars | None | Azure CLI, Key Vault, MDCA API | Validates Step `10` connectivity without printing secrets. |
+| `tools/Upload-MdcaCloudDiscoveryLog.ps1` | CEF/CSV log file, `agents.json`, Key Vault | MDCA upload stream | Azure CLI, Key Vault, MDCA API | Uploads exported ADX telemetry to MDCA Cloud Discovery. |
 | `tools/Install-CleanAdxLab.ps1` | Config/definitions | Orchestrates installer, ADX, runbook, storyline, smoke test | Most project dependencies | Higher-level clean-lab flow. |
 
 ## Important Operational Considerations
@@ -144,3 +152,5 @@ Some actions are intentionally printed as manual reminders because tenants diffe
 - Need password repair: `tools/Reset-AgentPasswords.ps1`.
 - Need add characters/story expansion: `tools/Add-StorylineAgents.ps1`.
 - Need check drift: `tools\Test-InstallationDefinitionsConsistency.ps1`.
+- Need manage external mail targets: `tools\Manage-ExternalRecipients.ps1`.
+- Need configure the MDCA Cloud Discovery pilot: `Install-ClaudIA.ps1 -Step 10`.

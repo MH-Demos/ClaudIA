@@ -15,7 +15,10 @@ function splitList(value, fallback = []) {
     .filter(Boolean);
 }
 
-const defaultExternalRecipients = 'demo.recipient@example.com';
+const configuredExternalRecipients = Array.isArray(config.externalRecipients)
+  ? config.externalRecipients.filter(Boolean).join(',')
+  : '';
+const defaultExternalRecipients = configuredExternalRecipients || 'demo.recipient@example.com';
 
 function findAgents() {
   const allAgents = Array.isArray(config.agents) ? config.agents : [];

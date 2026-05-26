@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Main deployment wizard for the lab. It deploys or resumes the full ClaudIA environment: users, licenses, app registration, Azure infrastructure, collaboration spaces, sensitivity labels, runbook, DLP/IRM policies, workbook, Activity Story Map, and optional BrowserAgent cloud automation.
+Main deployment wizard for the lab. It deploys or resumes the full ClaudIA environment: users, licenses, app registration, Azure infrastructure, collaboration spaces, sensitivity labels, runbook, DLP/IRM policies, workbook, Activity Story Map, optional BrowserAgent cloud automation, and optional MDCA Cloud Discovery connector setup.
 
 ## Execution
 
@@ -17,7 +17,7 @@ Main deployment wizard for the lab. It deploys or resumes the full ClaudIA envir
 
 - `ConfigPath`: path to `agents.json`. Default is `config/agents.json`.
 - `SkipPrerequisites`: skips Step `0`.
-- `Step`: runs a specific step. Step `4` includes `4a`, `4b`, `4c`; Step `6` includes `6a`, `6b`, `6c`.
+- `Step`: runs a specific step. Step `4` includes `4a`, `4b`, `4c`; Step `6` includes `6a`, `6b`, `6c`; Step `10` configures the optional MDCA Cloud Discovery connector.
 - `DryRun`: shows intended changes where supported.
 - `UseExistingUsers`: selects existing Entra ID users instead of creating users from config.
 - `UseInstallationDefinitions`: merges values from `config/Installation_definitions.json` and avoids re-prompting for known installation values.
@@ -41,7 +41,8 @@ Main deployment wizard for the lab. It deploys or resumes the full ClaudIA envir
 - `7`: workbook via `modules/Deploy-Workbook.ps1`.
 - `8`: Activity Story Map via `modules/Deploy-ActivityStoryMap.ps1`.
 - `9`: BrowserAgent cloud automation via `tools/Deploy-BrowserAgentInfra.ps1` and `tools/Deploy-BrowserAgentScheduledJobs.ps1`.
+- `10`: MDCA Cloud Discovery connector via `tools/Deploy-MdcaCloudDiscoveryConnector.ps1`.
 
 ## Notes
 
-This is the only script intended as the normal entry point. Use tool scripts for maintenance after the first deployment.
+This is the only script intended as the normal entry point. Use tool scripts for maintenance after the first deployment. Step `10` stores the MDCA portal URL and API token in Key Vault and writes only non-secret connector settings to `config/agents.json`.

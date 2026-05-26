@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.0
+.VERSION 1.0.1
 
 .GUID d931563d-3020-4f13-af14-6df6ee2a37a0
 
@@ -24,7 +24,7 @@ https://github.com/MH-Demos/ClaudIA
 Upload a Cloud Discovery log file to Microsoft Defender for Cloud Apps
 
 .RELEASENOTES
-Initial version metadata for Upload a Cloud Discovery log file to Microsoft Defender for Cloud Apps.
+Version 1.0.1 reads MDCA portal URL and API token from ClaudIA Key Vault configuration when available.
 
 #>
 <#
@@ -41,7 +41,7 @@ param(
     [Parameter(Mandatory)]
     [string]$Path,
 
-    [string]$ConfigPath = (Join-Path $env:TEMP 'mdca-cloud-discovery.local.json'),
+    [string]$ConfigPath = (Join-Path $PSScriptRoot '..\config\agents.json'),
     [string]$PortalUrl = $env:MDCA_PORTAL_URL,
     [string]$Token = $env:MDCA_API_TOKEN,
     [string]$Source = 'GENERIC_CEF',
@@ -57,8 +57,25 @@ if (-not (Test-Path -LiteralPath $Path)) {
 
 if (Test-Path -LiteralPath $ConfigPath) {
     $config = Get-Content -LiteralPath $ConfigPath -Raw | ConvertFrom-Json
-    if (-not $PortalUrl -and $config.portalUrl) { $PortalUrl = [string]$config.portalUrl }
-    if (-not $Token -and $config.token) { $Token = [string]$config.token }
+    if ($config.mdca) {
+        if ($config.tenant.subscriptionId) { az account set -s $config.tenant.subscriptionId 2>$null }
+        $kvName = [string]$config.mdca.keyVaultName
+        if (-not $PortalUrl -and $kvName -and $config.mdca.portalUrlSecretName) {
+            $PortalUrl = az keyvault secret show --vault-name $kvName --name $config.mdca.portalUrlSecretName --query value -o tsv 2>$null
+        }
+        if (-not $Token -and $kvName -and $config.mdca.tokenSecretName) {
+            $Token = az keyvault secret show --vault-name $kvName --name $config.mdca.tokenSecretName --query value -o tsv 2>$null
+        }
+        if ($InputStreamName -eq 'ADX Synthetic MDCA Pilot' -and $config.mdca.inputStreamName) {
+            $InputStreamName = [string]$config.mdca.inputStreamName
+        }
+        if ($Source -eq 'GENERIC_CEF' -and $config.mdca.source) {
+            $Source = [string]$config.mdca.source
+        }
+    } else {
+        if (-not $PortalUrl -and $config.portalUrl) { $PortalUrl = [string]$config.portalUrl }
+        if (-not $Token -and $config.token) { $Token = [string]$config.token }
+    }
 }
 
 if (-not $PortalUrl) { throw 'Missing MDCA portal URL.' }

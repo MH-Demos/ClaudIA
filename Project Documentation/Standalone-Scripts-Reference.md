@@ -17,6 +17,7 @@ Generated from the current PowerShell scripts in the repository. It focuses on s
 - [`tools/Deploy-AdxTelemetry.ps1`](#tools-deploy-adxtelemetry-ps1)
 - [`tools/Deploy-BrowserAgentInfra.ps1`](#tools-deploy-browseragentinfra-ps1)
 - [`tools/Deploy-BrowserAgentScheduledJobs.ps1`](#tools-deploy-browseragentscheduledjobs-ps1)
+- [`tools/Deploy-MdcaCloudDiscoveryConnector.ps1`](#tools-deploy-mdcaclouddiscoveryconnector-ps1)
 - [`tools/Enable-ActivityStoryMapFrontDoor.ps1`](#tools-enable-activitystorymapfrontdoor-ps1)
 - [`tools/Enable-GraphMeteredBilling.ps1`](#tools-enable-graphmeteredbilling-ps1)
 - [`tools/Get-ActivityExplorerFileOps.ps1`](#tools-get-activityexplorerfileops-ps1)
@@ -35,7 +36,9 @@ Generated from the current PowerShell scripts in the repository. It focuses on s
 - [`tools/Invoke-BrowserAgentSmoke.ps1`](#tools-invoke-browseragentsmoke-ps1)
 - [`tools/Invoke-EdgePersonaActivity.ps1`](#tools-invoke-edgepersonaactivity-ps1)
 - [`tools/Invoke-EndpointPersonaActivity.ps1`](#tools-invoke-endpointpersonaactivity-ps1)
+- [`tools/Invoke-MdcaCloudDiscoveryIngestion.ps1`](#tools-invoke-mdcaclouddiscoveryingestion-ps1)
 - [`tools/List-AzureOpenAIModels.ps1`](#tools-list-azureopenaimodels-ps1)
+- [`tools/Manage-ExternalRecipients.ps1`](#tools-manage-externalrecipients-ps1)
 - [`tools/Publish-ActivityStoryMapAssets.ps1`](#tools-publish-activitystorymapassets-ps1)
 - [`tools/Publish-LiveDemoSeedContent.ps1`](#tools-publish-livedemoseedcontent-ps1)
 - [`tools/Publish-RunbookOnly.ps1`](#tools-publish-runbookonly-ps1)
@@ -43,6 +46,7 @@ Generated from the current PowerShell scripts in the repository. It focuses on s
 - [`tools/Set-AzureOpenAIName.ps1`](#tools-set-azureopenainame-ps1)
 - [`tools/Test-BrowserAgentWorkspace.ps1`](#tools-test-browseragentworkspace-ps1)
 - [`tools/Test-InstallationDefinitionsConsistency.ps1`](#tools-test-installationdefinitionsconsistency-ps1)
+- [`tools/Test-MdcaCloudDiscoveryApi.ps1`](#tools-test-mdcaclouddiscoveryapi-ps1)
 - [`tools/Update-ActivityStoryMapCharacterProfiles.ps1`](#tools-update-activitystorymapcharacterprofiles-ps1)
 
 ## `Install-ClaudIA.ps1`
@@ -288,7 +292,7 @@ if (-not $result.AllPassed) { $result.Results | Where-Object { -not $_.Passed } 
 | `-NoADXWait` | `switch` | No |  | Script-specific option. See the script help and examples before use. |
 | `-BrowserAgent` | `switch` | No |  | Script-specific option. See the script help and examples before use. |
 | `-BrowserServices` | `string[]` | No | `@('owa','copilot')` | Script-specific option. See the script help and examples before use. |
-| `-ExternalRecipient` | `string` | No | `'demo.recipient@example.com'` | External mailbox target for OWA scenarios. Comma-separated values are supported. |
+| `-ExternalRecipient` | `string` | No | `''` | External mailbox target for OWA scenarios. Defaults to `config/agents.json` `externalRecipients` when available. Comma-separated values are supported. |
 | `-SendEmail` | `switch` | No |  | Actually send OWA messages instead of only drafting/composing them. |
 | `-Sensitive` | `switch` | No |  | Include synthetic sensitive business or personal data in generated activity. |
 | `-Label` | `string` | No | `''` | Sensitivity label name to attempt to apply in supported browser/mail flows. |
@@ -324,7 +328,7 @@ if (-not $result.AllPassed) { $result.Results | Where-Object { -not $_.Passed } 
 | `-Services` | `string[]` | No | `@()` | BrowserAgent service aliases to execute, such as `owa`, `copilot`, `internalai`, `deepseek`, `claude`, `grok`, `llama`, or `gemini`. |
 | `-BrowserAgent` | `switch` | No |  | Script-specific option. See the script help and examples before use. |
 | `-BrowserServices` | `string[]` | No | `@('owa','copilot')` | Script-specific option. See the script help and examples before use. |
-| `-ExternalRecipient` | `string` | No | `'demo.recipient@example.com'` | External mailbox target for OWA scenarios. Comma-separated values are supported. |
+| `-ExternalRecipient` | `string` | No | `''` | External mailbox target for OWA scenarios. Defaults to `config/agents.json` `externalRecipients` when available. Comma-separated values are supported. |
 | `-SendEmail` | `switch` | No |  | Actually send OWA messages instead of only drafting/composing them. |
 | `-Sensitive` | `switch` | No |  | Include synthetic sensitive business or personal data in generated activity. |
 | `-Label` | `string` | No | `''` | Sensitivity label name to attempt to apply in supported browser/mail flows. |
@@ -1323,3 +1327,81 @@ if (-not $result.AllPassed) { $result.Results | Where-Object { -not $_.Passed } 
 | `-StorylinePath` | `string` | No | `(Join-Path $PSScriptRoot '..\Storyline\characters_presentations.md')` | Script-specific option. See the script help and examples before use. |
 | `-OutputPath` | `string` | No | `(Join-Path $PSScriptRoot '..\activity-story-map\web\character-profiles.json')` | Path where generated output, inputs, BrowserAgents project, or test results are located. |
 | `-SkipGraph` | `switch` | No |  | Script-specific option. See the script help and examples before use. |
+
+## `tools/Deploy-MdcaCloudDiscoveryConnector.ps1`
+
+**Purpose:** Configure Microsoft Defender for Cloud Apps Cloud Discovery upload settings for ClaudIA.
+
+**Details:** Stores the MDCA portal URL and API token in Key Vault, writes non-secret connector settings under `config/agents.json` `mdca`, and validates the Cloud Discovery API.
+
+**Base command:**
+
+```powershell
+.\tools\Deploy-MdcaCloudDiscoveryConnector.ps1 -PortalUrl https://contoso.portal.cloudappsecurity.com -Token '<token>' -ProbeUploadUrl
+```
+
+**Parameters:**
+
+| Parameter | Type | Mandatory | Default | Use |
+| --- | --- | --- | --- | --- |
+| `-ConfigPath` | `string` | No | `(Join-Path $PSScriptRoot '..\config\agents.json')` | Path to the main configuration file, usually `config/agents.json`. |
+| `-InstallationDefinitionsPath` | `string` | No | `(Join-Path $PSScriptRoot '..\config\Installation_definitions.json')` | Path to installation definitions JSON used for resumable setup state. |
+| `-PortalUrl` | `string` | Yes |  | MDCA portal URL, for example `https://<tenant>.portal.cloudappsecurity.com`. |
+| `-Token` | `string` | Yes |  | MDCA API token. Step 10 prompts for this securely and stores it in Key Vault. |
+| `-InputStreamName` | `string` | No | `'ClaudIA ADX Cloud Discovery'` | MDCA Cloud Discovery input stream name. |
+| `-ProbeUploadUrl` | `switch` | No |  | Also validates that MDCA can generate an upload URL. |
+
+## `tools/Manage-ExternalRecipients.ps1`
+
+**Purpose:** List, add, remove, or clear lab-controlled external recipients used by BrowserAgents.
+
+**Details:** Updates `config/agents.json` `externalRecipients`. BrowserAgent scheduled jobs and local scheduled runs use this list when `-ExternalRecipient` is not explicitly provided.
+
+**Base command:**
+
+```powershell
+.\tools\Manage-ExternalRecipients.ps1 -Action List
+```
+
+**Examples:**
+
+```powershell
+.\tools\Manage-ExternalRecipients.ps1 -Action Add -Recipient vendor.review@example.test
+.\tools\Manage-ExternalRecipients.ps1 -Action Remove -Recipient vendor.review@example.test
+```
+
+## `tools\Test-MdcaCloudDiscoveryApi.ps1`
+
+**Purpose:** Validate Microsoft Defender for Cloud Apps Cloud Discovery API connectivity.
+
+**Details:** Reads MDCA settings from environment variables, a legacy local JSON file, or the ClaudIA `mdca` configuration block backed by Key Vault.
+
+**Base command:**
+
+```powershell
+.\tools\Test-MdcaCloudDiscoveryApi.ps1 -ProbeUploadUrl
+```
+
+## `tools\Upload-MdcaCloudDiscoveryLog.ps1`
+
+**Purpose:** Upload a Cloud Discovery log file to Microsoft Defender for Cloud Apps.
+
+**Details:** Uses the MDCA upload API sequence and, after Step 10, reads portal URL, API token, source, and input stream from ClaudIA configuration and Key Vault.
+
+**Base command:**
+
+```powershell
+.\tools\Upload-MdcaCloudDiscoveryLog.ps1 -Path .\out\mdca-adx-pilot.cef
+```
+
+## `tools\Invoke-MdcaCloudDiscoveryIngestion.ps1`
+
+**Purpose:** Export ADX telemetry and upload it to Microsoft Defender for Cloud Apps Cloud Discovery.
+
+**Details:** Runs `Export-MdcaDiscoveryLogFromAdx.ps1` and `Upload-MdcaCloudDiscoveryLog.ps1` as one ingestion operation. After Step `10`, it uses the MDCA settings stored in Key Vault.
+
+**Base command:**
+
+```powershell
+.\tools\Invoke-MdcaCloudDiscoveryIngestion.ps1
+```

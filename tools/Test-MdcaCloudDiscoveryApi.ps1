@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.0
+.VERSION 1.0.1
 
 .GUID 091adba0-1dd8-4454-b016-66dd315fa851
 
@@ -24,15 +24,16 @@ https://github.com/MH-Demos/ClaudIA
 Validate Microsoft Defender for Cloud Apps Cloud Discovery API connectivity
 
 .RELEASENOTES
-Initial version metadata for Validate Microsoft Defender for Cloud Apps Cloud Discovery API connectivity.
+Version 1.0.1 reads MDCA portal URL and API token from ClaudIA Key Vault configuration when available.
 
 #>
 <#
 .SYNOPSIS
     Validate Microsoft Defender for Cloud Apps Cloud Discovery API connectivity.
 .DESCRIPTION
-    Reads an MDCA portal URL and API token from a temporary JSON config file or
-    environment variables, then calls a read-only Cloud Discovery endpoint.
+    Reads an MDCA portal URL and API token from ClaudIA configuration, Key Vault,
+    a legacy local JSON file, or environment variables, then calls a read-only
+    Cloud Discovery endpoint.
 .EXAMPLE
     .\tools\Test-MdcaCloudDiscoveryApi.ps1
 .EXAMPLE
@@ -40,7 +41,7 @@ Initial version metadata for Validate Microsoft Defender for Cloud Apps Cloud Di
 #>
 [CmdletBinding()]
 param(
-    [string]$ConfigPath = (Join-Path $env:TEMP 'mdca-cloud-discovery.local.json'),
+    [string]$ConfigPath = (Join-Path $PSScriptRoot '..\config\agents.json'),
     [string]$PortalUrl = $env:MDCA_PORTAL_URL,
     [string]$Token = $env:MDCA_API_TOKEN,
     [switch]$ProbeUploadUrl
@@ -50,16 +51,27 @@ $ErrorActionPreference = 'Stop'
 
 if (Test-Path -LiteralPath $ConfigPath) {
     $config = Get-Content -LiteralPath $ConfigPath -Raw | ConvertFrom-Json
-    if (-not $PortalUrl -and $config.portalUrl) { $PortalUrl = [string]$config.portalUrl }
-    if (-not $Token -and $config.token) { $Token = [string]$config.token }
+    if ($config.mdca) {
+        if ($config.tenant.subscriptionId) { az account set -s $config.tenant.subscriptionId 2>$null }
+        $kvName = [string]$config.mdca.keyVaultName
+        if (-not $PortalUrl -and $kvName -and $config.mdca.portalUrlSecretName) {
+            $PortalUrl = az keyvault secret show --vault-name $kvName --name $config.mdca.portalUrlSecretName --query value -o tsv 2>$null
+        }
+        if (-not $Token -and $kvName -and $config.mdca.tokenSecretName) {
+            $Token = az keyvault secret show --vault-name $kvName --name $config.mdca.tokenSecretName --query value -o tsv 2>$null
+        }
+    } else {
+        if (-not $PortalUrl -and $config.portalUrl) { $PortalUrl = [string]$config.portalUrl }
+        if (-not $Token -and $config.token) { $Token = [string]$config.token }
+    }
 }
 
 if (-not $PortalUrl) {
-    throw 'Missing MDCA portal URL. Set MDCA_PORTAL_URL or provide portalUrl in the config file.'
+    throw 'Missing MDCA portal URL. Run Step 10, set MDCA_PORTAL_URL, or provide portalUrl in the config file.'
 }
 
 if (-not $Token) {
-    throw 'Missing MDCA API token. Set MDCA_API_TOKEN or provide token in the config file.'
+    throw 'Missing MDCA API token. Run Step 10, set MDCA_API_TOKEN, or provide token in the config file.'
 }
 
 $baseUri = $PortalUrl.TrimEnd('/')

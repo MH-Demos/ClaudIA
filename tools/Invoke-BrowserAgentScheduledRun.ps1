@@ -46,7 +46,7 @@ Initial version metadata for Run BrowserAgent daily activity using the schedules
 param(
     [string[]]$Agents,
     [string[]]$Services = @('owa','copilot','banking'),
-    [string]$ExternalRecipient = 'demo.recipient@example.com',
+    [string]$ExternalRecipient = '',
     [switch]$RunNow,
     [switch]$DueOnly,
     [int]$WindowMinutes = 20,
@@ -122,6 +122,10 @@ if (-not $selectedAgents -or $selectedAgents.Count -eq 0) { throw 'No BrowserAge
 
 $servicesText = (($Services -join ',') -split ',' | ForEach-Object { $_.Trim().ToLowerInvariant() } | Where-Object { $_ }) -join ','
 if (-not $servicesText) { throw 'No services selected.' }
+if (-not $ExternalRecipient -and $config.externalRecipients) {
+    $ExternalRecipient = (@($config.externalRecipients | Where-Object { $_ }) -join ',')
+}
+if (-not $ExternalRecipient) { $ExternalRecipient = 'demo.recipient@example.com' }
 
 $dueSchedules = Get-DueSchedules -Schedules $config.schedules -WindowMinutes $WindowMinutes
 $shouldRun = $RunNow -or (-not $DueOnly -and $false)

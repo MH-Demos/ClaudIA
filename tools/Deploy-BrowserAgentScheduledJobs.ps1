@@ -57,7 +57,7 @@ param(
     [string]$ImageTag = 'latest',
     [string[]]$Agents,
     [string[]]$Services = @('owa','copilot','banking'),
-    [string]$ExternalRecipient = 'demo.recipient@example.com',
+    [string]$ExternalRecipient = '',
     [switch]$SendEmail,
     [switch]$Sensitive,
     [string]$Label = 'General',
@@ -214,6 +214,10 @@ if (-not $config.adx.clientId -or -not $config.adx.clientSecretName -or -not $co
 }
 
 $servicesText = (($Services -join ',') -split ',' | ForEach-Object { $_.Trim().ToLowerInvariant() } | Where-Object { $_ }) -join ','
+if (-not $ExternalRecipient -and $config.externalRecipients) {
+    $ExternalRecipient = (@($config.externalRecipients | Where-Object { $_ }) -join ',')
+}
+if (-not $ExternalRecipient) { $ExternalRecipient = 'demo.recipient@example.com' }
 $agentsText = ($selectedAgents.sam -join ',')
 $schedulePlans = @($config.schedules | ForEach-Object { Get-UtcCron -Schedule $_ })
 

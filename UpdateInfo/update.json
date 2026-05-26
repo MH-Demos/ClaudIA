@@ -1,22 +1,6 @@
 {
   "files": [
     {
-      "directory": "ROOT",
-      "file": "Install-ClaudIA.ps1",
-      "version": "1.0.7",
-      "format": "ps1",
-      "changes": "ClaudIA - Interactive Deployment Wizard",
-      "URI": "Install-ClaudIA.ps1"
-    },
-    {
-      "directory": "ROOT",
-      "file": "Manage-Costs.ps1",
-      "version": "1.0.0",
-      "format": "ps1",
-      "changes": "Cost management utilities for the ClaudIA lab",
-      "URI": "Manage-Costs.ps1"
-    },
-    {
       "directory": "modules",
       "file": "Common.ps1",
       "version": "1.0.2",
@@ -137,6 +121,22 @@
       "URI": "prerequisites/Test-Prerequisites.ps1"
     },
     {
+      "directory": "ROOT",
+      "file": "Install-ClaudIA.ps1",
+      "version": "1.0.9",
+      "format": "ps1",
+      "changes": "ClaudIA - Interactive Deployment Wizard",
+      "URI": "Install-ClaudIA.ps1"
+    },
+    {
+      "directory": "ROOT",
+      "file": "Manage-Costs.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Cost management utilities for the ClaudIA lab",
+      "URI": "Manage-Costs.ps1"
+    },
+    {
       "directory": "tests",
       "file": "Test-AgentCredentials.ps1",
       "version": "1.0.1",
@@ -207,6 +207,14 @@
       "format": "ps1",
       "changes": "Deploys BrowserAgents as scheduled Azure Container Apps Jobs",
       "URI": "tools/Deploy-BrowserAgentScheduledJobs.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Deploy-MdcaCloudDiscoveryConnector.ps1",
+      "version": "1.0.1",
+      "format": "ps1",
+      "changes": "Configure Microsoft Defender for Cloud Apps Cloud Discovery upload settings and ingestion wrapper for ClaudIA",
+      "URI": "tools/Deploy-MdcaCloudDiscoveryConnector.ps1"
     },
     {
       "directory": "tools",
@@ -306,6 +314,14 @@
     },
     {
       "directory": "tools",
+      "file": "Invoke-MdcaCloudDiscoveryIngestion.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Export ADX telemetry and upload it to Microsoft Defender for Cloud Apps Cloud Discovery",
+      "URI": "tools/Invoke-MdcaCloudDiscoveryIngestion.ps1"
+    },
+    {
+      "directory": "tools",
       "file": "Invoke-ActivityStoryMapRefresh.ps1",
       "version": "1.0.0",
       "format": "ps1",
@@ -367,6 +383,14 @@
       "format": "ps1",
       "changes": "List chat-completion Azure OpenAI models available for the configured account",
       "URI": "tools/List-AzureOpenAIModels.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Manage-ExternalRecipients.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "List, add, or remove lab-controlled external recipients used by BrowserAgents",
+      "URI": "tools/Manage-ExternalRecipients.ps1"
     },
     {
       "directory": "tools",
@@ -443,9 +467,9 @@
     {
       "directory": "tools",
       "file": "Test-MdcaCloudDiscoveryApi.ps1",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "format": "ps1",
-      "changes": "Validate Microsoft Defender for Cloud Apps Cloud Discovery API connectivity",
+      "changes": "Validate Microsoft Defender for Cloud Apps Cloud Discovery API connectivity using ClaudIA Key Vault settings",
       "URI": "tools/Test-MdcaCloudDiscoveryApi.ps1"
     },
     {
@@ -475,9 +499,9 @@
     {
       "directory": "tools",
       "file": "Upload-MdcaCloudDiscoveryLog.ps1",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "format": "ps1",
-      "changes": "Upload a Cloud Discovery log file to Microsoft Defender for Cloud Apps",
+      "changes": "Upload a Cloud Discovery log file to Microsoft Defender for Cloud Apps using ClaudIA Key Vault settings",
       "URI": "tools/Upload-MdcaCloudDiscoveryLog.ps1"
     }
   ]

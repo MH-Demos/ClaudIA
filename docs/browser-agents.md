@@ -164,6 +164,21 @@ Use `teams` or `copilot` as additional readiness checks only when those services
 are licensed and already provisioned. They are not required before Step 9 can
 package local auth states and deploy Container Apps Jobs.
 
+## External Recipients
+
+BrowserAgent mail scenarios use `config/agents.json` `externalRecipients` unless
+a script parameter or environment variable overrides it.
+
+```powershell
+.\tools\Manage-ExternalRecipients.ps1
+.\tools\Manage-ExternalRecipients.ps1 -Action Add -Recipient vendor.review@example.test
+.\tools\Manage-ExternalRecipients.ps1 -Action Remove -Recipient demo.recipient@example.com
+```
+
+After changing recipients, rerun Step 9 or
+`tools\Deploy-BrowserAgentScheduledJobs.ps1` so Container Apps Jobs receive the
+updated environment variable.
+
 The initializer writes one JSON result per user under:
 
 ```text

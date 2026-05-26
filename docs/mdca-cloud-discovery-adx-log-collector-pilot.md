@@ -211,6 +211,30 @@ Criterio de exito:
 
 Esta opcion simula mejor el camino de produccion de Cloud Discovery.
 
+### ClaudIA Step 10
+
+The public installer exposes this path as optional Step 10:
+
+```powershell
+.\Install-ClaudIA.ps1 -UseInstallationDefinitions -Step 10 -SkipPrerequisites
+```
+
+Step 10 asks for:
+
+- MDCA portal URL, for example `https://<tenant>.portal.cloudappsecurity.com`.
+- MDCA API token from Defender for Cloud Apps.
+- Input stream name, for example `ClaudIA ADX Cloud Discovery`.
+
+The portal URL and token are stored in Azure Key Vault as `mdca-portal-url` and
+`mdca-api-token`. The non-secret connector settings are written to
+`config/agents.json` under `mdca`.
+
+After Step 10, upload a current ADX snapshot with:
+
+```powershell
+.\tools\Invoke-MdcaCloudDiscoveryIngestion.ps1
+```
+
 1. Crear un data source en:
 
    ```text

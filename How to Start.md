@@ -237,6 +237,7 @@ The installer can also resume one area at a time:
 | `7` | ClaudIA Activity Monitor workbook. |
 | `8` | Activity Story Map static site, API, and optional Front Door. |
 | `9` | Optional BrowserAgent cloud automation with Playwright Workspaces and Container Apps Jobs. |
+| `10` | Optional MDCA Cloud Discovery connector settings, Key Vault secrets, and API validation. |
 
 ## 7. Run A Smoke Test
 
@@ -253,6 +254,23 @@ For browser automation:
 ```
 
 Browser sessions are stored under `BrowserAgents/.auth` and are intentionally ignored by Git.
+
+For BrowserAgent email scenarios, manage lab-approved external recipients from configuration:
+
+```powershell
+.\tools\Manage-ExternalRecipients.ps1 -Action List
+.\tools\Manage-ExternalRecipients.ps1 -Action Add -Recipient vendor.review@example.test
+.\tools\Manage-ExternalRecipients.ps1 -Action Remove -Recipient vendor.review@example.test
+```
+
+For the optional MDCA Cloud Discovery pilot, configure the connector after ADX telemetry and BrowserAgent activity exist:
+
+```powershell
+.\Install-ClaudIA.ps1 -UseInstallationDefinitions -Step 10 -SkipPrerequisites
+.\tools\Invoke-MdcaCloudDiscoveryIngestion.ps1
+```
+
+Step 10 stores the MDCA portal URL and API token in Key Vault; only non-secret connector settings are written to `config/agents.json`.
 
 ## 8. Reproduce The Storyline
 

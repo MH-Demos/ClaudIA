@@ -696,6 +696,8 @@
       ],
       "existingUser": true
     }
+  ],
+  "externalRecipients": [
+    "demo.recipient@example.com"
   ]
 }
-

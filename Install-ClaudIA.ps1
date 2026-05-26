@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.7
+.VERSION 1.0.9
 .GUID eae37755-6eb4-444f-9e77-e8d699645e18
 
 .AUTHOR
@@ -23,7 +23,7 @@ https://github.com/MH-Demos/ClaudIA
 ClaudIA - Interactive Deployment Wizard
 
 .RELEASENOTES
-Version 1.0.7 offers BrowserAgent session initialization before Step 9 job deployment.
+Version 1.0.9 captures the Step 10 MDCA API token as a secure prompt before storing it in Key Vault.
 
 #>
 <#
@@ -45,7 +45,7 @@ Version 1.0.7 offers BrowserAgent session initialization before Step 9 job deplo
 .PARAMETER SkipPrerequisites
     Skip prerequisite checks (use if you already validated).
 .PARAMETER Step
-    Run only a specific step (0-9). Without -Step, the full deployment runs.
+    Run only a specific step (0-10). Without -Step, the full deployment runs.
     Step 4 includes 4a/4b/4c. Step 6 includes 6a/6b/6c.
 .PARAMETER DryRun
     Show what would be done without making changes.
@@ -61,7 +61,7 @@ Version 1.0.7 offers BrowserAgent session initialization before Step 9 job deplo
     .\Install-ClaudIA.ps1 -Step 4 -SkipPrerequisites
     .\Install-ClaudIA.ps1 -DryRun
 
-    === WIZARD FLOW (9 steps, all idempotent) ===
+    === WIZARD FLOW (10 steps, all idempotent) ===
 
     Step 0: PREREQUISITES
       Runs Test-Prerequisites.ps1 (13 checks: tools, providers, licenses, permissions).
@@ -127,6 +127,10 @@ Version 1.0.7 offers BrowserAgent session initialization before Step 9 job deplo
     Step 9: BROWSERAGENT CLOUD AUTOMATION
       Optional: creates regional Playwright Workspaces and Container Apps Jobs.
       -> Calls tools/Deploy-BrowserAgentInfra.ps1 and tools/Deploy-BrowserAgentScheduledJobs.ps1.
+
+    Step 10: MDCA CLOUD DISCOVERY CONNECTOR
+      Optional: stores MDCA portal/token settings and validates Cloud Discovery API access.
+      -> Calls tools/Deploy-MdcaCloudDiscoveryConnector.ps1.
 #>
 
 [CmdletBinding()]
@@ -268,6 +272,7 @@ function Test-AAInstallStep {
         '7' { return $Step -eq 7 }
         '8' { return $Step -eq 8 }
         '9' { return $Step -eq 9 }
+        '10' { return $Step -eq 10 }
         default { return $false }
     }
 }
@@ -2366,6 +2371,57 @@ if (Test-AAInstallStep '9') {
 }
 
 # ============================================================================
+# STEP 10: MDCA CLOUD DISCOVERY CONNECTOR (optional)
+# ============================================================================
+if (Test-AAInstallStep '10') {
+    Write-Host "=== Step 10: MDCA Cloud Discovery Connector ===" -ForegroundColor Cyan
+    Write-Host "  Stores MDCA portal URL/API token in Key Vault and validates Cloud Discovery API access." -ForegroundColor Gray
+    Write-Host "  Required values: MDCA portal URL and API token from Defender for Cloud Apps." -ForegroundColor Gray
+    Write-Host ""
+
+    $deployMdca = 'n'
+    if (-not $DryRun) {
+        $deployMdca = if ($Auto) { 'n' } else { Read-Host "  Configure MDCA Cloud Discovery connector now? (y/N)" }
+        if ($deployMdca -in @('y','Y','yes','YES')) {
+            $portalUrl = Read-Host "  MDCA portal URL (e.g. https://<tenant>.portal.cloudappsecurity.com)"
+            $secureToken = Read-Host "  MDCA API token" -AsSecureString
+            $tokenBstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureToken)
+            try {
+                $token = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($tokenBstr)
+                $streamNameDefault = "ClaudIA ADX Cloud Discovery"
+                $streamName = Read-Host "  MDCA input stream name [$streamNameDefault]"
+                if (-not $streamName) { $streamName = $streamNameDefault }
+                & (Join-Path $PSScriptRoot 'tools\Deploy-MdcaCloudDiscoveryConnector.ps1') `
+                    -ConfigPath $ConfigPath `
+                    -InstallationDefinitionsPath $installationDefinitionsPath `
+                    -PortalUrl $portalUrl `
+                    -Token $token `
+                    -InputStreamName $streamName `
+                    -ProbeUploadUrl
+            } finally {
+                if ($tokenBstr -ne [IntPtr]::Zero) { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($tokenBstr) }
+                $token = $null
+            }
+        } else {
+            Write-Host "  [SKIP] MDCA connector setup skipped." -ForegroundColor DarkYellow
+        }
+    } else {
+        Write-Host "  [DRY-RUN] Would store MDCA settings in Key Vault and validate Cloud Discovery API access." -ForegroundColor DarkYellow
+    }
+
+    Set-AAInstallationStepDefinition -Path $installationDefinitionsPath -Step '10' -Value ([ordered]@{
+        activity = 'MDCA Cloud Discovery connector'
+        completedAt = (Get-Date).ToString('o')
+        dryRun = [bool]$DryRun
+        requested = ($deployMdca -in @('y','Y','yes','YES'))
+    })
+    if ($deployMdca -in @('y','Y','yes','YES')) {
+        Set-AADeploymentResult -Step '10' -MainActivity 'MDCA Cloud Discovery connector' -Status 'deployed' -Comments 'MDCA settings stored in Key Vault and API access validated.'
+    }
+    Write-Host ""
+}
+
+# ============================================================================
 # SUMMARY
 # ============================================================================
 $expectedResults = @(
@@ -2384,7 +2440,8 @@ $expectedResults = @(
     @{Step="6c"; Activity="Insider Risk Management"; Runs=(Test-AAInstallStep '6c'); SkipComment="Skipped by targeted step selection."},
     @{Step="7"; Activity="ClaudIA Activity Monitor workbook"; Runs=(Test-AAInstallStep '7'); SkipComment="Skipped by targeted step selection."},
     @{Step="8"; Activity="Activity Story Map"; Runs=(Test-AAInstallStep '8'); SkipComment="Skipped by targeted step selection."},
-    @{Step="9"; Activity="BrowserAgent cloud automation"; Runs=(Test-AAInstallStep '9'); SkipComment="Optional BrowserAgent cloud layer skipped by targeted step selection or prompt."}
+    @{Step="9"; Activity="BrowserAgent cloud automation"; Runs=(Test-AAInstallStep '9'); SkipComment="Optional BrowserAgent cloud layer skipped by targeted step selection or prompt."},
+    @{Step="10"; Activity="MDCA Cloud Discovery connector"; Runs=(Test-AAInstallStep '10'); SkipComment="Optional MDCA Cloud Discovery connector skipped by targeted step selection or prompt."}
 )
 foreach ($item in $expectedResults) {
     if (-not ($script:AADeploymentResults | Where-Object { $_.Step -eq $item.Step })) {
@@ -2407,7 +2464,7 @@ $script:AADeploymentResults | Sort-Object {
     switch ($_.Step) {
         '0' { 0 } '1' { 1 } '2' { 2 } '3' { 3 } '4' { 4 }
         '4a' { 4.1 } '4b' { 4.2 } '4c' { 4.3 }
-        '5' { 5 } '6a' { 6.1 } '6b' { 6.2 } '6c' { 6.3 } '7' { 7 } '8' { 8 } '9' { 9 }
+        '5' { 5 } '6a' { 6.1 } '6b' { 6.2 } '6c' { 6.3 } '7' { 7 } '8' { 8 } '9' { 9 } '10' { 10 }
         default { 99 }
     }
 } | Format-Table -AutoSize
@@ -2454,6 +2511,7 @@ if ($config.adx -and $config.adx.enabled -eq $true) {
     Write-Host "    .\Install-ClaudIA.ps1 -UseInstallationDefinitions -Step 7 -SkipPrerequisites  # Workbook" -ForegroundColor Gray
 }
 Write-Host "    .\Install-ClaudIA.ps1 -UseInstallationDefinitions -Step 9 -SkipPrerequisites  # BrowserAgent cloud automation" -ForegroundColor Gray
+Write-Host "    .\Install-ClaudIA.ps1 -UseInstallationDefinitions -Step 10 -SkipPrerequisites # MDCA Cloud Discovery connector" -ForegroundColor Gray
 
 if ($config.activityStoryMap -and $config.activityStoryMap.launchUrl) {
     Write-Host ""
