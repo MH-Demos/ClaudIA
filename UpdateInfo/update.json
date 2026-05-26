@@ -3,7 +3,7 @@
     {
       "directory": "ROOT",
       "file": "Install-ClaudIA.ps1",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "format": "ps1",
       "changes": "ClaudIA - Interactive Deployment Wizard",
       "URI": "Install-ClaudIA.ps1"
@@ -179,7 +179,7 @@
     {
       "directory": "tools",
       "file": "Backup-ClaudIAConfiguration.ps1",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "format": "ps1",
       "changes": "Backs up and restores ClaudIA local configuration files",
       "URI": "tools/Backup-ClaudIAConfiguration.ps1"

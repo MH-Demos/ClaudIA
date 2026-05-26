@@ -1,7 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.0
-
+.VERSION 1.0.1
 .GUID eae37755-6eb4-444f-9e77-e8d699645e18
 
 .AUTHOR
@@ -24,7 +23,7 @@ https://github.com/MH-Demos/ClaudIA
 ClaudIA - Interactive Deployment Wizard
 
 .RELEASENOTES
-Initial version metadata for ClaudIA - Interactive Deployment Wizard.
+Version 1.0.1 preserves restored configuration and only forces fresh setup when placeholders are detected.
 
 #>
 <#
@@ -338,7 +337,35 @@ if (-not (Test-Path $ConfigPath)) {
 }
 $config = Get-Content $ConfigPath -Raw | ConvertFrom-Json
 
-$freshDefinitions = ($script:RunAllSteps -and -not $SkipPrerequisites -and -not $UseInstallationDefinitions)
+function Test-AAConfigNeedsSetup {
+    param([Parameter(Mandatory)]$Config)
+
+    $placeholderDomains = @('contoso.example', 'example.com', 'example.test')
+    $placeholderGuids = @(
+        '00000000-0000-0000-0000-000000000000',
+        '11111111-1111-1111-1111-111111111111',
+        '22222222-2222-2222-2222-222222222222',
+        '33333333-3333-3333-3333-333333333333',
+        '44444444-4444-4444-4444-444444444444'
+    )
+
+    $domain = [string]$Config.tenant.domain
+    $tenantId = [string]$Config.tenant.tenantId
+    $subscriptionId = [string]$Config.tenant.subscriptionId
+
+    return (
+        [string]::IsNullOrWhiteSpace($domain) -or
+        $domain -match 'REPLACE_WITH' -or
+        $placeholderDomains -contains $domain.ToLowerInvariant() -or
+        [string]::IsNullOrWhiteSpace($subscriptionId) -or
+        $subscriptionId -match 'REPLACE_WITH' -or
+        $placeholderGuids -contains $subscriptionId -or
+        $placeholderGuids -contains $tenantId
+    )
+}
+
+$configNeedsSetup = Test-AAConfigNeedsSetup -Config $config
+$freshDefinitions = ($script:RunAllSteps -and -not $SkipPrerequisites -and -not $UseInstallationDefinitions -and $configNeedsSetup)
 $script:ForceConfigurationPrompt = $freshDefinitions
 
 if ($UseInstallationDefinitions) {
@@ -865,7 +892,7 @@ function Select-AASubscription {
 }
 
 # Check if interactive setup is needed
-$needsSetup = ($config.tenant.domain -match 'REPLACE_WITH') -or ($config.tenant.subscriptionId -match 'REPLACE_WITH')
+$needsSetup = Test-AAConfigNeedsSetup -Config $config
 
 if (($needsSetup -or $script:ForceConfigurationPrompt) -and -not $DryRun -and -not $Auto) {
     Write-Host "================================================================" -ForegroundColor Cyan
@@ -2356,6 +2383,7 @@ if ($script:RunAllSteps -or $Step -eq 6) {
 }
 Write-Host ""
 Stop-Transcript | Out-Null
+
 
 
 

@@ -1,7 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.0
-
+.VERSION 1.0.1
 .GUID 7ff14a5d-03e7-44e1-8d6c-53f28ebf4a8e
 
 .AUTHOR
@@ -24,7 +23,7 @@ https://github.com/MH-Demos/ClaudIA
 Backs up and restores ClaudIA local configuration files while preserving folder structure.
 
 .RELEASENOTES
-Initial version metadata for ClaudIA configuration backup and restore.
+Version 1.0.1 restores folders by replacing the destination path instead of nesting duplicate folders.
 
 #>
 
@@ -103,6 +102,9 @@ function Copy-PathPreservingStructure {
     }
 
     if (Test-Path -LiteralPath $source -PathType Container) {
+        if (Test-Path -LiteralPath $destination) {
+            Remove-Item -LiteralPath $destination -Recurse -Force
+        }
         Copy-Item -LiteralPath $source -Destination $destination -Recurse -Force
     } elseif (Test-Path -LiteralPath $source -PathType Leaf) {
         Copy-Item -LiteralPath $source -Destination $destination -Force
@@ -251,3 +253,4 @@ switch ($Mode) {
         return
     }
 }
+
