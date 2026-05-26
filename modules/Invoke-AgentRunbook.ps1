@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 0ca67639-d16b-45c3-bd8f-50c63358043d
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Azure Automation Runbook - Parameterized AI-powered autonomous corporate agents
+
+.RELEASENOTES
+Initial version metadata for Azure Automation Runbook - Parameterized AI-powered autonomous corporate agents.
+
+#>
 <#
 .SYNOPSIS
     Azure Automation Runbook - Parameterized AI-powered autonomous corporate agents.
@@ -2836,5 +2865,8 @@ Please review and advise on the next action.$historyNote
 }
 
 Write-Output "`n=== COMPLETE: $totalFiles files uploaded, $($script:totalFileOps) file operations, $totalEmails emails + $totalThreadEmails thread emails sent, $totalExternalAi external AI interactions, $totalInsiderRisk insider risk events ==="
+
+
+
 
 

@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 754010c6-7fb3-4e2d-8790-92d61691ed8d
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Enables Azure Front Door for the Activity Story Map static website
+
+.RELEASENOTES
+Initial version metadata for Enables Azure Front Door for the Activity Story Map static website.
+
+#>
 <#
 .SYNOPSIS
     Enables Azure Front Door for the Activity Story Map static website.
@@ -10,7 +39,7 @@
 param(
     [string]$ConfigPath = (Join-Path $PSScriptRoot '..\config\agents.json'),
     [string]$InstallationDefinitionsPath = (Join-Path $PSScriptRoot '..\config\Installation_definitions.json'),
-    [string]$CustomDomain = 'activitymap.contoso.example',
+    [string]$CustomDomain = '',
     [string]$EndpointName,
     [switch]$WhatIf
 )
@@ -45,6 +74,32 @@ function Invoke-AzCli {
     }
 }
 
+function Invoke-AzCliWithFallback {
+    param(
+        [Parameter(Mandatory)][string[]]$Arguments,
+        [Parameter(Mandatory)][string[]]$FallbackArguments,
+        [Parameter(Mandatory)][string]$FallbackPattern
+    )
+
+    if ($WhatIf) {
+        Write-Host "WhatIf: az $($Arguments -join ' ')" -ForegroundColor Yellow
+        return $null
+    }
+
+    $output = & az @Arguments 2>&1
+    if ($LASTEXITCODE -eq 0) { return $output }
+
+    $text = ($output | Out-String)
+    if ($text -match $FallbackPattern) {
+        Write-Host "  [WARN] Azure CLI does not support one optional argument; retrying with compatible command." -ForegroundColor Yellow
+        $fallbackOutput = & az @FallbackArguments 2>&1
+        if ($LASTEXITCODE -eq 0) { return $fallbackOutput }
+        throw "Azure CLI command failed: az $($FallbackArguments -join ' ')`n$($fallbackOutput | Out-String)"
+    }
+
+    throw "Azure CLI command failed: az $($Arguments -join ' ')`n$text"
+}
+
 if (-not (Test-Path -LiteralPath $ConfigPath)) {
     throw "Config file not found: $ConfigPath"
 }
@@ -65,6 +120,12 @@ $originName = if ($config.activityStoryMap.frontDoor.originName) { [string]$conf
 $routeName = if ($config.activityStoryMap.frontDoor.routeName) { [string]$config.activityStoryMap.frontDoor.routeName } else { 'route-storymap' }
 $staticWebsiteUrl = [string]$config.activityStoryMap.staticWebsiteUrl
 $functionAppName = [string]$config.activityStoryMap.functionAppName
+if (-not $CustomDomain -and $config.activityStoryMap.frontDoor -and $config.activityStoryMap.frontDoor.customDomain) {
+    $savedCustomDomain = [string]$config.activityStoryMap.frontDoor.customDomain
+    if ($savedCustomDomain -and $savedCustomDomain -notmatch 'contoso\.example|example\.com|example\.test') {
+        $CustomDomain = $savedCustomDomain
+    }
+}
 
 if (-not $staticWebsiteUrl) { throw 'activityStoryMap.staticWebsiteUrl is required.' }
 if (-not $functionAppName) { throw 'activityStoryMap.functionAppName is required.' }
@@ -99,13 +160,21 @@ if (-not $originGroupExists) {
 
 $originExists = az afd origin show -g $resourceGroup --profile-name $profileName --origin-group-name $originGroupName --origin-name $originName --query name -o tsv 2>$null
 if (-not $originExists) {
-    Invoke-AzCli @(
+    $originCreateArgs = @(
         'afd','origin','create','-g',$resourceGroup,'--profile-name',$profileName,
         '--origin-group-name',$originGroupName,'--origin-name',$originName,
         '--host-name',$originHost,'--origin-host-header',$originHost,
         '--http-port','80','--https-port','443','--priority','1','--weight','1000',
         '--enabled-state','Enabled','--enable-certificate-name-check','true','-o','none'
     )
+    $originCreateFallbackArgs = @(
+        'afd','origin','create','-g',$resourceGroup,'--profile-name',$profileName,
+        '--origin-group-name',$originGroupName,'--origin-name',$originName,
+        '--host-name',$originHost,'--origin-host-header',$originHost,
+        '--http-port','80','--https-port','443','--priority','1','--weight','1000',
+        '--enabled-state','Enabled','-o','none'
+    )
+    Invoke-AzCliWithFallback -Arguments $originCreateArgs -FallbackArguments $originCreateFallbackArgs -FallbackPattern 'unrecognized arguments|enable-certificate-name-check' | Out-Null
 }
 
 $endpointExists = az afd endpoint show -g $resourceGroup --profile-name $profileName --endpoint-name $endpointName --query name -o tsv 2>$null
@@ -129,6 +198,12 @@ if (-not $routeExists) {
         '--enabled-state','Enabled','--https-redirect','Enabled',
         '--forwarding-protocol','HttpsOnly','-o','none'
     )
+}
+
+if ($WhatIf) {
+    Write-Host ''
+    Write-Host 'WhatIf complete. No Front Door resources were changed.' -ForegroundColor Yellow
+    return
 }
 
 $endpointHostName = az afd endpoint show -g $resourceGroup --profile-name $profileName --endpoint-name $endpointName --query hostName -o tsv
@@ -203,3 +278,6 @@ if ($CustomDomain) {
 }
 
 return [PSCustomObject]$frontDoorConfig
+
+
+

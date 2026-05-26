@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID a728b355-cc4b-415c-a460-2578798a33a9
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Configure DSPM DLP policies and IRM Priority User Group
+
+.RELEASENOTES
+Initial version metadata for Configure DSPM DLP policies and IRM Priority User Group.
+
+#>
 <#
 .SYNOPSIS
     Configure DSPM DLP policies and IRM Priority User Group.
@@ -149,3 +178,6 @@ Write-Host "    2. IRM > Settings > Priority user groups > Create 'ClaudIA Agent
 Write-Host "       Add these UPNs:" -ForegroundColor Yellow
 foreach ($upn in $agentUpns) { Write-Host "         $upn" -ForegroundColor Gray }
 Write-Host "    3. DSPM for AI > AI security > Get started" -ForegroundColor Yellow
+
+
+

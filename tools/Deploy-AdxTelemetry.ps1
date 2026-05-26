@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 37a5c907-b47b-4897-895c-553c3fccfee3
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Deploy Azure Data Explorer telemetry resources for autonomous agent activity
+
+.RELEASENOTES
+Initial version metadata for Deploy Azure Data Explorer telemetry resources for autonomous agent activity.
+
+#>
 <#
 .SYNOPSIS
     Deploy Azure Data Explorer telemetry resources for autonomous agent activity.
@@ -564,3 +593,6 @@ Sync-SourceConfigAdx -DefinitionsPath $InstallationDefinitionsPath -Definitions 
 Write-Host ""
 Write-Host "ADX telemetry configuration saved to:" -ForegroundColor Green
 Write-Host "  $InstallationDefinitionsPath"
+
+
+

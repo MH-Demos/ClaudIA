@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 941e9fb0-c246-4e6e-aee1-c3919b24e95c
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Query recent sensitivity label activity from ADX telemetry
+
+.RELEASENOTES
+Initial version metadata for Query recent sensitivity label activity from ADX telemetry.
+
+#>
 <#
 .SYNOPSIS
     Query recent sensitivity label activity from ADX telemetry.
@@ -83,3 +112,6 @@ $result.Tables[0].Rows | ForEach-Object {
         Error = $_[9]
     }
 } | Format-Table -AutoSize
+
+
+

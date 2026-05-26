@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 1512651d-a076-4bf9-9db4-77abf247b494
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Deploy the ClaudIA Activity Monitor workbook backed by Azure Data Explorer
+
+.RELEASENOTES
+Initial version metadata for Deploy the ClaudIA Activity Monitor workbook backed by Azure Data Explorer.
+
+#>
 <#
 .SYNOPSIS
     Deploy the ClaudIA Activity Monitor workbook backed by Azure Data Explorer.
@@ -214,3 +243,6 @@ try {
         throw
     }
 }
+
+
+

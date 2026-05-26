@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 996556ca-065e-4cf2-ac21-bddcf1e65bcb
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Shows recent BrowserAgent Azure Container Apps Job executions
+
+.RELEASENOTES
+Initial version metadata for Shows recent BrowserAgent Azure Container Apps Job executions.
+
+#>
 <#
 .SYNOPSIS
     Shows recent BrowserAgent Azure Container Apps Job executions.
@@ -71,3 +100,6 @@ if ($rows.Count -eq 0) {
 } else {
     $rows | Sort-Object StartTime -Descending | Format-Table -AutoSize
 }
+
+
+

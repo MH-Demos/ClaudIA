@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 3e142285-d584-415f-9eb7-c3a9835d2eeb
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Register Entra app with delegated scopes for ROPC agent authentication
+
+.RELEASENOTES
+Initial version metadata for Register Entra app with delegated scopes for ROPC agent authentication.
+
+#>
 <#
 .SYNOPSIS
     Register Entra app with delegated scopes for ROPC agent authentication.
@@ -76,3 +105,6 @@ try {
 }
 
 Write-Host "  Delegated permissions configured + admin consent granted." -ForegroundColor Green
+
+
+

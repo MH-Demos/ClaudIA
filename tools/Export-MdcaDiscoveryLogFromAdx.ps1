@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 09cd32ea-7f81-449a-a871-2b431c30b559
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Export BrowserAgent ADX telemetry as an MDCA Cloud Discovery test log
+
+.RELEASENOTES
+Initial version metadata for Export BrowserAgent ADX telemetry as an MDCA Cloud Discovery test log.
+
+#>
 <#
 .SYNOPSIS
     Export BrowserAgent ADX telemetry as an MDCA Cloud Discovery test log.
@@ -117,4 +146,7 @@ $lines | Set-Content -LiteralPath $OutputPath -Encoding UTF8
 Write-Host '=== ADX to MDCA Discovery Log Export ===' -ForegroundColor Cyan
 Write-Host "  Rows:   $($lines.Count)"
 Write-Host "  Output: $((Get-Item -LiteralPath $OutputPath).FullName)"
+
+
+
 

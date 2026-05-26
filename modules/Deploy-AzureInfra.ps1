@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 14141205-4bfa-4623-8070-86f59c9116ce
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Deploy Azure infrastructure: OpenAI, Automation, Key Vault, and ADX-ready runbook hosting
+
+.RELEASENOTES
+Initial version metadata for Deploy Azure infrastructure: OpenAI, Automation, Key Vault, and ADX-ready runbook hosting.
+
+#>
 <#
 .SYNOPSIS
     Deploy Azure infrastructure: OpenAI, Automation, Key Vault, and ADX-ready runbook hosting.
@@ -649,3 +678,6 @@ Write-Host " [OK]" -ForegroundColor Green
 Write-Host "  Telemetry backend: Azure Data Explorer. Run tools\Deploy-AdxTelemetry.ps1 after Step 4 if ADX is not provisioned yet." -ForegroundColor Cyan
 
 Write-Host "  Infrastructure deployment complete." -ForegroundColor Green
+
+
+

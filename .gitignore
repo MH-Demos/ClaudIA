@@ -10,6 +10,9 @@ BrowserAgents/.auth/
 # Generated outputs
 logs/
 out/
+BackupScripts/
+tools/BackupScripts/
+TemporaryBackup/
 temp_*.json
 *.log
 BrowserAgents/playwright-report/

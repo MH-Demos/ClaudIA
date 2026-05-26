@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 9838cc7b-da78-4705-884a-657f18549efd
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Deploy Insider Risk Management policies for Purview agent telemetry
+
+.RELEASENOTES
+Initial version metadata for Deploy Insider Risk Management policies for Purview agent telemetry.
+
+#>
 <#
 .SYNOPSIS
     Deploy Insider Risk Management policies for Purview agent telemetry.
@@ -204,3 +233,6 @@ foreach ($upn in $agentUpns) {
     Write-Host "       - $upn" -ForegroundColor Gray
 }
 Write-Host "    4. DSPM for AI > Get started (if not already enabled)" -ForegroundColor Yellow
+
+
+

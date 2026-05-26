@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 6628773e-fd19-4e77-96ce-252193eb423f
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Enables Microsoft Graph metered API billing for the lab app registration
+
+.RELEASENOTES
+Initial version metadata for Enables Microsoft Graph metered API billing for the lab app registration.
+
+#>
 <#
 .SYNOPSIS
     Enables Microsoft Graph metered API billing for the lab app registration.
@@ -160,3 +189,6 @@ if ($null -ne $script:originalAzureExtensionDir) {
 } else {
     Remove-Item Env:\AZURE_EXTENSION_DIR -ErrorAction SilentlyContinue
 }
+
+
+

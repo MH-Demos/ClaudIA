@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 18e4fe13-bf23-48fe-a824-ce75e26ec23d
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Forces a fresh Activity Story Map data refresh by running agent activity jobs
+
+.RELEASENOTES
+Initial version metadata for Forces a fresh Activity Story Map data refresh by running agent activity jobs.
+
+#>
 <#
 .SYNOPSIS
     Forces a fresh Activity Story Map data refresh by running agent activity jobs.
@@ -39,3 +68,6 @@ Write-Host 'Starting Activity Story Map data refresh...' -ForegroundColor Cyan
 Write-Host 'The map reads ADX live; open the Story Map after this run completes.' -ForegroundColor DarkGray
 
 & $fullRunScript @arguments
+
+
+

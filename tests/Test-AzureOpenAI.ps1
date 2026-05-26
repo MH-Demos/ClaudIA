@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID e466171f-02d2-431e-b803-bea994eb5cde
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Validate the Azure OpenAI deployment used by the runbook
+
+.RELEASENOTES
+Initial version metadata for Validate the Azure OpenAI deployment used by the runbook.
+
+#>
 <#
 .SYNOPSIS
     Validate the Azure OpenAI deployment used by the runbook.
@@ -64,3 +93,6 @@ foreach ($apiVersion in $apiVersions) {
 }
 
 throw "Azure OpenAI validation failed for all tested API versions."
+
+
+

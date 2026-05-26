@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID eae37755-6eb4-444f-9e77-e8d699645e18
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+ClaudIA - Interactive Deployment Wizard
+
+.RELEASENOTES
+Initial version metadata for ClaudIA - Interactive Deployment Wizard.
+
+#>
 <#
 .SYNOPSIS
     ClaudIA - Interactive Deployment Wizard
@@ -2180,19 +2209,28 @@ if (Test-AAInstallStep '9') {
 
             $deployJobs = if ($Auto) { 'n' } else { Read-Host "  Deploy scheduled Container Apps Jobs for BrowserAgents? Requires .auth files. (y/N)" }
             if ($deployJobs -in @('y','Y','yes','YES')) {
-                foreach ($workspaceConfig in @($config.browserAgents.regionalWorkspaces)) {
-                    $key = [string]$workspaceConfig.key
-                    $prefix = switch ($key) {
-                        'europe' { 'browseragents-eu' }
-                        'asia' { 'browseragents-asia' }
-                        default { 'browseragents' }
+                $authDir = Join-Path $PSScriptRoot 'BrowserAgents\.auth'
+                $authFiles = @(Get-ChildItem -LiteralPath $authDir -Filter '*.json' -File -ErrorAction SilentlyContinue)
+                if ($authFiles.Count -eq 0) {
+                    Write-Host "  [SKIP] BrowserAgent scheduled jobs were not deployed because no .auth session files exist yet." -ForegroundColor DarkYellow
+                    Write-Host "         Capture persona browser sessions first:" -ForegroundColor DarkYellow
+                    Write-Host "           .\tools\Initialize-BrowserAgents.ps1 -All -Services office,owa,teams -ContinueOnFailure" -ForegroundColor DarkYellow
+                    Write-Host "         Then rerun Step 9 or tools\Deploy-BrowserAgentScheduledJobs.ps1." -ForegroundColor DarkYellow
+                } else {
+                    foreach ($workspaceConfig in @($config.browserAgents.regionalWorkspaces)) {
+                        $key = [string]$workspaceConfig.key
+                        $prefix = switch ($key) {
+                            'europe' { 'browseragents-eu' }
+                            'asia' { 'browseragents-asia' }
+                            default { 'browseragents' }
+                        }
+                        & (Join-Path $PSScriptRoot 'tools\Deploy-BrowserAgentScheduledJobs.ps1') `
+                            -ConfigPath $ConfigPath `
+                            -BrowserRegionKey $key `
+                            -JobNamePrefix $prefix `
+                            -SkipAgentsMissingAuth `
+                            -Deploy
                     }
-                    & (Join-Path $PSScriptRoot 'tools\Deploy-BrowserAgentScheduledJobs.ps1') `
-                        -ConfigPath $ConfigPath `
-                        -BrowserRegionKey $key `
-                        -JobNamePrefix $prefix `
-                        -SkipAgentsMissingAuth `
-                        -Deploy
                 }
             } else {
                 Write-Host "  [SKIP] BrowserAgent scheduled jobs skipped. You can run tools\\Deploy-BrowserAgentScheduledJobs.ps1 later." -ForegroundColor DarkYellow
@@ -2318,3 +2356,6 @@ if ($script:RunAllSteps -or $Step -eq 6) {
 }
 Write-Host ""
 Stop-Transcript | Out-Null
+
+
+

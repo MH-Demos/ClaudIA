@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 0b09f957-2cdd-4454-abb0-e751bfc56f9b
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Create storyline users and license security groups in Microsoft Entra ID
+
+.RELEASENOTES
+Initial version metadata for Create storyline users and license security groups in Microsoft Entra ID.
+
+#>
 <#
 .SYNOPSIS
     Create storyline users and license security groups in Microsoft Entra ID.
@@ -446,3 +475,6 @@ if ($RevealPassword) {
 } else {
     Write-Host "Password inicial definido por parametro -InitialPassword." -ForegroundColor Yellow
 }
+
+
+

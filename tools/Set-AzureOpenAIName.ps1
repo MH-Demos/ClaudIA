@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 1b5befe2-e702-4835-9b05-d11d3e7aaff2
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Update the configured Azure OpenAI account name in config files
+
+.RELEASENOTES
+Initial version metadata for Update the configured Azure OpenAI account name in config files.
+
+#>
 <#
 .SYNOPSIS
     Update the configured Azure OpenAI account name in config files.
@@ -61,3 +90,6 @@ Write-Host "Next steps:" -ForegroundColor Cyan
 Write-Host "  .\Install-ClaudIA.ps1 -UseExistingUsers -UseInstallationDefinitions -Step 4"
 Write-Host "  .\Install-ClaudIA.ps1 -UseExistingUsers -UseInstallationDefinitions -Step 5"
 Write-Host "  .\tests\Test-AzureOpenAI.ps1"
+
+
+

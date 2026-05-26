@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 0216918c-f720-4dd8-bf40-d087c0b78cf5
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Enables or disables ClaudIA Microsoft 365 Copilot-specific tasks
+
+.RELEASENOTES
+Initial version metadata for Enables or disables ClaudIA Microsoft 365 Copilot-specific tasks.
+
+#>
 <#
 .SYNOPSIS
     Enables or disables ClaudIA Microsoft 365 Copilot-specific tasks.
@@ -59,3 +88,6 @@ if ($enabled) {
     Write-Host ""
     Write-Host "Copilot-specific runbook tasks are disabled until licenses are available." -ForegroundColor Yellow
 }
+
+
+

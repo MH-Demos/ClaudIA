@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 83b0e0a1-8d34-4e64-818f-9877b16e36af
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Uploads the 2026-05-27 live demo seed content pack to a SharePoint document library
+
+.RELEASENOTES
+Initial version metadata for Uploads the 2026-05-27 live demo seed content pack to a SharePoint document library.
+
+#>
 <#
 .SYNOPSIS
     Uploads the 2026-05-27 live demo seed content pack to a SharePoint document library.
@@ -130,3 +159,6 @@ foreach ($file in $files) {
 Write-Host ""
 Write-Host "Uploaded $($uploaded.Count) files." -ForegroundColor Cyan
 $uploaded | Format-Table -AutoSize
+
+
+

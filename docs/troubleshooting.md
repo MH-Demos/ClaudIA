@@ -120,6 +120,29 @@ If Azure and Microsoft 365 are managed by different accounts, answer yes when th
 
 Step 1 runs only after prerequisites are fixed or explicitly bypassed. If this check fails, agent users have not been created yet.
 
+### Persona photo upload fails with ForbiddenByPolicy or invalid_role
+
+**Symptom**:
+
+```text
+ForbiddenByPolicy
+invalid_role
+```
+
+**Cause**: The photo upload is using an Azure CLI token from an account that can access the Azure subscription but cannot update Microsoft 365/Entra user photos.
+
+**Fix**: Sign in with a Microsoft 365/Entra admin account that can update user photos. If the installer already collected a separate Microsoft 365 admin sign-in, `Set-EntraUserPhotos.ps1` automatically uses the isolated `.claudia/az-m365-admin` profile. Then retry:
+
+```powershell
+.\tools\Set-EntraUserPhotos.ps1 -SkipMissing
+```
+
+You can also pass an explicit Azure CLI profile:
+
+```powershell
+.\tools\Set-EntraUserPhotos.ps1 -SkipMissing -M365AzureConfigDir .\.claudia\az-m365-admin
+```
+
 ### The resource group prompt received a subscription ID
 
 **Symptom**: The environment summary shows the resource group as a GUID, or the installer warns that the resource group must be a name.

@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 8b187ba4-2203-4ffe-9328-fc941d0b8771
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Validate app-claudia-dataagent client secret and one agent password from Key Vault
+
+.RELEASENOTES
+Initial version metadata for Validate app-claudia-dataagent client secret and one agent password from Key Vault.
+
+#>
 <#
 .SYNOPSIS
     Validate app-claudia-dataagent client secret and one agent password from Key Vault.
@@ -184,3 +213,6 @@ if (-not $ropcOk) {
         Write-Check "Sensitivity labels visible to agent" $false $msg
     }
 }
+
+
+

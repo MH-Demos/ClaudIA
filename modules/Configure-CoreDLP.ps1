@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 0d340b78-0eeb-43e8-8a40-43a03ea5381a
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Deploy category-based core DLP policies for Purview reporting
+
+.RELEASENOTES
+Initial version metadata for Deploy category-based core DLP policies for Purview reporting.
+
+#>
 <#
 .SYNOPSIS
     Deploy category-based core DLP policies for Purview reporting.
@@ -390,3 +419,6 @@ foreach ($labelPath in @('Confidential/Conf-HR', 'Confidential/Conf-Finance')) {
 Write-Host "  Category-based core DLP policies deployed ($modeLabel)." -ForegroundColor Green
 Write-Host "  Policies: $($policyNames.Values -join ', ')" -ForegroundColor DarkGray
 Write-Host "  Incident reports: $complianceEmail" -ForegroundColor DarkGray
+
+
+

@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID b94087f0-e35b-4a85-94fd-c5aebc04ea68
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+List chat-completion Azure OpenAI models available for the configured account
+
+.RELEASENOTES
+Initial version metadata for List chat-completion Azure OpenAI models available for the configured account.
+
+#>
 <#
 .SYNOPSIS
     List chat-completion Azure OpenAI models available for the configured account.
@@ -97,3 +126,6 @@ if ($imageModels.Count -eq 0) {
         Write-Host ("  [{0}] {1} | version={2} | {3} | default={4} | standardDefault={5} | standardMax={6} | skus={7}" -f ($i + 1), $m.name, $m.version, $m.lifecycleStatus, $m.isDefaultVersion, $defaultCapacity, $max, $skus)
     }
 }
+
+
+

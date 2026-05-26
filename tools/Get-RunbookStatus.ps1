@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID df922b3c-dfe7-4729-a9c4-187069c753f5
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Show recent Azure Automation runbook executions for the autonomous agents lab
+
+.RELEASENOTES
+Initial version metadata for Show recent Azure Automation runbook executions for the autonomous agents lab.
+
+#>
 <#
 .SYNOPSIS
     Show recent Azure Automation runbook executions for the autonomous agents lab.
@@ -255,3 +284,6 @@ $rows | Format-Table -AutoSize
 $summary = $rows | Group-Object Status | ForEach-Object { "$($_.Name)=$($_.Count)" }
 Write-Host ""
 Write-Host "Summary: $($summary -join ', ')" -ForegroundColor Cyan
+
+
+

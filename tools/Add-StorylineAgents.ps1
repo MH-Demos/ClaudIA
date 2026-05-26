@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 39dfae26-9172-49a1-b250-682677d032c6
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Add existing Entra ID users as storyline expansion agents without duplicates
+
+.RELEASENOTES
+Initial version metadata for Add existing Entra ID users as storyline expansion agents without duplicates.
+
+#>
 <#
 .SYNOPSIS
     Add existing Entra ID users as storyline expansion agents without duplicates.
@@ -293,3 +322,6 @@ Write-Host "Recommended next steps:" -ForegroundColor Cyan
 Write-Host "  1. Run Step 2 if the new users need licenses/MFA exclusion group membership."
 Write-Host "  2. Run Step 4a if new departments need SharePoint folders or Teams channels."
 Write-Host "  3. Run Step 5 only if you want a full runbook redeploy/secret rotation."
+
+
+

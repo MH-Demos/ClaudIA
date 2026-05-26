@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 34243e4e-ff38-4bb3-ae8d-de924179f396
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Cost management utilities for the ClaudIA lab
+
+.RELEASENOTES
+Initial version metadata for Cost management utilities for the ClaudIA lab.
+
+#>
 <#
 .SYNOPSIS
     Cost management utilities for the ClaudIA lab.
@@ -309,3 +338,6 @@ switch ($Action) {
     'FullSchedule'    { Set-ScheduleMode -Full $true }
     'Recommendations' { Show-Recommendations }
 }
+
+
+

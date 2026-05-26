@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 8264a309-d2cf-4f56-ada3-81cdf11768cb
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Deploys the Azure Playwright Workspace used by BrowserAgents
+
+.RELEASENOTES
+Initial version metadata for Deploys the Azure Playwright Workspace used by BrowserAgents.
+
+#>
 <#
 .SYNOPSIS
     Deploys the Azure Playwright Workspace used by BrowserAgents.
@@ -123,3 +152,6 @@ $result | Format-List
 
 Write-Host "Add PLAYWRIGHT_SERVICE_URL to BrowserAgents/.env when running tests." -ForegroundColor Yellow
 $result
+
+
+

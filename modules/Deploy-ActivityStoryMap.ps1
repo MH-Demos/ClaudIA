@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 377b3221-30aa-4184-80d1-bc9a5eb6b6d6
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Deploys the Activity Story Map Azure frontend and API
+
+.RELEASENOTES
+Initial version metadata for Deploys the Activity Story Map Azure frontend and API.
+
+#>
 <#
 .SYNOPSIS
     Deploys the Activity Story Map Azure frontend and API.
@@ -243,3 +272,6 @@ Write-Host "  API: $apiBaseUrl/api/graph"
 Write-Host "  Open with API binding: $launchUrl"
 
 return [PSCustomObject]$storyMapConfig
+
+
+

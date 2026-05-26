@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 1fe93420-48b6-4a89-aaef-5b931b4eaf59
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Query recent low-complexity file operations generated for Purview Activity Explorer validation
+
+.RELEASENOTES
+Initial version metadata for Query recent low-complexity file operations generated for Purview Activity Explorer validation.
+
+#>
 <#
 .SYNOPSIS
     Query recent low-complexity file operations generated for Purview Activity Explorer validation.
@@ -84,3 +113,6 @@ $result.Tables[0].Rows | ForEach-Object {
         Error = $_[9]
     }
 } | Format-Table -AutoSize
+
+
+

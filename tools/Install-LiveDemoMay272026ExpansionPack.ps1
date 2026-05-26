@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 2dd29cf2-e356-4b0a-8de6-be9bd2765029
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Installs the May 27 2026 live demo expansion pack
+
+.RELEASENOTES
+Initial version metadata for Installs the May 27 2026 live demo expansion pack.
+
+#>
 <#
 .SYNOPSIS
     Installs the May 27 2026 live demo expansion pack.
@@ -312,3 +341,6 @@ if ($teamId) {
         Write-Host "  This republishes Invoke-AgentRunbook so Copilot prompts can use the AgentLiveDemo* variables." -ForegroundColor Gray
     }
 }
+
+
+

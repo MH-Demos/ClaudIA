@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID d86d1b89-1e52-4f7c-9a10-d52a24f2f0c9
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Captures a Microsoft 365 browser session for a BrowserAgent using Key Vault credentials
+
+.RELEASENOTES
+Initial version metadata for Captures a Microsoft 365 browser session for a BrowserAgent using Key Vault credentials.
+
+#>
 <#
 .SYNOPSIS
     Captures a Microsoft 365 browser session for a BrowserAgent using Key Vault credentials.
@@ -56,3 +85,6 @@ finally {
     $env:BROWSER_AGENT_PASSWORD = $null
     Pop-Location
 }
+
+
+

@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 46dd4ec3-8689-457f-813e-3c30a5f55ada
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Provision sensitivity labels required by agent content classification
+
+.RELEASENOTES
+Initial version metadata for Provision sensitivity labels required by agent content classification.
+
+#>
 <#
 .SYNOPSIS
     Provision sensitivity labels required by agent content classification.
@@ -411,3 +440,6 @@ if (-not $SkipPublish) {
 Write-Host ""
 Write-Host "  NOTE: Labels take 24-48h to propagate to Office apps." -ForegroundColor Yellow
 Write-Host "  The runbook applies labels via Graph API (works within minutes)." -ForegroundColor Yellow
+
+
+

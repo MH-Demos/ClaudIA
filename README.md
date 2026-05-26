@@ -47,6 +47,7 @@ Run this check before publishing:
 | [config](config) | Tenant, agent, locale, ADX, activity map, and installation definition templates. |
 | [modules](modules) | PowerShell modules used by the main installer. |
 | [tools](tools) | Operational tools for ADX, browser agents, story map publishing, costs, and validation. |
+| [UpdateInfo](UpdateInfo) | Script version manifest used by `tools/Update-ClaudIAScripts.ps1`. |
 | [prerequisites](prerequisites) | Workstation and cloud prerequisite checks. |
 | [BrowserAgents](BrowserAgents) | Playwright-based browser persona agents. |
 | [activity-story-map](activity-story-map) | Static portal, API functions, visual assets, and architecture map. |
@@ -74,6 +75,12 @@ az account set --subscription 11111111-1111-1111-1111-111111111111
 ```
 
 For the complete setup path, including local tools, Azure subscription requirements, Microsoft 365 licensing, Key Vault usage, browser agents, images, and storyline replication, use [How to Start.md](How%20to%20Start.md). If the tenant is brand new, start with [If Your Tenant Is Completely New.md](If%20Your%20Tenant%20Is%20Completely%20New.md).
+
+To update only PowerShell scripts without overwriting tenant configuration, run:
+
+```powershell
+.\tools\Update-ClaudIAScripts.ps1
+```
 
 ## Localization Strategy
 

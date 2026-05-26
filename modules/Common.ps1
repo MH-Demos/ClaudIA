@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID a0c76a45-5021-47b3-98a4-626b744a5f58
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Common script
+
+.RELEASENOTES
+Initial version metadata for Common script.
+
+#>
 function Get-AgentUpn {
     param(
         [Parameter(Mandatory)]$Agent,
@@ -454,3 +483,6 @@ function Set-AAInstallationStepDefinition {
     }
     Save-AAInstallationDefinitions -Path $Path
 }
+
+
+

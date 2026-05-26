@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 204f539c-3eb6-422c-a88d-c3e07b3b0c00
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Runs BrowserAgent smoke tests locally or in Azure Playwright Workspaces
+
+.RELEASENOTES
+Initial version metadata for Runs BrowserAgent smoke tests locally or in Azure Playwright Workspaces.
+
+#>
 <#
 .SYNOPSIS
     Runs BrowserAgent smoke tests locally or in Azure Playwright Workspaces.
@@ -38,3 +67,6 @@ try {
 finally {
     Pop-Location
 }
+
+
+

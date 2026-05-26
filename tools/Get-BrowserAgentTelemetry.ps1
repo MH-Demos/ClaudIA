@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 3fb0b6d5-8195-4916-8ede-434a02887a46
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Query recent BrowserAgent telemetry from Azure Data Explorer
+
+.RELEASENOTES
+Initial version metadata for Query recent BrowserAgent telemetry from Azure Data Explorer.
+
+#>
 <#
 .SYNOPSIS
     Query recent BrowserAgent telemetry from Azure Data Explorer.
@@ -86,3 +115,6 @@ $result.Tables[0].Rows | ForEach-Object {
         Detail = $_[8]
     }
 } | Format-Table -AutoSize
+
+
+

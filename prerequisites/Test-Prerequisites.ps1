@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID a29057cc-e679-4daa-832b-0bd1020462ce
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Validates local and cloud prerequisites for installing ClaudIA
+
+.RELEASENOTES
+Initial version metadata for Validates local and cloud prerequisites for installing ClaudIA.
+
+#>
 <#
 .SYNOPSIS
     Validates local and cloud prerequisites for installing ClaudIA.
@@ -556,3 +585,6 @@ if ($AsJson) {
 } else {
     return $result
 }
+
+
+

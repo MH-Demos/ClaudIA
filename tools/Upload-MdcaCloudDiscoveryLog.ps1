@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID d931563d-3020-4f13-af14-6df6ee2a37a0
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Upload a Cloud Discovery log file to Microsoft Defender for Cloud Apps
+
+.RELEASENOTES
+Initial version metadata for Upload a Cloud Discovery log file to Microsoft Defender for Cloud Apps.
+
+#>
 <#
 .SYNOPSIS
     Upload a Cloud Discovery log file to Microsoft Defender for Cloud Apps.
@@ -87,3 +116,6 @@ Invoke-RestMethod -Method POST `
     -ErrorAction Stop | Out-Null
 
 Write-Host '[OK] Upload finalized. MDCA processing is asynchronous.' -ForegroundColor Green
+
+
+

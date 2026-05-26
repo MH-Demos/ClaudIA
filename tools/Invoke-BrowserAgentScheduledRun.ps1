@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID a08a7ba5-08cb-49de-ab48-89f9b1a8f1e4
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Run BrowserAgent daily activity using the schedules defined in config\agents.json
+
+.RELEASENOTES
+Initial version metadata for Run BrowserAgent daily activity using the schedules defined in config\agents.json.
+
+#>
 <#
 .SYNOPSIS
     Run BrowserAgent daily activity using the schedules defined in config\agents.json.
@@ -202,3 +231,6 @@ $summary | Format-Table -AutoSize
 
 Write-Host ''
 & (Join-Path $repoRoot 'tools\Get-BrowserAgentTelemetry.ps1') -SinceMinutes 90 -ConfigPath $ConfigPath
+
+
+

@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 8dbae4fe-f944-4f8e-802c-1f3bbda64852
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Prepares and launches Microsoft Edge persona activity for Endpoint DLP testing
+
+.RELEASENOTES
+Initial version metadata for Prepares and launches Microsoft Edge persona activity for Endpoint DLP testing.
+
+#>
 <#
 .SYNOPSIS
     Prepares and launches Microsoft Edge persona activity for Endpoint DLP testing.
@@ -210,3 +239,6 @@ Write-Host "  3. From Edge, use Print > Microsoft Print to PDF on the test page 
 Write-Host "  4. Use Ctrl+S / Save page as on the test page or target site."
 Write-Host ""
 Write-Host "Wait 10-30 minutes, then filter Activity Explorer by Priya, the Cloud PC device, and browser/endpoint activities." -ForegroundColor Yellow
+
+
+

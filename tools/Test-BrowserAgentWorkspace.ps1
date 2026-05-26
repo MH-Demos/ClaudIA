@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID bfeaf319-3a4b-46b6-9de6-bec468e4d410
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Validates the BrowserAgent Playwright Workspace resource
+
+.RELEASENOTES
+Initial version metadata for Validates the BrowserAgent Playwright Workspace resource.
+
+#>
 <#
 .SYNOPSIS
     Validates the BrowserAgent Playwright Workspace resource.
@@ -57,3 +86,6 @@ if ($workspace.properties.provisioningState -ne 'Succeeded') {
 
 Write-Host "[OK] BrowserAgent workspace resource is ready." -ForegroundColor Green
 Write-Host "Note: running cloud browsers also requires Playwright Workspace RBAC and npm dependencies in BrowserAgents." -ForegroundColor Yellow
+
+
+

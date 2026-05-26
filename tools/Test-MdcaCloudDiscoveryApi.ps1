@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 091adba0-1dd8-4454-b016-66dd315fa851
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Validate Microsoft Defender for Cloud Apps Cloud Discovery API connectivity
+
+.RELEASENOTES
+Initial version metadata for Validate Microsoft Defender for Cloud Apps Cloud Discovery API connectivity.
+
+#>
 <#
 .SYNOPSIS
     Validate Microsoft Defender for Cloud Apps Cloud Discovery API connectivity.
@@ -94,3 +123,6 @@ if ($ProbeUploadUrl) {
     Write-Host "  Provider: $($uploadProbe.provider)"
     Write-Host '  Upload URL received and intentionally not printed.'
 }
+
+
+

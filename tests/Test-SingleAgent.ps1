@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 38687e2c-b7b6-4915-a40f-54a3c290f9c1
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Quick test: run a single agent and verify data in Azure Data Explorer
+
+.RELEASENOTES
+Initial version metadata for Quick test: run a single agent and verify data in Azure Data Explorer.
+
+#>
 <#
 .SYNOPSIS
     Quick test: run a single agent and verify data in Azure Data Explorer.
@@ -326,4 +355,7 @@ if ($r -and $r.Tables -and $r.Tables[0].Rows.Count -gt 0) {
 } else {
     Write-Host "`n[WARN] No data in ADX yet. May need more time or runbook diagnostics review." -ForegroundColor Yellow
 }
+
+
+
 

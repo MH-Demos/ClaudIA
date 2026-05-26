@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID d0f85a7b-3fa0-4714-ad08-c7def8e48841
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Test Public Repo Safety script
+
+.RELEASENOTES
+Initial version metadata for Test Public Repo Safety script.
+
+#>
 param(
     [string]$Path = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 )
@@ -76,3 +105,6 @@ if ($issues.Count -gt 0) {
 }
 
 Write-Host "Public repository safety check passed." -ForegroundColor Green
+
+
+

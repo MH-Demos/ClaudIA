@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 284c4f4a-cb9b-4f46-bac0-815747632407
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Builds the Activity Story Map character profile manifest
+
+.RELEASENOTES
+Initial version metadata for Builds the Activity Story Map character profile manifest.
+
+#>
 <#
 .SYNOPSIS
     Builds the Activity Story Map character profile manifest.
@@ -163,3 +192,6 @@ New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
 $manifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $OutputPath -Encoding utf8
 Write-Host "Generated character profile manifest: $OutputPath" -ForegroundColor Green
 Write-Host "Profiles: $($profiles.Count)"
+
+
+

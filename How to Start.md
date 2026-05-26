@@ -116,6 +116,28 @@ Do not run validation from an older working copy such as `purview-autonomous-age
 
 Do not download only `Install-ClaudIA.ps1`. The installer depends on the full repository structure, including `modules`, `config`, `tools`, `prerequisites`, `Images`, and documentation files.
 
+To update only ClaudIA PowerShell scripts without replacing local tenant configuration, use the script updater:
+
+```powershell
+.\tools\Update-ClaudIAScripts.ps1
+```
+
+The updater reads `UpdateInfo/update.json`, compares each script's `PSScriptInfo` version, backs up changed local scripts under `BackupScripts`, and downloads newer scripts from GitHub. The manifest intentionally excludes tenant configuration and generated files.
+
+If you plan to download or replace the full repository folder, back up local configuration first:
+
+```powershell
+.\tools\Backup-ClaudIAConfiguration.ps1
+```
+
+After replacing the repository files, restore the latest configuration backup:
+
+```powershell
+.\tools\Backup-ClaudIAConfiguration.ps1 -Mode Restore
+```
+
+Backups are stored under `TemporaryBackup` and preserve the original folder structure. After validating the restored environment, you can delete `TemporaryBackup`.
+
 If PowerShell shows a message like `is not digitally signed` or `cannot be loaded`, unblock the downloaded scripts from the repository root:
 
 ```powershell

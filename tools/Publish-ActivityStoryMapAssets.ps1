@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 9ff8ff7c-f587-446d-b73a-0e5b4a6c50e9
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Publishes Activity Story Map images to the existing static website storage
+
+.RELEASENOTES
+Initial version metadata for Publishes Activity Story Map images to the existing static website storage.
+
+#>
 <#
 .SYNOPSIS
     Publishes Activity Story Map images to the existing static website storage.
@@ -153,3 +182,6 @@ if ($PurgeFrontDoor -and $config.activityStoryMap.frontDoor -and $config.activit
 
 Write-Host "Published Activity Story Map assets to $($config.activityStoryMap.staticWebsiteUrl)" -ForegroundColor Green
 Write-Host "Manifest: $($config.activityStoryMap.staticWebsiteUrl)images/manifest.json"
+
+
+

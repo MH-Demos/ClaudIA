@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID e5390e18-412b-4314-84a5-8f9fa46478e6
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Runs user-attributed endpoint activity from a Windows 365 Cloud PC
+
+.RELEASENOTES
+Initial version metadata for Runs user-attributed endpoint activity from a Windows 365 Cloud PC.
+
+#>
 <#
 .SYNOPSIS
     Runs user-attributed endpoint activity from a Windows 365 Cloud PC.
@@ -242,3 +271,6 @@ Write-Host "=== Summary ===" -ForegroundColor Cyan
 } | Format-List
 
 Write-Host "Wait 10-30 minutes, then filter Activity Explorer by user, device, and activity type." -ForegroundColor Yellow
+
+
+

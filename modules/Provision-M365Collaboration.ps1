@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 0bca2ea4-0a13-4efe-a80c-c9187dbb9c8f
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Provision SharePoint site + Teams team + department channels for agents
+
+.RELEASENOTES
+Initial version metadata for Provision SharePoint site + Teams team + department channels for agents.
+
+#>
 <#
 .SYNOPSIS
     Provision SharePoint site + Teams team + department channels for agents.
@@ -481,3 +510,6 @@ Write-Host "    Members:  $($memberRefs.Count) agents" -ForegroundColor Gray
 if ($collaborationSites.Count -gt 0) {
     Write-Host "    Expansion teams: $($collaborationSites.Count)" -ForegroundColor Gray
 }
+
+
+

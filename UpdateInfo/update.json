@@ -1,0 +1,484 @@
+{
+  "files": [
+    {
+      "directory": "ROOT",
+      "file": "Install-ClaudIA.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "ClaudIA - Interactive Deployment Wizard",
+      "URI": "Install-ClaudIA.ps1"
+    },
+    {
+      "directory": "ROOT",
+      "file": "Manage-Costs.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Cost management utilities for the ClaudIA lab",
+      "URI": "Manage-Costs.ps1"
+    },
+    {
+      "directory": "modules",
+      "file": "Common.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Common script",
+      "URI": "modules/Common.ps1"
+    },
+    {
+      "directory": "modules",
+      "file": "Configure-CoreDLP.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Deploy category-based core DLP policies for Purview reporting",
+      "URI": "modules/Configure-CoreDLP.ps1"
+    },
+    {
+      "directory": "modules",
+      "file": "Configure-DLP.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Configure DSPM DLP policies and IRM Priority User Group",
+      "URI": "modules/Configure-DLP.ps1"
+    },
+    {
+      "directory": "modules",
+      "file": "Configure-IRM.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Deploy Insider Risk Management policies for Purview agent telemetry",
+      "URI": "modules/Configure-IRM.ps1"
+    },
+    {
+      "directory": "modules",
+      "file": "Deploy-ActivityStoryMap.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Deploys the Activity Story Map Azure frontend and API",
+      "URI": "modules/Deploy-ActivityStoryMap.ps1"
+    },
+    {
+      "directory": "modules",
+      "file": "Deploy-AzureInfra.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Deploy Azure infrastructure: OpenAI, Automation, Key Vault, and ADX-ready runbook hosting",
+      "URI": "modules/Deploy-AzureInfra.ps1"
+    },
+    {
+      "directory": "modules",
+      "file": "Deploy-Runbook.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Store agent secrets in Key Vault and deploy the runbook",
+      "URI": "modules/Deploy-Runbook.ps1"
+    },
+    {
+      "directory": "modules",
+      "file": "Deploy-Workbook.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Deploy the ClaudIA Activity Monitor workbook backed by Azure Data Explorer",
+      "URI": "modules/Deploy-Workbook.ps1"
+    },
+    {
+      "directory": "modules",
+      "file": "Invoke-AgentRunbook.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Azure Automation Runbook - Parameterized AI-powered autonomous corporate agents",
+      "URI": "modules/Invoke-AgentRunbook.ps1"
+    },
+    {
+      "directory": "modules",
+      "file": "Provision-Fabric.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Provision Microsoft Fabric capacity, workspace, and lakehouse for agent data",
+      "URI": "modules/Provision-Fabric.ps1"
+    },
+    {
+      "directory": "modules",
+      "file": "Provision-M365Collaboration.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Provision SharePoint site + Teams team + department channels for agents",
+      "URI": "modules/Provision-M365Collaboration.ps1"
+    },
+    {
+      "directory": "modules",
+      "file": "Provision-SensitivityLabels.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Provision sensitivity labels required by agent content classification",
+      "URI": "modules/Provision-SensitivityLabels.ps1"
+    },
+    {
+      "directory": "modules",
+      "file": "Register-AgentApp.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Register Entra app with delegated scopes for ROPC agent authentication",
+      "URI": "modules/Register-AgentApp.ps1"
+    },
+    {
+      "directory": "modules",
+      "file": "Select-ExistingUsers.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Interactive picker to select existing Entra ID users as agent personas",
+      "URI": "modules/Select-ExistingUsers.ps1"
+    },
+    {
+      "directory": "prerequisites",
+      "file": "Test-Prerequisites.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Validates local and cloud prerequisites for installing ClaudIA",
+      "URI": "prerequisites/Test-Prerequisites.ps1"
+    },
+    {
+      "directory": "tests",
+      "file": "Test-AgentCredentials.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Validate app-claudia-dataagent client secret and one agent password from Key Vault",
+      "URI": "tests/Test-AgentCredentials.ps1"
+    },
+    {
+      "directory": "tests",
+      "file": "Test-AzureOpenAI.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Validate the Azure OpenAI deployment used by the runbook",
+      "URI": "tests/Test-AzureOpenAI.ps1"
+    },
+    {
+      "directory": "tests",
+      "file": "Test-FullRun.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Run the agent runbook for all configured users and summarize results",
+      "URI": "tests/Test-FullRun.ps1"
+    },
+    {
+      "directory": "tests",
+      "file": "Test-SingleAgent.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Quick test: run a single agent and verify data in Azure Data Explorer",
+      "URI": "tests/Test-SingleAgent.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Add-StorylineAgents.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Add existing Entra ID users as storyline expansion agents without duplicates",
+      "URI": "tools/Add-StorylineAgents.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Backup-ClaudIAConfiguration.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Backs up and restores ClaudIA local configuration files",
+      "URI": "tools/Backup-ClaudIAConfiguration.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Deploy-AdxTelemetry.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Deploy Azure Data Explorer telemetry resources for autonomous agent activity",
+      "URI": "tools/Deploy-AdxTelemetry.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Deploy-BrowserAgentInfra.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Deploys the Azure Playwright Workspace used by BrowserAgents",
+      "URI": "tools/Deploy-BrowserAgentInfra.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Deploy-BrowserAgentScheduledJobs.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Deploys BrowserAgents as scheduled Azure Container Apps Jobs",
+      "URI": "tools/Deploy-BrowserAgentScheduledJobs.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Enable-ActivityStoryMapFrontDoor.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Enables Azure Front Door for the Activity Story Map static website",
+      "URI": "tools/Enable-ActivityStoryMapFrontDoor.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Enable-GraphMeteredBilling.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Enables Microsoft Graph metered API billing for the lab app registration",
+      "URI": "tools/Enable-GraphMeteredBilling.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Export-MdcaDiscoveryLogFromAdx.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Export BrowserAgent ADX telemetry as an MDCA Cloud Discovery test log",
+      "URI": "tools/Export-MdcaDiscoveryLogFromAdx.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Get-ActivityExplorerFileOps.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Query recent low-complexity file operations generated for Purview Activity Explorer validation",
+      "URI": "tools/Get-ActivityExplorerFileOps.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Get-BrowserAgentScheduledJobStatus.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Shows recent BrowserAgent Azure Container Apps Job executions",
+      "URI": "tools/Get-BrowserAgentScheduledJobStatus.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Get-BrowserAgentTelemetry.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Query recent BrowserAgent telemetry from Azure Data Explorer",
+      "URI": "tools/Get-BrowserAgentTelemetry.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Get-LabelActivity.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Query recent sensitivity label activity from ADX telemetry",
+      "URI": "tools/Get-LabelActivity.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Get-RunbookStatus.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Show recent Azure Automation runbook executions for the autonomous agents lab",
+      "URI": "tools/Get-RunbookStatus.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Initialize-BrowserAgents.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Initialize and validate BrowserAgent sessions for one or more M365 personas",
+      "URI": "tools/Initialize-BrowserAgents.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Initialize-StorylineEntraUsers.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Create storyline users and license security groups in Microsoft Entra ID",
+      "URI": "tools/Initialize-StorylineEntraUsers.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Install-CleanAdxLab.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Clean end-to-end installer for an ADX-backed autonomous agents lab",
+      "URI": "tools/Install-CleanAdxLab.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Install-LiveDemoMay272026ExpansionPack.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Installs the May 27 2026 live demo expansion pack",
+      "URI": "tools/Install-LiveDemoMay272026ExpansionPack.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Invoke-ActivityStoryMapRefresh.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Forces a fresh Activity Story Map data refresh by running agent activity jobs",
+      "URI": "tools/Invoke-ActivityStoryMapRefresh.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Invoke-BrowserAgentAuth.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Captures a Microsoft 365 browser session for a BrowserAgent using Key Vault credentials",
+      "URI": "tools/Invoke-BrowserAgentAuth.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Invoke-BrowserAgentDaily.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Run real browser-based daily activity for one BrowserAgent",
+      "URI": "tools/Invoke-BrowserAgentDaily.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Invoke-BrowserAgentScheduledRun.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Run BrowserAgent daily activity using the schedules defined in config\\agents.json",
+      "URI": "tools/Invoke-BrowserAgentScheduledRun.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Invoke-BrowserAgentSmoke.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Runs BrowserAgent smoke tests locally or in Azure Playwright Workspaces",
+      "URI": "tools/Invoke-BrowserAgentSmoke.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Invoke-EdgePersonaActivity.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Prepares and launches Microsoft Edge persona activity for Endpoint DLP testing",
+      "URI": "tools/Invoke-EdgePersonaActivity.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Invoke-EndpointPersonaActivity.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Runs user-attributed endpoint activity from a Windows 365 Cloud PC",
+      "URI": "tools/Invoke-EndpointPersonaActivity.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "List-AzureOpenAIModels.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "List chat-completion Azure OpenAI models available for the configured account",
+      "URI": "tools/List-AzureOpenAIModels.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Publish-ActivityStoryMapAssets.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Publishes Activity Story Map images to the existing static website storage",
+      "URI": "tools/Publish-ActivityStoryMapAssets.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Publish-LiveDemoSeedContent.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Uploads the 2026-05-27 live demo seed content pack to a SharePoint document library",
+      "URI": "tools/Publish-LiveDemoSeedContent.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Publish-RunbookOnly.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Publish the local Invoke-AgentRunbook.ps1 to Azure Automation without rotating secrets",
+      "URI": "tools/Publish-RunbookOnly.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Reset-AgentPasswords.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Reset configured agent passwords and synchronize their Key Vault secrets",
+      "URI": "tools/Reset-AgentPasswords.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Set-AzureOpenAIName.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Update the configured Azure OpenAI account name in config files",
+      "URI": "tools/Set-AzureOpenAIName.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Set-CopilotTasks.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Enables or disables ClaudIA Microsoft 365 Copilot-specific tasks",
+      "URI": "tools/Set-CopilotTasks.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Set-EntraUserPhotos.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Uploads ClaudIA persona images to Microsoft Entra user profile photos",
+      "URI": "tools/Set-EntraUserPhotos.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Test-BrowserAgentWorkspace.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Validates the BrowserAgent Playwright Workspace resource",
+      "URI": "tools/Test-BrowserAgentWorkspace.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Test-InstallationDefinitionsConsistency.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Validate that installation-specific values are consistent across config files",
+      "URI": "tools/Test-InstallationDefinitionsConsistency.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Test-MdcaCloudDiscoveryApi.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Validate Microsoft Defender for Cloud Apps Cloud Discovery API connectivity",
+      "URI": "tools/Test-MdcaCloudDiscoveryApi.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Test-PublicRepoSafety.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Test Public Repo Safety script",
+      "URI": "tools/Test-PublicRepoSafety.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Update-ActivityStoryMapCharacterProfiles.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Builds the Activity Story Map character profile manifest",
+      "URI": "tools/Update-ActivityStoryMapCharacterProfiles.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Update-ClaudIAScripts.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Updates ClaudIA PowerShell scripts from the published GitHub manifest",
+      "URI": "tools/Update-ClaudIAScripts.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Upload-MdcaCloudDiscoveryLog.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Upload a Cloud Discovery log file to Microsoft Defender for Cloud Apps",
+      "URI": "tools/Upload-MdcaCloudDiscoveryLog.ps1"
+    }
+  ]
+}

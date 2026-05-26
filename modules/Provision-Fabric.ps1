@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 61f11d3f-ff9d-4141-b3bc-589d3c64a759
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Provision Microsoft Fabric capacity, workspace, and lakehouse for agent data
+
+.RELEASENOTES
+Initial version metadata for Provision Microsoft Fabric capacity, workspace, and lakehouse for agent data.
+
+#>
 <#
 .SYNOPSIS
     Provision Microsoft Fabric capacity, workspace, and lakehouse for agent data.
@@ -210,3 +239,6 @@ Write-Host "    Lakehouse: $lhName ($lhId)" -ForegroundColor Gray
 Write-Host ""
 Write-Host "  NOTE: F2 capacity costs ~`$260/month when running 24/7." -ForegroundColor Yellow
 Write-Host "  Pause when not in use: az resource invoke-action --action pause ..." -ForegroundColor Yellow
+
+
+

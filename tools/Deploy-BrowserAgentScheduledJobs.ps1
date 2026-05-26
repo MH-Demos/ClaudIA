@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID adaf4ed4-552e-4e6f-9ad7-be89baef73e5
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Deploys BrowserAgents as scheduled Azure Container Apps Jobs
+
+.RELEASENOTES
+Initial version metadata for Deploys BrowserAgents as scheduled Azure Container Apps Jobs.
+
+#>
 <#
 .SYNOPSIS
     Deploys BrowserAgents as scheduled Azure Container Apps Jobs.
@@ -166,7 +195,16 @@ if ($missingAuth.Count -gt 0) {
         throw "Cannot deploy all selected agents because BrowserAgent session state is missing for: $names."
     }
 }
-if (-not $selectedAgents -or $selectedAgents.Count -eq 0) { throw 'No BrowserAgents selected after auth-state validation.' }
+if (-not $selectedAgents -or $selectedAgents.Count -eq 0) {
+    if ($SkipAgentsMissingAuth) {
+        Write-Warning 'No BrowserAgents have local auth-state files yet. Scheduled jobs were not deployed.'
+        Write-Host 'Run this first to capture browser sessions:' -ForegroundColor Yellow
+        Write-Host '  .\tools\Initialize-BrowserAgents.ps1 -All -Services office,owa,teams -ContinueOnFailure' -ForegroundColor Yellow
+        Write-Host 'Then retry Step 9 or run Deploy-BrowserAgentScheduledJobs.ps1 again.' -ForegroundColor Yellow
+        return
+    }
+    throw 'No BrowserAgents selected after auth-state validation.'
+}
 
 if (-not $config.browserAgents.playwrightServiceUrl) {
     throw 'browserAgents.playwrightServiceUrl is required in config\agents.json.'
@@ -353,3 +391,6 @@ foreach ($schedule in $schedulePlans) {
 Write-Host ''
 Write-Host 'BrowserAgent scheduled jobs deployed.' -ForegroundColor Green
 Write-Host 'Use az containerapp job execution list/show to review automatic runs.' -ForegroundColor Yellow
+
+
+

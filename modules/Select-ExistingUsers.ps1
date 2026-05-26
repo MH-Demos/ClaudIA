@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID 35934374-53aa-4702-9814-868914c70d46
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Interactive picker to select existing Entra ID users as agent personas
+
+.RELEASENOTES
+Initial version metadata for Interactive picker to select existing Entra ID users as agent personas.
+
+#>
 <#
 .SYNOPSIS
     Interactive picker to select existing Entra ID users as agent personas.
@@ -193,4 +222,7 @@ Write-Host "  Summary: $($agentsOut.Count) agents ($wave1Count Wave 1 + $($agent
 Write-Host ""
 
 return $agentsOut
+
+
+
 

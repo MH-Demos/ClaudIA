@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID b66c966f-85cb-42d4-97e1-e763e825cbb9
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Publish the local Invoke-AgentRunbook.ps1 to Azure Automation without rotating secrets
+
+.RELEASENOTES
+Initial version metadata for Publish the local Invoke-AgentRunbook.ps1 to Azure Automation without rotating secrets.
+
+#>
 <#
 .SYNOPSIS
     Publish the local Invoke-AgentRunbook.ps1 to Azure Automation without rotating secrets.
@@ -84,3 +113,6 @@ if ($hasFix) {
 } else {
     Write-Host "  [WARN] Published runbook does not show the JSON byte-array fix." -ForegroundColor Yellow
 }
+
+
+

@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID ca69ea41-4e4a-457f-883d-5989f6e2c987
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Store agent secrets in Key Vault and deploy the runbook
+
+.RELEASENOTES
+Initial version metadata for Store agent secrets in Key Vault and deploy the runbook.
+
+#>
 <#
 .SYNOPSIS
     Store agent secrets in Key Vault and deploy the runbook.
@@ -329,3 +358,6 @@ foreach ($sched in $Config.schedules) {
 }
 
 Write-Host "  Runbook deployed with $($Config.schedules.Count) daily schedules." -ForegroundColor Green
+
+
+

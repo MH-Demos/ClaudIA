@@ -13,6 +13,14 @@ The first automation path packages `BrowserAgents/.auth/*.json` inside the priva
 
 ## Deploy
 
+Before deploying scheduled jobs, capture at least one local browser session state.
+The job image packages `BrowserAgents/.auth/*.json`; if that folder is empty,
+ClaudIA skips job deployment and prints the initialization command.
+
+```powershell
+.\tools\Initialize-BrowserAgents.ps1 -All -Services office,owa,teams -ContinueOnFailure
+```
+
 Preview the plan:
 
 ```powershell

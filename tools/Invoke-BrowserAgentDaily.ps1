@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID d7340b5b-35dd-45ca-978d-4060cf47837c
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Run real browser-based daily activity for one BrowserAgent
+
+.RELEASENOTES
+Initial version metadata for Run real browser-based daily activity for one BrowserAgent.
+
+#>
 <#
 .SYNOPSIS
     Run real browser-based daily activity for one BrowserAgent.
@@ -103,3 +132,6 @@ try {
 finally {
     Pop-Location
 }
+
+
+

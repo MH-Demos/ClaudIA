@@ -1,3 +1,32 @@
+<#PSScriptInfo
+
+.VERSION 1.0.0
+
+.GUID b01e73f5-62c7-4384-b041-8ba10e92f447
+
+.AUTHOR
+https://www.linkedin.com/in/profesorkaz/; Sebastian Zamorano
+https://www.linkedin.com/in/mrnabster; Nabil Senoussaoui
+
+.COMPANYNAME
+ClaudIA - Cloud Activity, Usage & Data Intelligence Architecture
+
+.COPYRIGHT
+Copyright (c) ClaudIA contributors. All rights reserved.
+
+.TAGS
+ClaudIA PowerShell Automation Microsoft365 Azure Purview
+
+.PROJECTURI
+https://github.com/MH-Demos/ClaudIA
+
+.DESCRIPTION
+Initialize and validate BrowserAgent sessions for one or more M365 personas
+
+.RELEASENOTES
+Initial version metadata for Initialize and validate BrowserAgent sessions for one or more M365 personas.
+
+#>
 <#
 .SYNOPSIS
     Initialize and validate BrowserAgent sessions for one or more M365 personas.
@@ -51,6 +80,15 @@ function Get-KeyVaultNameFromConfig {
     if ($Config.infrastructure -and $Config.infrastructure.keyVaultName) { return [string]$Config.infrastructure.keyVaultName }
     if ($Config.adx -and $Config.adx.keyVaultName) { return [string]$Config.adx.keyVaultName }
     return ''
+}
+
+function Get-AgentUpn {
+    param($Agent, [string]$Domain)
+    if ($Agent.userPrincipalName) { return [string]$Agent.userPrincipalName }
+    if ($Agent.upn) { return [string]$Agent.upn }
+    if ("$($Agent.sam)" -match '@') { return [string]$Agent.sam }
+    if (-not $Domain) { throw "Tenant domain is required to build the UPN for '$($Agent.sam)'." }
+    return "$($Agent.sam)@$Domain"
 }
 
 function Invoke-BrowserAgentAuthCapture {
@@ -113,7 +151,11 @@ function Invoke-BrowserAgentPreflight {
 }
 
 $config = Get-Content -LiteralPath $ConfigPath -Raw | ConvertFrom-Json
-$allAgents = @($config.agents | Where-Object { $_.sam -and $_.userPrincipalName })
+$tenantDomain = [string]$config.tenant.domain
+$allAgents = @($config.agents | Where-Object { $_.sam } | ForEach-Object {
+    $_ | Add-Member -NotePropertyName userPrincipalName -NotePropertyValue (Get-AgentUpn -Agent $_ -Domain $tenantDomain) -Force
+    $_
+})
 if (-not $All) {
     if (-not $Agents -or $Agents.Count -eq 0) { throw "Pass -Agents or use -All." }
     $wanted = @{}
@@ -231,3 +273,6 @@ foreach ($agent in $allAgents) {
 Write-Host ""
 Write-Host "=== BrowserAgent Initialization Results ===" -ForegroundColor Cyan
 $summary | Format-Table -AutoSize
+
+
+
