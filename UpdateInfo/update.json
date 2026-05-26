@@ -3,7 +3,7 @@
     {
       "directory": "ROOT",
       "file": "Install-ClaudIA.ps1",
-      "version": "1.0.1",
+      "version": "1.0.3",
       "format": "ps1",
       "changes": "ClaudIA - Interactive Deployment Wizard",
       "URI": "Install-ClaudIA.ps1"
@@ -131,7 +131,7 @@
     {
       "directory": "prerequisites",
       "file": "Test-Prerequisites.ps1",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "format": "ps1",
       "changes": "Validates local and cloud prerequisites for installing ClaudIA",
       "URI": "prerequisites/Test-Prerequisites.ps1"

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.1
+.VERSION 1.0.3
 .GUID eae37755-6eb4-444f-9e77-e8d699645e18
 
 .AUTHOR
@@ -23,7 +23,7 @@ https://github.com/MH-Demos/ClaudIA
 ClaudIA - Interactive Deployment Wizard
 
 .RELEASENOTES
-Version 1.0.1 preserves restored configuration and only forces fresh setup when placeholders are detected.
+Version 1.0.3 validates Automation Account availability through ARM REST when the Azure CLI automation extension fails locally.
 
 #>
 <#
@@ -560,13 +560,24 @@ function Test-AAAutomationAccountAvailable {
 
     $aaName = [string]$Config.infrastructure.automationAccountName
     $rg = [string]$Config.infrastructure.resourceGroup
+    $subscriptionId = [string]$Config.tenant.subscriptionId
     if (-not $aaName -or -not $rg) { return $false }
 
     $aa = az automation account show -n $aaName -g $rg --query id -o tsv 2>$null
     if ($aa) { return $true }
 
     $aaOther = az automation account list --query "[?name=='$aaName'].id | [0]" -o tsv 2>$null
-    return [bool]$aaOther
+    if ($aaOther) { return $true }
+
+    if ($subscriptionId) {
+        $escapedRg = [System.Uri]::EscapeDataString($rg)
+        $escapedName = [System.Uri]::EscapeDataString($aaName)
+        $url = "https://management.azure.com/subscriptions/$subscriptionId/resourceGroups/$escapedRg/providers/Microsoft.Automation/automationAccounts/${escapedName}?api-version=2023-11-01"
+        $restId = az rest --method get --url $url --query id -o tsv 2>$null
+        if ($restId) { return $true }
+    }
+
+    return $false
 }
 
 function Update-AAAgentUpnDomains {
@@ -771,6 +782,25 @@ function Test-AAM365AdminProfileHasTenantAdminRole {
     } catch {
         return $false
     }
+}
+
+function Initialize-AAM365AdminProfileFromDisk {
+    $candidate = Join-Path $PSScriptRoot '.claudia\az-m365-admin'
+    if (-not (Test-Path -LiteralPath $candidate)) { return $false }
+
+    $script:AAM365AzConfigDir = $candidate
+    $acctJson = Invoke-AAM365Az -Arguments @('account','show','-o','json') 2>$null
+    if (-not $acctJson) {
+        $script:AAM365AzConfigDir = $null
+        return $false
+    }
+
+    $acct = $null
+    try { $acct = $acctJson | ConvertFrom-Json } catch {}
+    if ($acct -and $acct.user) {
+        Write-Host "  Reusing Microsoft 365 admin profile: $($acct.user.name)" -ForegroundColor Gray
+    }
+    return $true
 }
 
 function Initialize-AAM365AdminSignIn {
@@ -1310,6 +1340,9 @@ if (-not $DryRun -and $domain -notmatch 'REPLACE_WITH') {
 # ============================================================================
 if ((Test-AAInstallStep '0') -and -not $SkipPrerequisites) {
     Write-Host "=== Step 0: Checking prerequisites ===" -ForegroundColor Cyan
+    if (-not $script:AAM365AzConfigDir) {
+        Initialize-AAM365AdminProfileFromDisk | Out-Null
+    }
     $prereqParams = @{
         ConfigPath = $ConfigPath
     }
@@ -1332,6 +1365,31 @@ if ((Test-AAInstallStep '0') -and -not $SkipPrerequisites) {
                     Write-Host "  [OK] Azure resource providers are registered. Continuing deployment." -ForegroundColor Green
                 } else {
                     Show-AAPrerequisiteGuidance -PrerequisiteResult $prereq
+                }
+            }
+        }
+
+        $adminRoleFailure = @($prereq.Results | Where-Object {
+            $_.Status -eq 'Fail' -and $_.Name -eq 'Deploying user has admin directory role'
+        })
+        if ($adminRoleFailure.Count -gt 0 -and -not $Auto) {
+            Write-Host ""
+            if ($script:AAM365AzConfigDir) {
+                Write-Host "  The saved Microsoft 365 admin profile did not satisfy the admin role check." -ForegroundColor Yellow
+            } else {
+                Write-Host "  ClaudIA can use a separate Microsoft 365/Entra admin sign-in for tenant setup while keeping the current Azure subscription sign-in." -ForegroundColor Yellow
+            }
+            $m365SignIn = Read-Host "  Sign in with a separate Microsoft 365/Entra admin account and rerun prerequisites? (Y/n)"
+            if ($m365SignIn -notin @('n','N','no','NO')) {
+                if (Initialize-AAM365AdminSignIn -TenantHint $config.tenant.domain) {
+                    $prereqParams.M365AzureConfigDir = $script:AAM365AzConfigDir
+                    $prereq = & (Join-Path $PSScriptRoot 'prerequisites\Test-Prerequisites.ps1') @prereqParams
+                    if ($prereq.AllPassed) {
+                        Write-Host ""
+                        Write-Host "  [OK] Microsoft 365 admin prerequisites passed. Continuing deployment." -ForegroundColor Green
+                    } else {
+                        Show-AAPrerequisiteGuidance -PrerequisiteResult $prereq
+                    }
                 }
             }
         }
@@ -2383,6 +2441,8 @@ if ($script:RunAllSteps -or $Step -eq 6) {
 }
 Write-Host ""
 Stop-Transcript | Out-Null
+
+
 
 
 

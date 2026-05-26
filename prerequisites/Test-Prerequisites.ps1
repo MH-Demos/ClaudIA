@@ -1,7 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.0
-
+.VERSION 1.0.1
 .GUID a29057cc-e679-4daa-832b-0bd1020462ce
 
 .AUTHOR
@@ -24,7 +23,7 @@ https://github.com/MH-Demos/ClaudIA
 Validates local and cloud prerequisites for installing ClaudIA
 
 .RELEASENOTES
-Initial version metadata for Validates local and cloud prerequisites for installing ClaudIA.
+Version 1.0.1 treats BrowserAgents Node/npm prerequisites as optional warnings for the base ClaudIA deployment.
 
 #>
 <#
@@ -390,12 +389,12 @@ if (-not $SkipBrowserAgents) {
             $nodeText = Get-CommandVersion -Command 'node'
             $nodeVersion = ConvertTo-SemVer -VersionText $nodeText
             if ($nodeVersion -and $nodeVersion.Major -ge 20) { $nodeText }
-        } "Install Node.js LTS 20 or later: winget install OpenJS.NodeJS.LTS"
+        } "Install Node.js LTS 20 or later before using BrowserAgents: winget install OpenJS.NodeJS.LTS" -WarningOnly
 
         Invoke-Check 'BrowserAgents / Node' 'npm installed' {
             $npmText = Get-CommandVersion -Command 'npm' -Arguments @('--version')
             if ($npmText) { "npm $npmText" }
-        } "Install Node.js LTS, then reopen PowerShell."
+        } "Install Node.js LTS, then reopen PowerShell before using BrowserAgents." -WarningOnly
 
         Invoke-Check 'BrowserAgents / Node' 'BrowserAgents npm dependencies installed' {
             $nodeModules = Join-Path $BrowserAgentsPath 'node_modules'
@@ -585,6 +584,7 @@ if ($AsJson) {
 } else {
     return $result
 }
+
 
 
 
