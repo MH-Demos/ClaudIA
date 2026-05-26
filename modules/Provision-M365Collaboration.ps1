@@ -1,7 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.0
-
+.VERSION 1.0.2
 .GUID 0bca2ea4-0a13-4efe-a80c-c9187dbb9c8f
 
 .AUTHOR
@@ -24,7 +23,7 @@ https://github.com/MH-Demos/ClaudIA
 Provision SharePoint site + Teams team + department channels for agents
 
 .RELEASENOTES
-Initial version metadata for Provision SharePoint site + Teams team + department channels for agents.
+Version 1.0.2 creates collaboration expansion teams with the signed-in admin as initial owner to avoid Teams template impersonation failures.
 
 #>
 <#
@@ -76,16 +75,33 @@ $agents  = $Config.agents
 $depts   = @($Config.agents | ForEach-Object { $_.department } | Where-Object { $_ } | Sort-Object -Unique)
 if (-not $depts -or $depts.Count -eq 0) { $depts = @('HR', 'Finance', 'Legal', 'Engineering', 'Sales') }
 
+function Resolve-AutomationAccountResourceGroup {
+    param(
+        [Parameter(Mandatory)][string]$SubscriptionId,
+        [Parameter(Mandatory)][string]$ResourceGroup,
+        [Parameter(Mandatory)][string]$AutomationAccountName
+    )
+
+    $aaCheck = az automation account show -n $AutomationAccountName -g $ResourceGroup --query name -o tsv 2>$null
+    if ($aaCheck) { return $ResourceGroup }
+
+    $aaOther = az automation account list --query "[?name=='$AutomationAccountName'].resourceGroup | [0]" -o tsv 2>$null
+    if ($aaOther) { return [string]$aaOther }
+
+    $escapedRg = [System.Uri]::EscapeDataString($ResourceGroup)
+    $escapedName = [System.Uri]::EscapeDataString($AutomationAccountName)
+    $url = "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$escapedRg/providers/Microsoft.Automation/automationAccounts/${escapedName}?api-version=2023-11-01"
+    $restId = az rest --method get --url $url --query id -o tsv 2>$null
+    if ($restId) { return $ResourceGroup }
+
+    return $null
+}
+
 # Resolve actual AA resource group (may differ from config)
-$aaRg = $rg
-$aaCheck = az automation account show -n $aaName -g $rg --query name -o tsv 2>$null
-if (-not $aaCheck) {
-    $aaOther = az automation account list --query "[?name=='$aaName'].resourceGroup" -o tsv 2>$null
-    if ($aaOther) { $aaRg = $aaOther }
-    else {
-        Write-Host "  [ERROR] Automation Account '$aaName' not found. Run Step 4 first." -ForegroundColor Red
-        return
-    }
+$aaRg = Resolve-AutomationAccountResourceGroup -SubscriptionId $sub -ResourceGroup $rg -AutomationAccountName $aaName
+if (-not $aaRg) {
+    Write-Host "  [ERROR] Automation Account '$aaName' not found. Run Step 4 first." -ForegroundColor Red
+    return
 }
 
 # Graph token. When Azure and Microsoft 365 use separate admin accounts,
@@ -198,10 +214,11 @@ function Ensure-CollaborationTeam {
         $teamId = $existingTeam.id
         Write-Host " [EXISTS] $teamId" -ForegroundColor DarkYellow
     } else {
-        $ownerId = Resolve-CollabUserId -Sam $TeamConfig.owner
-        if (-not $ownerId) {
-            $ownerId = (Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/me?`$select=id" -Headers $gh).id
-        }
+        # Teams template creation does not reliably allow creating the team
+        # while impersonating another user as owner. Create with the signed-in
+        # admin as owner, then add persona users as members below.
+        $me = Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/me?`$select=id" -Headers $gh
+        $ownerId = $me.id
 
         $channelDefs = @()
         foreach ($chName in @($TeamConfig.channels)) {
@@ -238,7 +255,11 @@ function Ensure-CollaborationTeam {
     }
 
     Write-Host "  Adding collaboration members..." -NoNewline
-    $memberCount = Add-CollabTeamMembers -TeamId $teamId -MemberSams @($TeamConfig.members)
+    $memberSams = @($TeamConfig.members)
+    if ($TeamConfig.owner -and $memberSams -notcontains $TeamConfig.owner) {
+        $memberSams += $TeamConfig.owner
+    }
+    $memberCount = Add-CollabTeamMembers -TeamId $teamId -MemberSams $memberSams
     Write-Host " [OK] $memberCount members" -ForegroundColor Green
 
     Write-Host "  Resolving collaboration SharePoint site..." -NoNewline
@@ -510,6 +531,8 @@ Write-Host "    Members:  $($memberRefs.Count) agents" -ForegroundColor Gray
 if ($collaborationSites.Count -gt 0) {
     Write-Host "    Expansion teams: $($collaborationSites.Count)" -ForegroundColor Gray
 }
+
+
 
 
 

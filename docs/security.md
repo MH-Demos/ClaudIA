@@ -10,15 +10,15 @@ Install-ClaudIA.ps1
     |     - Delegated permissions (NOT application)
     |     - Admin consent granted
     |
-    +-- Agent passwords stored in Azure Automation encrypted variables
-    |     - NOT in Key Vault (Azure Policy blocks AA sandboxes from KV)
-    |     - Encrypted at rest by Automation Account
+    +-- Agent passwords and app secrets stored in Azure Key Vault
+    |     - Automation variables store secret names and non-secret configuration
+    |     - Automation managed identity reads secrets at runtime
     |
     +-- At runtime (runbook):
-          1. Automation MI gets shared key from LA workspace
+          1. Automation MI reads required secrets from Key Vault
           2. For each agent: ROPC token with explicit delegated scopes
           3. Agent actions (file upload, email) under agent's own identity
-          4. Activity logged to ClaudIAActivity_CL via Data Collector API
+          4. Activity logged to Azure Data Explorer (ADX) table CLAUDIA_Activity
 ```
 
 ## Why ROPC (and why it's risky)
@@ -66,7 +66,7 @@ Install-ClaudIA.ps1
 | Role | Scope | Usage |
 | --- | --- | --- |
 | Cognitive Services OpenAI User | oai-claudia-lab | Call GPT-4o-mini |
-| Log Analytics Contributor | la-agents | Get shared key for Data Collector API |
+| ADX Database Ingestor | ADX database | Ingest ClaudIA activity telemetry into Azure Data Explorer |
 
 ### Automation MI (Graph App Permissions — for remediation runbook)
 

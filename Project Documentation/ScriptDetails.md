@@ -26,6 +26,7 @@ Safe resume with existing state:
 .\Install-ClaudIA.ps1 -UseInstallationDefinitions -Step 6 -SkipPrerequisites
 .\Install-ClaudIA.ps1 -UseInstallationDefinitions -Step 7 -SkipPrerequisites
 .\Install-ClaudIA.ps1 -UseInstallationDefinitions -Step 8 -SkipPrerequisites
+.\Install-ClaudIA.ps1 -UseInstallationDefinitions -Step 9 -SkipPrerequisites
 ```
 
 Post-install validation:
@@ -143,4 +144,3 @@ Some actions are intentionally printed as manual reminders because tenants diffe
 - Need password repair: `tools/Reset-AgentPasswords.ps1`.
 - Need add characters/story expansion: `tools/Add-StorylineAgents.ps1`.
 - Need check drift: `tools\Test-InstallationDefinitionsConsistency.ps1`.
-

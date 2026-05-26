@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.0
+.VERSION 1.0.1
 
 .GUID e466171f-02d2-431e-b803-bea994eb5cde
 
@@ -24,7 +24,7 @@ https://github.com/MH-Demos/ClaudIA
 Validate the Azure OpenAI deployment used by the runbook
 
 .RELEASENOTES
-Initial version metadata for Validate the Azure OpenAI deployment used by the runbook.
+Version 1.0.1 explains current-user RBAC failures separately from runbook managed identity access.
 
 #>
 <#
@@ -74,6 +74,13 @@ Write-Host "  Deployment:   $deployment"
 if ($modelVersion) { Write-Host "  ModelVersion: $modelVersion" }
 Write-Host ""
 
+$accountId = az cognitiveservices account show -n $account -g $config.infrastructure.resourceGroup --query id -o tsv 2>$null
+$currentPrincipalId = az ad signed-in-user show --query id -o tsv 2>$null
+$roleAssignments = @()
+if ($accountId) {
+    $roleAssignments = @(az role assignment list --scope $accountId --query "[].{principalId:principalId,role:roleDefinitionName}" -o json 2>$null | ConvertFrom-Json)
+}
+
 $apiVersions = @('2024-10-21','2024-08-01-preview','2024-02-01')
 foreach ($apiVersion in $apiVersions) {
     $uri = "${endpoint}openai/deployments/${deployment}/chat/completions?api-version=$apiVersion"
@@ -89,6 +96,16 @@ foreach ($apiVersion in $apiVersions) {
         $details = if ($_.ErrorDetails.Message) { $_.ErrorDetails.Message } else { $_.Exception.Message }
         Write-Host " [FAIL]" -ForegroundColor Red
         Write-Host "  $details" -ForegroundColor Yellow
+        if ($details -match 'PermissionDenied' -and $accountId) {
+            $currentHasOpenAiRole = @($roleAssignments | Where-Object {
+                $_.principalId -eq $currentPrincipalId -and $_.role -match 'Cognitive Services OpenAI|Cognitive Services Contributor|Owner|Contributor'
+            }).Count -gt 0
+            if (-not $currentHasOpenAiRole) {
+                Write-Host "  The current Azure CLI user does not have Azure OpenAI data-plane access on this account." -ForegroundColor Yellow
+                Write-Host "  This blocks this local test, but the runbook can still work if the Automation managed identity has 'Cognitive Services OpenAI User'." -ForegroundColor Yellow
+                Write-Host "  Fix for local validation: assign 'Cognitive Services OpenAI User' to the signed-in user on $account." -ForegroundColor Yellow
+            }
+        }
     }
 }
 

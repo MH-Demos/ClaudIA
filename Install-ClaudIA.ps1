@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.3
+.VERSION 1.0.7
 .GUID eae37755-6eb4-444f-9e77-e8d699645e18
 
 .AUTHOR
@@ -23,7 +23,7 @@ https://github.com/MH-Demos/ClaudIA
 ClaudIA - Interactive Deployment Wizard
 
 .RELEASENOTES
-Version 1.0.3 validates Automation Account availability through ARM REST when the Azure CLI automation extension fails locally.
+Version 1.0.7 offers BrowserAgent session initialization before Step 9 job deployment.
 
 #>
 <#
@@ -45,7 +45,7 @@ Version 1.0.3 validates Automation Account availability through ARM REST when th
 .PARAMETER SkipPrerequisites
     Skip prerequisite checks (use if you already validated).
 .PARAMETER Step
-    Run only a specific step (0-8). Without -Step, the full deployment runs.
+    Run only a specific step (0-9). Without -Step, the full deployment runs.
     Step 4 includes 4a/4b/4c. Step 6 includes 6a/6b/6c.
 .PARAMETER DryRun
     Show what would be done without making changes.
@@ -921,6 +921,10 @@ function Select-AASubscription {
     return $selection
 }
 
+if (-not $script:AAM365AzConfigDir) {
+    Initialize-AAM365AdminProfileFromDisk | Out-Null
+}
+
 # Check if interactive setup is needed
 $needsSetup = Test-AAConfigNeedsSetup -Config $config
 
@@ -1249,22 +1253,14 @@ if (-not $DryRun -and $domain -notmatch 'REPLACE_WITH') {
 
     # -- Check Automation Account (search in target RG, then subscription-wide) ---
     $aaName = $config.infrastructure.automationAccountName
-    $aaExists = az automation account show -n $aaName -g $rg --query name -o tsv 2>$null
-    if ($aaExists) {
+    if (Test-AAAutomationAccountAvailable -Config $config) {
         Write-Host "  [OK]  Automation: $aaName" -ForegroundColor Green
         $probeResults['automation'] = 'exists'
         $script:aaActualRg = $rg
     } else {
-        $aaSubWide = az automation account list --query "[?name=='$aaName'].{name:name,rg:resourceGroup}" -o json 2>$null | ConvertFrom-Json
-        if ($aaSubWide -and $aaSubWide.Count -gt 0) {
-            $script:aaActualRg = $aaSubWide[0].rg
-            Write-Host "  [OK]  Automation: $aaName (in $($script:aaActualRg))" -ForegroundColor Green
-            $probeResults['automation'] = 'exists'
-        } else {
-            Write-Host "  [NEW] Automation: $aaName (will be created at Step 4)" -ForegroundColor DarkYellow
-            $probeResults['automation'] = 'new'
-            $script:aaActualRg = $rg
-        }
+        Write-Host "  [NEW] Automation: $aaName (will be created at Step 4)" -ForegroundColor DarkYellow
+        $probeResults['automation'] = 'new'
+        $script:aaActualRg = $rg
     }
 
     # -- Check Entra app registration ---
@@ -2263,10 +2259,31 @@ if (Test-AAInstallStep '9') {
     Write-Host ""
 
     $deployBrowserAgents = 'n'
+    $browserAgentJobsStatus = 'not-requested'
+    $browserAgentJobsComment = ''
     if (-not $DryRun) {
         $deployBrowserAgents = if ($Auto) { 'n' } else { Read-Host "  Deploy BrowserAgent cloud automation now? (y/N)" }
         if ($deployBrowserAgents -in @('y','Y','yes','YES')) {
             Sync-AABrowserAgentConfig -Config $config
+            $authDir = Join-Path $PSScriptRoot 'BrowserAgents\.auth'
+            $authFiles = @(Get-ChildItem -LiteralPath $authDir -Filter '*.json' -File -ErrorAction SilentlyContinue)
+            $configuredAgentCount = @($config.agents | Where-Object { $_.sam }).Count
+            if ($authFiles.Count -lt $configuredAgentCount) {
+                Write-Host "  BrowserAgent session states: $($authFiles.Count)/$configuredAgentCount found." -ForegroundColor DarkYellow
+                Write-Host "  Scheduled jobs package BrowserAgents\\.auth into a private container image." -ForegroundColor Gray
+                Write-Host "  Base initialization validates Office and OWA; Teams can be validated later because first-run provisioning can be slow." -ForegroundColor Gray
+                $initBrowserAgents = if ($Auto) { 'n' } else { Read-Host "  Initialize BrowserAgent sessions now before continuing? (Y/n)" }
+                if ($initBrowserAgents -notin @('n','N','no','NO')) {
+                    & (Join-Path $PSScriptRoot 'tools\Initialize-BrowserAgents.ps1') `
+                        -All `
+                        -Services office,owa `
+                        -ContinueOnFailure `
+                        -ConfigPath $ConfigPath
+                    $authFiles = @(Get-ChildItem -LiteralPath $authDir -Filter '*.json' -File -ErrorAction SilentlyContinue)
+                    Write-Host "  BrowserAgent session states after initialization: $($authFiles.Count)/$configuredAgentCount found." -ForegroundColor Gray
+                }
+            }
+
             $workspaceResults = @()
             $regionalWorkspaces = @($config.browserAgents.regionalWorkspaces)
             if ($regionalWorkspaces.Count -eq 0) { $regionalWorkspaces = @($config.browserAgents) }
@@ -2294,12 +2311,13 @@ if (Test-AAInstallStep '9') {
 
             $deployJobs = if ($Auto) { 'n' } else { Read-Host "  Deploy scheduled Container Apps Jobs for BrowserAgents? Requires .auth files. (y/N)" }
             if ($deployJobs -in @('y','Y','yes','YES')) {
-                $authDir = Join-Path $PSScriptRoot 'BrowserAgents\.auth'
                 $authFiles = @(Get-ChildItem -LiteralPath $authDir -Filter '*.json' -File -ErrorAction SilentlyContinue)
                 if ($authFiles.Count -eq 0) {
+                    $browserAgentJobsStatus = 'skipped-missing-auth'
+                    $browserAgentJobsComment = 'Playwright Workspaces were deployed, but Container Apps Jobs were skipped because BrowserAgents\.auth has no session files.'
                     Write-Host "  [SKIP] BrowserAgent scheduled jobs were not deployed because no .auth session files exist yet." -ForegroundColor DarkYellow
                     Write-Host "         Capture persona browser sessions first:" -ForegroundColor DarkYellow
-                    Write-Host "           .\tools\Initialize-BrowserAgents.ps1 -All -Services office,owa,teams -ContinueOnFailure" -ForegroundColor DarkYellow
+                    Write-Host "           .\tools\Initialize-BrowserAgents.ps1 -All -Services office,owa -ContinueOnFailure" -ForegroundColor DarkYellow
                     Write-Host "         Then rerun Step 9 or tools\Deploy-BrowserAgentScheduledJobs.ps1." -ForegroundColor DarkYellow
                 } else {
                     foreach ($workspaceConfig in @($config.browserAgents.regionalWorkspaces)) {
@@ -2316,8 +2334,12 @@ if (Test-AAInstallStep '9') {
                             -SkipAgentsMissingAuth `
                             -Deploy
                     }
+                    $browserAgentJobsStatus = 'deployed'
+                    $browserAgentJobsComment = 'Regional Playwright Workspaces and Container Apps Jobs were deployed.'
                 }
             } else {
+                $browserAgentJobsStatus = 'skipped-by-user'
+                $browserAgentJobsComment = 'Playwright Workspaces were deployed, but Container Apps Jobs were skipped by prompt.'
                 Write-Host "  [SKIP] BrowserAgent scheduled jobs skipped. You can run tools\\Deploy-BrowserAgentScheduledJobs.ps1 later." -ForegroundColor DarkYellow
             }
         } else {
@@ -2332,8 +2354,14 @@ if (Test-AAInstallStep '9') {
         completedAt = (Get-Date).ToString('o')
         dryRun = [bool]$DryRun
         requested = ($deployBrowserAgents -in @('y','Y','yes','YES'))
+        jobsStatus = $browserAgentJobsStatus
         regionalWorkspaces = $config.browserAgents.regionalWorkspaces
     })
+    if ($deployBrowserAgents -in @('y','Y','yes','YES')) {
+        $step9Status = if ($browserAgentJobsStatus -eq 'deployed') { 'deployed' } elseif ($DryRun) { 'skipped' } else { 'partial' }
+        $step9Comment = if ($browserAgentJobsComment) { $browserAgentJobsComment } else { 'Completed in this run. Review module output above for detailed actions.' }
+        Set-AADeploymentResult -Step '9' -MainActivity 'BrowserAgent cloud automation' -Status $step9Status -Comments $step9Comment
+    }
     Write-Host ""
 }
 
@@ -2425,6 +2453,7 @@ if ($config.adx -and $config.adx.enabled -eq $true) {
 } else {
     Write-Host "    .\Install-ClaudIA.ps1 -UseInstallationDefinitions -Step 7 -SkipPrerequisites  # Workbook" -ForegroundColor Gray
 }
+Write-Host "    .\Install-ClaudIA.ps1 -UseInstallationDefinitions -Step 9 -SkipPrerequisites  # BrowserAgent cloud automation" -ForegroundColor Gray
 
 if ($config.activityStoryMap -and $config.activityStoryMap.launchUrl) {
     Write-Host ""

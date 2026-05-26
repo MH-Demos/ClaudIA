@@ -18,8 +18,12 @@ The job image packages `BrowserAgents/.auth/*.json`; if that folder is empty,
 ClaudIA skips job deployment and prints the initialization command.
 
 ```powershell
-.\tools\Initialize-BrowserAgents.ps1 -All -Services office,owa,teams -ContinueOnFailure
+.\tools\Initialize-BrowserAgents.ps1 -All -Services office,owa -ContinueOnFailure
 ```
+
+`teams` preflight is optional. In new tenants it can wait for first-run Teams
+provisioning and time out even when the Office/OWA session is usable for the
+scheduled job path.
 
 Preview the plan:
 

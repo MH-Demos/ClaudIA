@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.0
+.VERSION 1.0.1
 
 .GUID 8b187ba4-2203-4ffe-9328-fc941d0b8771
 
@@ -24,7 +24,7 @@ https://github.com/MH-Demos/ClaudIA
 Validate app-claudia-dataagent client secret and one agent password from Key Vault
 
 .RELEASENOTES
-Initial version metadata for Validate app-claudia-dataagent client secret and one agent password from Key Vault.
+Version 1.0.1 recommends password reset repair when ROPC returns invalid credentials.
 
 #>
 <#
@@ -198,6 +198,11 @@ foreach ($scope in $ropcScopes) {
 }
 if (-not $ropcOk) {
     Write-Check "ROPC Graph token acquired" $false $lastRopcError
+    if ($lastRopcError -match 'AADSTS50126|invalid username or password') {
+        Write-Host "       Fix: reset the configured agent passwords and synchronize Key Vault:" -ForegroundColor Yellow
+        Write-Host "         .\tools\Reset-AgentPasswords.ps1 -All" -ForegroundColor Yellow
+        Write-Host "       Then rerun Step 5 or .\tools\Publish-RunbookOnly.ps1 so Automation receives refreshed config." -ForegroundColor Yellow
+    }
 } else {
     Write-Host ""
     Write-Host "Testing sensitivity label policy access..." -ForegroundColor Cyan

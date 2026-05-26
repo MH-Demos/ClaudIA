@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.0
+.VERSION 1.0.2
 
 .GUID adaf4ed4-552e-4e6f-9ad7-be89baef73e5
 
@@ -24,7 +24,7 @@ https://github.com/MH-Demos/ClaudIA
 Deploys BrowserAgents as scheduled Azure Container Apps Jobs
 
 .RELEASENOTES
-Initial version metadata for Deploys BrowserAgents as scheduled Azure Container Apps Jobs.
+Version 1.0.2 removes Log Analytics provider registration because Container Apps logs are disabled for the ADX-only path.
 
 #>
 <#
@@ -199,7 +199,7 @@ if (-not $selectedAgents -or $selectedAgents.Count -eq 0) {
     if ($SkipAgentsMissingAuth) {
         Write-Warning 'No BrowserAgents have local auth-state files yet. Scheduled jobs were not deployed.'
         Write-Host 'Run this first to capture browser sessions:' -ForegroundColor Yellow
-        Write-Host '  .\tools\Initialize-BrowserAgents.ps1 -All -Services office,owa,teams -ContinueOnFailure' -ForegroundColor Yellow
+        Write-Host '  .\tools\Initialize-BrowserAgents.ps1 -All -Services office,owa -ContinueOnFailure' -ForegroundColor Yellow
         Write-Host 'Then retry Step 9 or run Deploy-BrowserAgentScheduledJobs.ps1 again.' -ForegroundColor Yellow
         return
     }
@@ -257,7 +257,7 @@ if (-not $Deploy) {
 
 & az account set --subscription $SubscriptionId
 
-foreach ($namespace in @('Microsoft.App','Microsoft.ContainerRegistry','Microsoft.ManagedIdentity','Microsoft.OperationalInsights')) {
+foreach ($namespace in @('Microsoft.App','Microsoft.ContainerRegistry','Microsoft.ManagedIdentity')) {
     Write-Host "Registering provider $namespace..."
     Invoke-AzCli -Arguments @('provider','register','--namespace',$namespace,'--only-show-errors') | Out-Null
 }

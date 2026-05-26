@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.0
+.VERSION 1.0.2
 
 .GUID a0c76a45-5021-47b3-98a4-626b744a5f58
 
@@ -24,9 +24,26 @@ https://github.com/MH-Demos/ClaudIA
 Common script
 
 .RELEASENOTES
-Initial version metadata for Common script.
+Version 1.0.2 adds partial deployment result status support.
 
 #>
+function Invoke-AAAzCommand {
+    param([Parameter(Mandatory)][string[]]$Arguments)
+
+    if (-not $env:CLAUDIA_M365_AZURE_CONFIG_DIR) {
+        return (& az @Arguments)
+    }
+
+    $oldConfigDir = $env:AZURE_CONFIG_DIR
+    $env:AZURE_CONFIG_DIR = $env:CLAUDIA_M365_AZURE_CONFIG_DIR
+    try {
+        & az @Arguments
+    } finally {
+        if ($null -ne $oldConfigDir) { $env:AZURE_CONFIG_DIR = $oldConfigDir }
+        else { Remove-Item Env:\AZURE_CONFIG_DIR -ErrorAction SilentlyContinue }
+    }
+}
+
 function Get-AgentUpn {
     param(
         [Parameter(Mandatory)]$Agent,
@@ -193,9 +210,9 @@ function Ensure-AADataAgentGraphConsent {
     $scopes = @(Get-AADataAgentGraphScopes)
     $scopeText = ($scopes | ForEach-Object { $_.Value }) -join ' '
 
-    az ad app update --id $AppId --is-fallback-public-client true -o none 2>$null
+    Invoke-AAAzCommand -Arguments @('ad','app','update','--id',$AppId,'--is-fallback-public-client','true','-o','none') 2>$null
 
-    $graphToken = az account get-access-token --resource https://graph.microsoft.com --query accessToken -o tsv 2>$null
+    $graphToken = Invoke-AAAzCommand -Arguments @('account','get-access-token','--resource','https://graph.microsoft.com','--query','accessToken','-o','tsv') 2>$null
     if (-not $graphToken) { throw "Could not acquire Microsoft Graph token. Run az login with a Global Admin or Privileged Role Admin account." }
     $graphHeaders = @{ Authorization = "Bearer $graphToken"; 'Content-Type' = 'application/json' }
 
@@ -204,7 +221,7 @@ function Ensure-AADataAgentGraphConsent {
 
     $spObject = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/servicePrincipals?`$filter=appId eq '$AppId'" -Headers $graphHeaders).value | Select-Object -First 1
     if (-not $spObject) {
-        az ad sp create --id $AppId -o none 2>$null
+        Invoke-AAAzCommand -Arguments @('ad','sp','create','--id',$AppId,'-o','none') 2>$null
         Start-Sleep -Seconds 5
         $spObject = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/servicePrincipals?`$filter=appId eq '$AppId'" -Headers $graphHeaders).value | Select-Object -First 1
     }
@@ -252,7 +269,7 @@ function Ensure-AADataAgentGraphConsent {
             -Headers $graphHeaders -Body $grantBody | Out-Null
     }
 
-    az ad app permission admin-consent --id $AppId 2>$null
+    Invoke-AAAzCommand -Arguments @('ad','app','permission','admin-consent','--id',$AppId) 2>$null
     $updatedGrants = @((Invoke-RestMethod "https://graph.microsoft.com/v1.0/oauth2PermissionGrants?`$filter=clientId eq '$($spObject.id)' and resourceId eq '$($graphSp.id)'" -Headers $graphHeaders).value)
     $updatedTenantGrant = $updatedGrants | Where-Object { $_.consentType -eq 'AllPrincipals' } | Select-Object -First 1
     if (-not $updatedTenantGrant) {
@@ -272,7 +289,7 @@ function Set-AADeploymentResult {
     param(
         [Parameter(Mandatory)][string]$Step,
         [Parameter(Mandatory)][string]$MainActivity,
-        [Parameter(Mandatory)][ValidateSet('deployed','skipped','failed')][string]$Status,
+        [Parameter(Mandatory)][ValidateSet('deployed','partial','skipped','failed')][string]$Status,
         [string]$Comments = ''
     )
 

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.0
+.VERSION 1.0.1
 
 .GUID 3e142285-d584-415f-9eb7-c3a9835d2eeb
 
@@ -24,7 +24,7 @@ https://github.com/MH-Demos/ClaudIA
 Register Entra app with delegated scopes for ROPC agent authentication
 
 .RELEASENOTES
-Initial version metadata for Register Entra app with delegated scopes for ROPC agent authentication.
+Version 1.0.1 reports client secret creation failures clearly instead of masking the permission error.
 
 #>
 <#
@@ -84,8 +84,13 @@ if ($existing) {
 
 # Create client secret
 $secret = az ad app credential reset --id $app.appId --display-name 'agent-secret' --years 1 --query password -o tsv 2>$null
-Write-Host "  Client secret: $($secret.Substring(0, 8))..." -ForegroundColor Yellow
-Write-Host "  SAVE THIS SECRET for Step 5." -ForegroundColor Yellow
+if ([string]::IsNullOrWhiteSpace($secret)) {
+    Write-Host "  [WARN] Could not create a client secret for $appName." -ForegroundColor Yellow
+    Write-Host "         Step 5 can create and store the secret in Key Vault when run with a Microsoft 365 admin profile." -ForegroundColor Yellow
+} else {
+    Write-Host "  Client secret: $($secret.Substring(0, 8))..." -ForegroundColor Yellow
+    Write-Host "  SAVE THIS SECRET for Step 5 if you are not using Key Vault automation." -ForegroundColor Yellow
+}
 
 # Add delegated permissions
 $graphId = '00000003-0000-0000-c000-000000000000'

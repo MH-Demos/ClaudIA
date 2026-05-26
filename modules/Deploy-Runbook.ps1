@@ -1,7 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.0
-
+.VERSION 1.0.1
 .GUID ca69ea41-4e4a-457f-883d-5989f6e2c987
 
 .AUTHOR
@@ -24,7 +23,7 @@ https://github.com/MH-Demos/ClaudIA
 Store agent secrets in Key Vault and deploy the runbook
 
 .RELEASENOTES
-Initial version metadata for Store agent secrets in Key Vault and deploy the runbook.
+Version 1.0.1 validates app client secrets against the configured ClaudIA tenant and fails early if a new secret cannot be generated.
 
 #>
 <#
@@ -137,8 +136,9 @@ $aaUri = "https://management.azure.com/subscriptions/${sub}/resourceGroups/${rg}
 # Get app registration details. App operations may require the separate M365
 # admin profile when Azure subscription admin and tenant admin are different.
 $appId = Invoke-M365Az -Arguments @('ad','app','list','--display-name','app-claudia-dataagent','--query','[0].appId','-o','tsv') 2>$null
-$tenantId = az account show --query tenantId -o tsv 2>$null
+$tenantId = if ($Config.tenant.tenantId) { [string]$Config.tenant.tenantId } else { az account show --query tenantId -o tsv 2>$null }
 if (-not $appId) { throw "app-claudia-dataagent was not found. Run Step 3 first." }
+if (-not $tenantId) { throw "Tenant ID is missing. Re-run Step 0 or update config/agents.json tenant.tenantId." }
 
 Write-Host "  Validating app delegated consent..." -NoNewline
 try {
@@ -152,6 +152,9 @@ try {
 
 # Get client secret (user must provide or we generate a new one)
 $clientSecret = Invoke-M365Az -Arguments @('ad','app','credential','reset','--id',$appId,'--display-name','agent-deploy','--years','1','--query','password','-o','tsv') 2>$null
+if ([string]::IsNullOrWhiteSpace($clientSecret)) {
+    throw "Could not generate a new client secret for app-claudia-dataagent ($appId). Run Step 3 with a Global Administrator or Privileged Role Administrator, then rerun Step 5."
+}
 
 # Validate Key Vault RBAC. The runbook reads secrets with the Automation Managed
 # Identity. app-claudia-dataagent is also granted Secrets User for admin validation and
@@ -259,7 +262,9 @@ try {
     Write-Host " [OK]" -ForegroundColor Green
 } catch {
     Write-Host " [FAIL]" -ForegroundColor Red
-    Write-Host "  Key Vault secret writes failed. If RBAC was just assigned, wait 1-2 minutes and rerun Step 5." -ForegroundColor Yellow
+    Write-Host "  Key Vault secret writes or validation failed." -ForegroundColor Yellow
+    Write-Host "  If RBAC was just assigned, wait 1-2 minutes and rerun Step 5." -ForegroundColor Yellow
+    Write-Host "  If the error is AADSTS7000215, rerun Step 3 with the Microsoft 365 admin account so ClaudIA can create a fresh app client secret." -ForegroundColor Yellow
     throw
 }
 
@@ -358,6 +363,7 @@ foreach ($sched in $Config.schedules) {
 }
 
 Write-Host "  Runbook deployed with $($Config.schedules.Count) daily schedules." -ForegroundColor Green
+
 
 
 

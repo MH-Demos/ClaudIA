@@ -110,6 +110,9 @@ Deploys ClaudIA Activity Monitor Azure workbook (8 KQL sections).
 Step 8: DEPLOY ACTIVITY STORY MAP
 Deploys an Azure Storage static website and Azure Function backed by ADX.
 -> Calls modules/Deploy-ActivityStoryMap.ps1.
+Step 9: BROWSERAGENT CLOUD AUTOMATION
+Optional: creates regional Playwright Workspaces and Container Apps Jobs.
+-> Calls tools/Deploy-BrowserAgentInfra.ps1 and tools/Deploy-BrowserAgentScheduledJobs.ps1.
 
 ```
 

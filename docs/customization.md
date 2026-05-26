@@ -159,13 +159,13 @@ This does not disable non-Copilot AI emulation. ExternalAI scenarios are control
 3. The wizard assigns licenses automatically
 4. Each licensed agent will run 3 AI-generated search queries per run
 
-## Sentinel Workspace Modes
+## Legacy Sentinel Workspace Modes
 
-The wizard supports two Sentinel deployment modes for the security analytics rules (agent monitoring + privilege escalation detection):
+ClaudIA's current public deployment uses Azure Data Explorer as the telemetry backend. The Sentinel/Log Analytics notes below are legacy guidance for older lab branches that still used a Log Analytics workspace.
 
 ### Mode 1: Integrated (default)
 
-Sentinel is enabled on the **same Log Analytics workspace** used for the agent telemetry workbook. This is the simplest setup.
+Sentinel was enabled on the **same Log Analytics workspace** used for the legacy agent telemetry workbook.
 
 ```json
 "sentinelEnabled": true,
@@ -173,13 +173,13 @@ Sentinel is enabled on the **same Log Analytics workspace** used for the agent t
 "sentinelResourceGroup": ""
 ```
 
-**Behavior**: The wizard enables Sentinel on `la-agents`, creates 4 analytics rules (AI monitoring + privilege escalation), and deploys the `Remediate-AgentPrivilegeEscalation` runbook.
+**Behavior**: Older builds enabled Sentinel on `la-agents`, created analytics rules, and deployed the `Remediate-AgentPrivilegeEscalation` runbook. This is not part of the ADX-first installer path.
 
 **Limitation**: Some Managed Environment (ME/MCAP) tenants block Sentinel onboarding. In that case, the wizard shows `[WARN]` and falls back to deploying only the remediation runbook (scan mode, no Sentinel alerts).
 
-### Mode 2: External Sentinel workspace
+### Mode 2: External Sentinel workspace (legacy only)
 
-Use an **existing Sentinel-enabled workspace** (e.g., your SOC workspace) for the security rules, while keeping the agent workbook on the dedicated `la-agents` workspace.
+Older branches could use an **existing Sentinel-enabled workspace** for security rules while keeping the agent workbook on a dedicated `la-agents` workspace. The current ADX-first installer does not create `la-agents` or Sentinel rules.
 
 ```json
 "sentinelEnabled": true,
@@ -187,7 +187,7 @@ Use an **existing Sentinel-enabled workspace** (e.g., your SOC workspace) for th
 "sentinelResourceGroup": "rg-soc"
 ```
 
-**Behavior**: The wizard creates the analytics rules on the external Sentinel workspace. The agent workbook stays on `la-agents`. The `AuditLogs` table must be ingested in the external workspace (via Entra diagnostic settings or Sentinel Azure AD connector).
+**Behavior**: Legacy builds created analytics rules on the external Sentinel workspace. The current build uses ADX for telemetry and does not depend on Log Analytics.
 
 **Setup during wizard**:
 ```
@@ -195,7 +195,7 @@ Sentinel workspace (Enter=use agent LA, or existing LA name): la-soc-prod
 Sentinel workspace RG: rg-soc
 ```
 
-### What gets deployed
+### What legacy builds deployed
 
 | Component | Integrated | External |
 | --- | --- | --- |

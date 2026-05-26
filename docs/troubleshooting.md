@@ -192,16 +192,14 @@ Invoke-RestMethod -Method PATCH -Uri "https://graph.microsoft.com/v1.0/users/amo
 .\modules\Deploy-Runbook.ps1 -Config $config -AgentPassword $pwd
 ```
 
-### ClaudIAActivity_CL table empty in Log Analytics
+### CLAUDIA_Activity table empty in Azure Data Explorer
 
-**Cause 1**: Automation MI doesn't have `Log Analytics Contributor` role.
+**Cause 1**: `app-claudia-dataagent` is not assigned as ADX database ingestor.
 ```powershell
-$aaObjId = az automation account show --name aa-claudia-lab -g rg-claudia-lab --query identity.principalId -o tsv
-az role assignment create --role "Log Analytics Contributor" --assignee-object-id $aaObjId `
-    --assignee-principal-type ServicePrincipal --scope "/subscriptions/.../workspaces/la-agents"
+.\tools\Deploy-AdxTelemetry.ps1
 ```
 
-**Cause 2**: Data Collector API takes 5-15 minutes for first-time table creation. Wait and re-check.
+**Cause 2**: No runbook or BrowserAgent activity has been executed since ADX was deployed.
 
 **Cause 3**: Weekend -- the runbook skips weekends by default. Use `-SkipWeekendCheck` parameter.
 
@@ -306,11 +304,11 @@ Invoke-RestMethod -Method PATCH -Uri ".../automationAccounts/aa-claudia-lab?api-
     -Headers $h -Body $body
 ```
 
-### Sentinel rules show no incidents
+### Legacy Sentinel rules show no incidents
 
-**Cause**: Custom rules reference `AzureDiagnostics` but agent data is in `ClaudIAActivity_CL`.
+**Cause**: Older custom rules reference `AzureDiagnostics` or `ClaudIAActivity_CL`, but the current public deployment writes activity telemetry to ADX table `CLAUDIA_Activity`.
 
-**Fix**: Update Sentinel rules to query `ClaudIAActivity_CL` instead. The packaged Sentinel rules are already configured correctly.
+**Fix**: Use the ADX workbook, Activity Story Map, or `tools\Get-BrowserAgentTelemetry.ps1` for the current telemetry path. Only maintain Sentinel rules if you intentionally run a legacy Log Analytics/Sentinel branch.
 
 ## Logs and Diagnostics
 
@@ -318,10 +316,10 @@ Invoke-RestMethod -Method PATCH -Uri ".../automationAccounts/aa-claudia-lab?api-
 | --- | --- | --- |
 | Automation job output | Azure Portal > Automation > Jobs > Output | Real-time agent activity |
 | Automation job streams | Azure Portal > Automation > Jobs > Errors/Warnings | ROPC failures, API errors |
-| ClaudIAActivity_CL | LA > Logs > `ClaudIAActivity_CL` | Agent UPN, activity type, prompt, response |
-| AzureDiagnostics | LA > Logs > `AzureDiagnostics` | OpenAI API metadata (no user field) |
+| CLAUDIA_Activity | Azure Data Explorer > ADX-CLAUDIA > `CLAUDIA_Activity` | Agent UPN, activity type, prompt, response |
+| Activity Story Map API | Azure Function `func-claudia-story` | Public portal graph data backed by ADX |
 | Activity Explorer | Purview Portal > Activity Explorer | DLP matches, label activity (shows "guest" for AI) |
-| Sentinel Incidents | Azure Portal > Sentinel > Incidents | Anomalous agent behavior alerts |
+| Legacy Sentinel Incidents | Azure Portal > Sentinel > Incidents | Only if a legacy Sentinel workspace was intentionally deployed |
 
 ## Step 4a: M365 Collaboration Issues
 

@@ -145,7 +145,7 @@ service prompts across the whole lab.
 Validate one user with an existing captured session:
 
 ```powershell
-.\tools\Initialize-BrowserAgents.ps1 -Agents priya.sharma -Services office,owa,copilot,teams -SkipAuth
+.\tools\Initialize-BrowserAgents.ps1 -Agents priya.sharma -Services office,owa -SkipAuth
 ```
 
 Capture or refresh the browser session first:
@@ -157,8 +157,12 @@ Capture or refresh the browser session first:
 Initialize every configured agent:
 
 ```powershell
-.\tools\Initialize-BrowserAgents.ps1 -All -Services office,owa,copilot -ContinueOnFailure
+.\tools\Initialize-BrowserAgents.ps1 -All -Services office,owa -ContinueOnFailure
 ```
+
+Use `teams` or `copilot` as additional readiness checks only when those services
+are licensed and already provisioned. They are not required before Step 9 can
+package local auth states and deploy Container Apps Jobs.
 
 The initializer writes one JSON result per user under:
 

@@ -56,8 +56,7 @@ The `openAiTpm` config controls the provisioned throughput:
 | --- | --- | --- | --- |
 | Azure OpenAI `oai-claudia-lab` | GPT-4o | ~$5 | See model table above (3x/day default with GPT-4o) |
 | Azure Automation `aa-claudia-lab` | Basic | ~$2 | $0.002/min. 3 runs/day x ~20 min/run x 30 days = ~1800 min/mo |
-| Log Analytics `la-agents` | Free tier | ~$0 | 5 GB/month free. Agent data: ~50 MB/month |
-| Microsoft Sentinel | Free tier | ~$0 | Included with LA. 10 GB/day free for 31 days |
+| Azure Data Explorer `adx-claudia-lab` | Dev(No SLA) / Basic | usage-based | Primary telemetry backend for runbook, BrowserAgents, workbook, and Activity Story Map. |
 | Azure Monitor Workbook | Free | $0 | No cost for workbook queries |
 | **Total Azure** | | **~$7/month** | With GPT-4o 3x/day |
 

@@ -3,7 +3,7 @@
     {
       "directory": "ROOT",
       "file": "Install-ClaudIA.ps1",
-      "version": "1.0.3",
+      "version": "1.0.7",
       "format": "ps1",
       "changes": "ClaudIA - Interactive Deployment Wizard",
       "URI": "Install-ClaudIA.ps1"
@@ -19,7 +19,7 @@
     {
       "directory": "modules",
       "file": "Common.ps1",
-      "version": "1.0.0",
+      "version": "1.0.2",
       "format": "ps1",
       "changes": "Common script",
       "URI": "modules/Common.ps1"
@@ -35,7 +35,7 @@
     {
       "directory": "modules",
       "file": "Configure-DLP.ps1",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "format": "ps1",
       "changes": "Configure DSPM DLP policies and IRM Priority User Group",
       "URI": "modules/Configure-DLP.ps1"
@@ -67,7 +67,7 @@
     {
       "directory": "modules",
       "file": "Deploy-Runbook.ps1",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "format": "ps1",
       "changes": "Store agent secrets in Key Vault and deploy the runbook",
       "URI": "modules/Deploy-Runbook.ps1"
@@ -99,7 +99,7 @@
     {
       "directory": "modules",
       "file": "Provision-M365Collaboration.ps1",
-      "version": "1.0.0",
+      "version": "1.0.2",
       "format": "ps1",
       "changes": "Provision SharePoint site + Teams team + department channels for agents",
       "URI": "modules/Provision-M365Collaboration.ps1"
@@ -115,7 +115,7 @@
     {
       "directory": "modules",
       "file": "Register-AgentApp.ps1",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "format": "ps1",
       "changes": "Register Entra app with delegated scopes for ROPC agent authentication",
       "URI": "modules/Register-AgentApp.ps1"
@@ -131,7 +131,7 @@
     {
       "directory": "prerequisites",
       "file": "Test-Prerequisites.ps1",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "format": "ps1",
       "changes": "Validates local and cloud prerequisites for installing ClaudIA",
       "URI": "prerequisites/Test-Prerequisites.ps1"
@@ -139,7 +139,7 @@
     {
       "directory": "tests",
       "file": "Test-AgentCredentials.ps1",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "format": "ps1",
       "changes": "Validate app-claudia-dataagent client secret and one agent password from Key Vault",
       "URI": "tests/Test-AgentCredentials.ps1"
@@ -147,7 +147,7 @@
     {
       "directory": "tests",
       "file": "Test-AzureOpenAI.ps1",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "format": "ps1",
       "changes": "Validate the Azure OpenAI deployment used by the runbook",
       "URI": "tests/Test-AzureOpenAI.ps1"
@@ -203,7 +203,7 @@
     {
       "directory": "tools",
       "file": "Deploy-BrowserAgentScheduledJobs.ps1",
-      "version": "1.0.0",
+      "version": "1.0.2",
       "format": "ps1",
       "changes": "Deploys BrowserAgents as scheduled Azure Container Apps Jobs",
       "URI": "tools/Deploy-BrowserAgentScheduledJobs.ps1"
@@ -243,7 +243,7 @@
     {
       "directory": "tools",
       "file": "Get-BrowserAgentScheduledJobStatus.ps1",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "format": "ps1",
       "changes": "Shows recent BrowserAgent Azure Container Apps Job executions",
       "URI": "tools/Get-BrowserAgentScheduledJobStatus.ps1"
@@ -395,7 +395,7 @@
     {
       "directory": "tools",
       "file": "Reset-AgentPasswords.ps1",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "format": "ps1",
       "changes": "Reset configured agent passwords and synchronize their Key Vault secrets",
       "URI": "tools/Reset-AgentPasswords.ps1"
@@ -427,7 +427,7 @@
     {
       "directory": "tools",
       "file": "Test-BrowserAgentWorkspace.ps1",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "format": "ps1",
       "changes": "Validates the BrowserAgent Playwright Workspace resource",
       "URI": "tools/Test-BrowserAgentWorkspace.ps1"

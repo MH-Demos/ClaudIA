@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.1
+.VERSION 1.0.2
 .GUID a29057cc-e679-4daa-832b-0bd1020462ce
 
 .AUTHOR
@@ -23,7 +23,7 @@ https://github.com/MH-Demos/ClaudIA
 Validates local and cloud prerequisites for installing ClaudIA
 
 .RELEASENOTES
-Version 1.0.1 treats BrowserAgents Node/npm prerequisites as optional warnings for the base ClaudIA deployment.
+Version 1.0.2 removes Log Analytics provider registration from the ADX-only deployment path.
 
 #>
 <#
@@ -249,8 +249,7 @@ function Get-RequiredProviders {
             'Microsoft.LoadTestService',
             'Microsoft.App',
             'Microsoft.ContainerRegistry',
-            'Microsoft.ManagedIdentity',
-            'Microsoft.OperationalInsights'
+            'Microsoft.ManagedIdentity'
         )) {
             $providers.Add($provider)
         }

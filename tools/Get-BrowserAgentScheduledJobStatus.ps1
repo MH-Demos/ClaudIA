@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.0
+.VERSION 1.0.1
 
 .GUID 996556ca-065e-4cf2-ac21-bddcf1e65bcb
 
@@ -24,7 +24,7 @@ https://github.com/MH-Demos/ClaudIA
 Shows recent BrowserAgent Azure Container Apps Job executions
 
 .RELEASENOTES
-Initial version metadata for Shows recent BrowserAgent Azure Container Apps Job executions.
+Version 1.0.1 checks all configured regional BrowserAgent Container Apps Jobs.
 
 #>
 <#
@@ -39,6 +39,7 @@ param(
     [string]$SubscriptionId = '',
     [string]$ResourceGroup = '',
     [string]$JobNamePrefix = 'browseragents',
+    [string]$BrowserRegionKey = '',
     [int]$Top = 10
 )
 
@@ -59,22 +60,48 @@ if (-not $ResourceGroup) { $ResourceGroup = $config.browserAgents.resourceGroup 
 
 & az account set --subscription $SubscriptionId
 
-$rows = @()
-foreach ($schedule in @($config.schedules)) {
-    $jobName = (($JobNamePrefix + '-' + $schedule.name).ToLowerInvariant() -replace '[^a-z0-9-]', '-')
-    if ($jobName.Length -gt 32) { $jobName = $jobName.Substring(0, 32).Trim('-') }
+$regionConfigs = @($config.browserAgents.regionalWorkspaces)
+if ($regionConfigs.Count -eq 0) { $regionConfigs = @([pscustomobject]@{ key = 'default' }) }
+if ($BrowserRegionKey) {
+    $regionConfigs = @($regionConfigs | Where-Object {
+        ([string]$_.key).Equals($BrowserRegionKey, [System.StringComparison]::OrdinalIgnoreCase)
+    })
+    if ($regionConfigs.Count -eq 0) { throw "Browser region '$BrowserRegionKey' was not found in browserAgents.regionalWorkspaces." }
+}
 
+$jobPlans = @()
+foreach ($regionConfig in $regionConfigs) {
+    $key = if ($regionConfig.key) { [string]$regionConfig.key } else { 'default' }
+    $prefix = if ($BrowserRegionKey -or $regionConfigs.Count -eq 1) {
+        $JobNamePrefix
+    } else {
+        switch ($key) {
+            'europe' { 'browseragents-eu' }
+            'asia' { 'browseragents-asia' }
+            default { 'browseragents' }
+        }
+    }
+    foreach ($schedule in @($config.schedules)) {
+        $jobName = (($prefix + '-' + $schedule.name).ToLowerInvariant() -replace '[^a-z0-9-]', '-')
+        if ($jobName.Length -gt 32) { $jobName = $jobName.Substring(0, 32).Trim('-') }
+        $jobPlans += [pscustomobject]@{ Region = $key; JobName = $jobName }
+    }
+}
+
+$rows = @()
+foreach ($jobPlan in $jobPlans) {
     try {
         $executions = @(Invoke-AzCliJson -Arguments @(
             'containerapp','job','execution','list',
-            '-n',$jobName,
+            '-n',$jobPlan.JobName,
             '-g',$ResourceGroup,
             '--query',"[0:$Top]",
             '-o','json'
         ))
         foreach ($execution in $executions) {
             $rows += [PSCustomObject]@{
-                Job = $jobName
+                Region = $jobPlan.Region
+                Job = $jobPlan.JobName
                 Execution = $execution.name
                 Status = $execution.properties.status
                 StartTime = $execution.properties.startTime
@@ -84,7 +111,8 @@ foreach ($schedule in @($config.schedules)) {
         }
     } catch {
         $rows += [PSCustomObject]@{
-            Job = $jobName
+            Region = $jobPlan.Region
+            Job = $jobPlan.JobName
             Execution = ''
             Status = 'not-found-or-unavailable'
             StartTime = ''
@@ -98,7 +126,7 @@ Write-Host '=== BrowserAgent Scheduled Job Status ===' -ForegroundColor Cyan
 if ($rows.Count -eq 0) {
     Write-Host 'No executions found.' -ForegroundColor Yellow
 } else {
-    $rows | Sort-Object StartTime -Descending | Format-Table -AutoSize
+    $rows | Sort-Object Region,Job,StartTime -Descending | Format-Table -AutoSize
 }
 
 

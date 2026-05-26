@@ -50,8 +50,7 @@ Minimum cloud requirements:
 | Azure Key Vault | Stores agent and app secrets so secrets stay outside the repository. |
 | Azure Automation | Runs autonomous agent jobs and operational runbooks. |
 | Azure OpenAI or Azure AI Foundry | Generates synthetic business content. |
-| Log Analytics and Microsoft Sentinel | Stores and analyzes generated telemetry. |
-| Azure Data Explorer | Optional but recommended for storyline and activity analytics. |
+| Azure Data Explorer | Stores and analyzes generated telemetry for the runbook, BrowserAgents, workbook, and Activity Story Map. |
 | Azure Functions and Storage Static Website | Required for the activity story map portal. |
 | Microsoft Playwright Testing or local Playwright | Optional browser-persona execution. |
 
@@ -82,7 +81,6 @@ Register providers before deployment:
 az provider register -n Microsoft.CognitiveServices --wait
 az provider register -n Microsoft.Automation --wait
 az provider register -n Microsoft.KeyVault --wait
-az provider register -n Microsoft.OperationalInsights --wait
 az provider register -n Microsoft.Kusto --wait
 az provider register -n Microsoft.Web --wait
 az provider register -n Microsoft.Storage --wait
@@ -212,7 +210,7 @@ Expected deployment areas:
 | Entra personas | Lab users or selected existing users configured for autonomous activity. |
 | Microsoft 365 workloads | SharePoint, OneDrive, Outlook, Teams, and optional Fabric targets. |
 | Purview | Sensitivity labels, DLP policies, Insider Risk and DSPM-related scenarios where available. |
-| Azure | Automation, Key Vault, OpenAI, Log Analytics, Sentinel, ADX, storage, Functions, and optional Front Door. |
+| Azure | Automation, Key Vault, OpenAI, ADX, storage, Functions, Playwright Workspaces, Container Apps Jobs, and optional Front Door. |
 | Runbooks | Scheduled agent execution and supporting operational tasks. |
 
 If Copilot licenses are added later, re-enable Copilot tasks:
@@ -227,6 +225,18 @@ The wizard is designed to be re-run safely. Use dry run mode before changes when
 ```powershell
 .\Install-ClaudIA.ps1 -DryRun
 ```
+
+The installer can also resume one area at a time:
+
+| Step | Area |
+| --- | --- |
+| `3` | Register or repair `app-claudia-dataagent` and delegated Graph consent. |
+| `4` | Azure infrastructure, ADX telemetry, M365 collaboration, labels, and optional Fabric. |
+| `5` | Key Vault secrets, Automation variables, runbook, and schedules. |
+| `6` | Purview DLP, DSPM, and Insider Risk configuration. |
+| `7` | ClaudIA Activity Monitor workbook. |
+| `8` | Activity Story Map static site, API, and optional Front Door. |
+| `9` | Optional BrowserAgent cloud automation with Playwright Workspaces and Container Apps Jobs. |
 
 ## 7. Run A Smoke Test
 

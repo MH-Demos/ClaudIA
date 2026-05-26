@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Main deployment wizard for the lab. It deploys or resumes the full ClaudIA environment: users, licenses, app registration, Azure infrastructure, collaboration spaces, sensitivity labels, runbook, DLP/IRM policies, workbook, and Activity Story Map.
+Main deployment wizard for the lab. It deploys or resumes the full ClaudIA environment: users, licenses, app registration, Azure infrastructure, collaboration spaces, sensitivity labels, runbook, DLP/IRM policies, workbook, Activity Story Map, and optional BrowserAgent cloud automation.
 
 ## Execution
 
@@ -40,8 +40,8 @@ Main deployment wizard for the lab. It deploys or resumes the full ClaudIA envir
 - `6c`: IRM via `modules/Configure-IRM.ps1`.
 - `7`: workbook via `modules/Deploy-Workbook.ps1`.
 - `8`: Activity Story Map via `modules/Deploy-ActivityStoryMap.ps1`.
+- `9`: BrowserAgent cloud automation via `tools/Deploy-BrowserAgentInfra.ps1` and `tools/Deploy-BrowserAgentScheduledJobs.ps1`.
 
 ## Notes
 
 This is the only script intended as the normal entry point. Use tool scripts for maintenance after the first deployment.
-
