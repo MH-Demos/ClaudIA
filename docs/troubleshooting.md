@@ -1,46 +1,66 @@
 # Troubleshooting
 
-> Last updated: v2.1 (2026-05-07)
+This guide covers common ClaudIA setup, deployment, and runtime issues.
 
-## Common Issues
+ClaudIA is designed for lab, demo, training, and testing environments. Do not use these steps against production tenants or production data.
+
+## First Checks
+
+Before troubleshooting a specific error, confirm the basics:
+
+```powershell
+az logout
+az login --tenant contoso.onmicrosoft.com
+az account set --subscription 11111111-1111-1111-1111-111111111111
+
+.\prerequisites\Test-Prerequisites.ps1
+.\tools\Test-PublicRepoSafety.ps1
+```
+
+Confirm that:
+
+- You are in the ClaudIA repository root.
+- You cloned or downloaded the full repository, not only `Install-ClaudIA.ps1`.
+- You are using a lab tenant.
+- The Azure subscription is visible to the signed-in account.
+- The deploying account has the required Entra, Microsoft 365, and Azure permissions.
+- Runtime secrets are stored in Azure Key Vault.
+- Browser session files and `.env` files are not committed.
+
+## PowerShell And Repository Issues
 
 ### PowerShell says the script is not digitally signed
 
-**Symptom**:
+**Symptom**
 
 ```text
 File ...\Install-ClaudIA.ps1 cannot be loaded. The file is not digitally signed.
 ```
 
-or the first script runs, but a helper file fails:
+**Cause**
 
-```text
-File ...\modules\Common.ps1 cannot be loaded. The file is not digitally signed.
-```
+Windows marked downloaded `.ps1` files with the internet zone.
 
-**Cause**: Windows marked one or more downloaded `.ps1` files with the internet zone. This commonly happens after downloading a ZIP, copying files from a browser download, or synchronizing from another machine.
+**Fix**
 
-**Fix**: Open PowerShell in the ClaudIA repository root and unblock all PowerShell files:
+Run from the ClaudIA repository root:
 
 ```powershell
-cd C:\MyDev\ClaudIA
 Get-ChildItem -Recurse -Filter *.ps1 | Unblock-File
 .\Install-ClaudIA.ps1
 ```
 
-If your organization enforces `AllSigned` execution policy, unblocking files is not enough. Use a lab workstation where local scripts are allowed, or ask your administrator to approve a temporary lab execution policy for this repository.
+If your organization enforces `AllSigned`, use a lab workstation where local scripts are allowed or ask your administrator to approve a temporary lab execution policy.
 
-### The installer cannot find modules\Common.ps1
+### The installer cannot find `modules\Common.ps1`
 
-**Symptom**:
+**Cause**
 
-```text
-The term '...\modules\Common.ps1' is not recognized
-```
+Only part of the repository was downloaded.
 
-**Cause**: Only `Install-ClaudIA.ps1` was downloaded or copied. ClaudIA must be run from the full repository root.
+**Fix**
 
-**Fix**: Clone or download the complete repository, then run the installer from the folder that contains `modules`, `config`, `tools`, and `Install-ClaudIA.ps1`.
+Clone or download the complete repository, then run the installer from the root folder that contains `modules`, `config`, `tools`, `prerequisites`, and `Install-ClaudIA.ps1`.
 
 ```powershell
 git clone https://github.com/MH-Demos/ClaudIA.git C:\MyDev\ClaudIA
@@ -49,36 +69,32 @@ Get-ChildItem -Recurse -Filter *.ps1 | Unblock-File
 .\Install-ClaudIA.ps1
 ```
 
+## Azure And Tenant Access Issues
+
 ### Azure CLI says the selected account does not exist in the tenant
 
-**Symptom**:
+**Cause**
 
-```text
-Selected user account does not exist in tenant 'Your Demo Tenant' and cannot access the application '04b07795-8ddb-461a-bbee-02f9e1bf7b46' in that tenant.
-```
+The Azure account selected during sign-in is not a user in the target Entra tenant. This is common when the Azure subscription owner belongs to another organization.
 
-**Cause**: The Azure account selected in device-code login is not a user in the target Entra tenant. This is common when the Azure subscription owner belongs to another organization.
-
-**Fix**:
+**Fix**
 
 1. Invite the account as an external user in the target Entra tenant.
 2. Have the user accept the invitation.
-3. Assign Owner or Contributor on the target Azure subscription or resource group.
+3. Assign Owner or Contributor on the target subscription or ClaudIA resource group.
 4. Run the installer again and sign in to the target tenant.
 
 When possible, use a native target-tenant administrator for first-time setup.
 
 ### Azure CLI login succeeds but no subscriptions are visible
 
-**Symptom**:
+**Cause**
 
-```text
-ERROR: No subscriptions found for user@example.com.
-```
+The account exists in the tenant but does not have Azure RBAC on the target subscription.
 
-**Cause**: The account may exist in the tenant but does not have Azure RBAC on the target subscription.
+**Fix**
 
-**Fix**: Assign Owner or Contributor on the target subscription or on the ClaudIA resource group, then verify:
+Assign Owner or Contributor on the target subscription or on the ClaudIA resource group, then verify:
 
 ```powershell
 az logout
@@ -88,318 +104,414 @@ az account list -o table
 
 Only continue when the target subscription appears in `az account list`.
 
-If the account is an Azure subscription owner from another tenant, also confirm the subscription directory has been changed or associated to the demo tenant. Adding the account as an external user is necessary, but it does not by itself move the subscription into the target tenant.
-
 ### Prerequisites fail because resource providers are not registered
 
-**Symptom**: The prerequisite check reports failures such as `Microsoft.KeyVault`, `Microsoft.CognitiveServices`, `Microsoft.Automation`, or `Microsoft.Storage`.
+**Cause**
 
-**Cause**: New Azure subscriptions often have required resource providers in `NotRegistered` state.
+New Azure subscriptions often have required resource providers in `NotRegistered` state.
 
-**Fix**: Let ClaudIA start provider registration:
+**Fix**
+
+Let ClaudIA register the providers:
 
 ```powershell
 .\Install-ClaudIA.ps1 -RegisterProviders
 ```
 
-or register the providers manually with the commands printed by the prerequisite check. Some providers can take a few minutes to finish registration.
+Or register providers manually:
+
+```powershell
+az provider register -n Microsoft.CognitiveServices --wait
+az provider register -n Microsoft.Automation --wait
+az provider register -n Microsoft.KeyVault --wait
+az provider register -n Microsoft.Kusto --wait
+az provider register -n Microsoft.Web --wait
+az provider register -n Microsoft.Storage --wait
+```
 
 ### The deploying user has no admin directory role
 
-**Symptom**:
+**Cause**
 
-```text
-[FAIL] Deploying user has admin directory role
+The signed-in account can access Azure but is not a Microsoft 365 / Entra deployment administrator in the target tenant.
+
+**Fix**
+
+Use an account with both Azure RBAC and tenant admin rights, or grant the required setup roles in the demo tenant.
+
+For the simplest first deployment, use a single account with:
+
+- Owner or Contributor on the Azure subscription or resource group.
+- Global Administrator or Privileged Role Administrator for initial setup.
+
+If Azure and Microsoft 365 are managed by different people, use the installer prompt for a separate Microsoft 365 / Entra admin sign-in.
+
+## Tenant Readiness Issues
+
+### ROPC returns `AADSTS50126: Invalid username or password`
+
+**Cause**
+
+The persona password stored in Azure Key Vault does not match the actual Entra user password, or the wrong Key Vault secret name is referenced in configuration.
+
+**Fix**
+
+1. Confirm the persona's `keyVaultSecretName` in `config/agents.json`.
+2. Confirm the secret exists in the configured Key Vault.
+3. Reset the Entra user password if needed.
+4. Update the Key Vault secret value.
+5. Re-run the relevant deployment or runbook publication step.
+
+Example Key Vault update:
+
+```powershell
+az keyvault secret set --vault-name kv-claudia-lab --name devon-reyes --value "<new-lab-password>"
 ```
 
-**Cause**: The signed-in account can access Azure but is not a Microsoft 365/Entra deployment administrator in the target tenant.
+Do not store the password in Git, `.env`, screenshots, or documentation.
 
-**Fix**: Use a single deployment account with both Azure RBAC and tenant admin rights, or grant the current account `Global Administrator` or `Privileged Role Administrator` in the demo tenant for setup. Without this, ClaudIA cannot create agent users, assign licenses, create/admin-consent the Entra app, or configure tenant-level Microsoft 365 services.
+### ROPC returns `AADSTS50079` or MFA required
 
-If Azure and Microsoft 365 are managed by different accounts, answer yes when the installer asks to sign in with a separate Microsoft 365/Entra admin account. ClaudIA keeps that admin sign-in in `.claudia/az-m365-admin` and continues using the original Azure account for subscription deployment.
+**Cause**
 
-Step 1 runs only after prerequisites are fixed or explicitly bypassed. If this check fails, agent users have not been created yet.
+The persona is not in the dedicated ClaudIA MFA exclusion group, or the Conditional Access policy exclusion was not saved.
 
-### Persona photo upload fails with ForbiddenByPolicy or invalid_role
+**Fix**
 
-**Symptom**:
+1. Verify the user is a member of `grp-claudia-agent-mfa-exclusion`.
+2. Verify the Conditional Access policy excludes only that dedicated group.
+3. Confirm the agent account has no admin roles.
+4. Retry the runbook or BrowserAgent flow.
 
-```text
-ForbiddenByPolicy
-invalid_role
+Never assign admin roles to MFA-excluded persona accounts.
+
+### Security Defaults block lab automation
+
+**Cause**
+
+Brand-new tenants may have Security Defaults enabled. Security Defaults is good for real tenants, but it conflicts with unattended lab automation that cannot satisfy MFA.
+
+**Fix**
+
+For a lab tenant only:
+
+1. Confirm the tenant is not production.
+2. Disable Security Defaults.
+3. Create a dedicated ClaudIA agent MFA exclusion group.
+4. Create Conditional Access policies that require MFA for normal users.
+5. Exclude only the ClaudIA agent group.
+6. Never assign admin roles to excluded agent accounts.
+
+## Key Vault Issues
+
+### Key Vault Forbidden errors
+
+**Cause**
+
+The runtime identity, Automation managed identity, Function App managed identity, or deployment account does not have the required Key Vault data-plane permission.
+
+**Fix**
+
+1. Confirm the Key Vault name in `config/agents.json`.
+2. Confirm the identity that needs to read secrets.
+3. Grant the appropriate Key Vault role, such as Key Vault Secrets User for runtime read access or Key Vault Secrets Officer for setup operations.
+4. Retry the deployment or runbook.
+
+Example:
+
+```powershell
+$kvId = az keyvault show -n kv-claudia-lab -g rg-claudia-lab --query id -o tsv
+$principalId = az automation account show -n aa-claudia-lab -g rg-claudia-lab --query identity.principalId -o tsv
+az role assignment create --role "Key Vault Secrets User" --assignee-object-id $principalId --assignee-principal-type ServicePrincipal --scope $kvId
 ```
 
-**Cause**: The photo upload is using an Azure CLI token from an account that can access the Azure subscription but cannot update Microsoft 365/Entra user photos.
+### A secret exists but the runbook cannot find it
 
-**Fix**: Sign in with a Microsoft 365/Entra admin account that can update user photos. If the installer already collected a separate Microsoft 365 admin sign-in, `Set-EntraUserPhotos.ps1` automatically uses the isolated `.claudia/az-m365-admin` profile. Then retry:
+**Cause**
+
+The secret name in `config/agents.json` does not match the name stored in Key Vault, or the runbook is using an outdated configuration snapshot.
+
+**Fix**
+
+1. Compare `keyVaultSecretName` for the persona with the Key Vault secret name.
+2. Re-publish the runbook or rerun the relevant installer step.
+3. Confirm Automation variables contain non-secret configuration or secret-name references, not plaintext passwords.
+
+## Microsoft 365 Workload Issues
+
+### Persona photo upload fails with `ForbiddenByPolicy` or `invalid_role`
+
+**Cause**
+
+The photo upload is using a token from an account that can access Azure but cannot update Microsoft 365 / Entra user photos.
+
+**Fix**
+
+Sign in with a Microsoft 365 / Entra admin account that can update user photos:
 
 ```powershell
 .\tools\Set-EntraUserPhotos.ps1 -SkipMissing
 ```
 
-You can also pass an explicit Azure CLI profile:
+If the installer collected a separate Microsoft 365 admin sign-in, pass that Azure CLI profile:
 
 ```powershell
 .\tools\Set-EntraUserPhotos.ps1 -SkipMissing -M365AzureConfigDir .\.claudia\az-m365-admin
 ```
 
-### The resource group prompt received a subscription ID
+### Teams team creation fails
 
-**Symptom**: The environment summary shows the resource group as a GUID, or the installer warns that the resource group must be a name.
+**Cause**
 
-**Cause**: The Azure subscription ID was pasted into the resource group field.
+The admin account does not have the required Teams role, Teams is not provisioned, or duplicate teams already exist.
 
-**Fix**: Use the subscription GUID only for the subscription field. Use a resource group name such as `rg-claudia-lab` for the resource group field. A brand-new subscription does not need an existing resource group; ClaudIA creates the resource group during Azure deployment.
+**Fix**
 
-### ROPC returns 400 Bad Request
+1. Confirm the admin account has Teams Administrator or Global Administrator role.
+2. Confirm Teams is enabled in the tenant.
+3. Remove duplicate demo teams if needed.
+4. Re-run the relevant setup step.
 
-**Symptom**: `AADSTS50126: Invalid username or password`
+### SharePoint site is not ready
 
-**Cause**: Agent password stored in Automation variables doesn't match the actual user password.
+**Cause**
 
-**Fix (v2.1+)**: Re-run the wizard — it detects existing users and offers to auto-reset passwords:
+Microsoft 365 group-backed SharePoint sites can take time to provision after team creation.
+
+**Fix**
+
+Wait a few minutes, then re-run the relevant setup step. Existing teams should be detected and the site URL should resolve on retry.
+
+### Teams posts fail with 403
+
+**Cause**
+
+The persona token does not have the required delegated permissions, admin consent is missing, or Teams channel configuration was not created.
+
+**Fix**
+
+1. Verify delegated Graph consent includes Teams messaging scopes required by ClaudIA.
+2. Re-run the agent app registration step if permissions are missing.
+3. Re-publish runbook configuration.
+4. Confirm the Teams/channel references exist.
+
+### Connect-IPPSSession hangs or fails
+
+**Cause**
+
+Security & Compliance PowerShell requires interactive authentication and may open a browser prompt.
+
+**Fix**
+
+Pre-connect before running the wizard:
+
 ```powershell
+Connect-IPPSSession
 .\Install-ClaudIA.ps1 -SkipPrerequisites
-# When prompted "Reset all agent passwords now? (Y/n)" → Y
-# The wizard resets all 10 passwords and stores them in Automation variables automatically
 ```
 
-**Fix (manual)**:
-```powershell
-# Reset password via Graph API
-$gt = az account get-access-token --resource https://graph.microsoft.com --query accessToken -o tsv
-$body = @{passwordProfile=@{password='<new-agent-password>';forceChangePasswordNextSignIn=$false}} | ConvertTo-Json
-Invoke-RestMethod -Method PATCH -Uri "https://graph.microsoft.com/v1.0/users/amoreau@TENANT.onmicrosoft.com" `
-    -Headers @{Authorization="Bearer $gt"; 'Content-Type'='application/json'} -Body $body
-# Then update the Automation variable
-```
+## ADX And Telemetry Issues
 
-### ROPC returns AADSTS50079 (MFA Required)
+### `CLAUDIA_Activity` table is empty
 
-**Cause**: Agent is not in the MFA exclusion group, or the CA policy exclusion was not saved.
+**Possible causes**
 
-**Fix**:
-1. Verify agent is member of `grp-claudia-agent-mfa-exclusion`
-2. Entra admin center > Conditional Access > Edit MFA policy > Exclude > Verify the group is listed
-3. Save the policy
+- ADX was deployed but no runbook or BrowserAgent activity has executed yet.
+- The ingestion identity does not have ADX database ingestor permissions.
+- The configuration points to the wrong cluster, database, or table.
+- Weekend or schedule logic skipped execution.
+- BrowserAgent ADX ingestion was disabled for local testing.
 
-### Activity Explorer shows "guest" instead of agent name
+**Fix**
 
-**Cause**: The ROPC token uses `.default` scope which returns an application token.
-
-**Fix**: The runbook should use explicit delegated scopes (already configured in the packaged version). If you see "guest" after deployment, ensure the runbook is the latest version:
-```powershell
-.\modules\Deploy-Runbook.ps1 -Config $config -AgentPassword $pwd
-```
-
-### CLAUDIA_Activity table empty in Azure Data Explorer
-
-**Cause 1**: `app-claudia-dataagent` is not assigned as ADX database ingestor.
 ```powershell
 .\tools\Deploy-AdxTelemetry.ps1
+.\tests\Test-SingleAgent.ps1 -Agent priya.sharma
 ```
 
-**Cause 2**: No runbook or BrowserAgent activity has been executed since ADX was deployed.
+Then query ADX:
 
-**Cause 3**: Weekend -- the runbook skips weekends by default. Use `-SkipWeekendCheck` parameter.
-
-### OneLake upload fails (403 Forbidden)
-
-**Symptom**: `Write-OneLake` logs `OneLake upload failed: 403` in runbook output.
-
-**Cause 1**: Missing `storage.azure.com/user_impersonation` scope on the Entra app.
-```powershell
-# Add scope via Graph API (see customization.md > Enabling OneLake dual-write)
+```kusto
+CLAUDIA_Activity
+| order by TimeGenerated desc
+| take 50
 ```
 
-**Cause 2**: Admin consent not granted for the storage scope.
+### Activity Story Map loads but shows no activity
 
-**Cause 3**: Fabric F2 capacity is paused.
+**Cause**
+
+The portal is reachable, but the API cannot query ADX or no telemetry exists for the selected time range.
+
+**Fix**
+
+1. Confirm `activityStoryMap.apiBaseUrl` in `config/agents.json`.
+2. Confirm the Azure Function can query ADX.
+3. Confirm `CLAUDIA_Activity` contains recent rows.
+4. Increase the portal lookback window.
+5. Republish portal assets if configuration changed.
+
 ```powershell
-az resource invoke-action --action resume --resource-type "Microsoft.Fabric/capacities" \
-    --name fabriclabcap --resource-group rg-security-lab
-```
-
-### OneLake variables not found
-
-**Symptom**: Runbook runs but no OneLake output (only SharePoint uploads).
-
-**Cause**: `AgentFabricWorkspaceId` and/or `AgentFabricLakehouseId` Automation variables missing.
-
-**Fix**: Create the variables (see customization.md) and ensure they are in the same RG as the Automation Account. The wizard (v1.5.2+) auto-detects the correct RG.
-
-### User creation says [OK] but users don't exist
-
-**Symptom**: Step 1 shows `[OK]` for all users but Step 2 can't find them.
-
-**Cause**: Pre-v1.4 bug -- `az ad user create` with `--department`/`--job-title` flags fails silently when errors are redirected to `$null`.
-
-**Fix**: Update to v1.4+ which removes unsupported flags and checks `$LASTEXITCODE`.
-
-### Sentinel onboarding fails (409 Conflict or 400 Bad Request)
-
-**Symptom**: Step 4 shows `[WARN]` for Sentinel with 409 or 400 error.
-
-**Cause**: Managed Environment (ME/MCAP) tenants block Sentinel onboarding via API. This is a platform restriction, not a code bug.
-
-**Workaround**:
-1. The remediation runbook still deploys and works in scan mode (no Sentinel trigger)
-2. Use an external Sentinel workspace in a different subscription:
-   ```json
-   "sentinelWorkspace": "la-soc-prod",
-   "sentinelResourceGroup": "rg-soc"
-   ```
-3. Or schedule the remediation runbook to run hourly as a standalone guard
-
-### Agent removed from MFA exclusion group unexpectedly
-
-**Symptom**: Agent ROPC auth fails with `AADSTS50079` (MFA required) after working previously.
-
-**Cause**: The `Remediate-AgentPrivilegeEscalation` runbook detected an admin role on the agent and removed it from the MFA exclusion group as a security measure.
-
-**Fix**:
-1. Check the Sentinel incident `Agent-Privilege-Escalation` for details
-2. Remove any admin role from the agent account
-3. Re-add the agent to `grp-claudia-agent-mfa-exclusion` (only after role is removed)
-4. Verify: the agent must have ZERO directory roles before re-adding to the exclusion group
-
-### Key Vault Forbidden errors
-
-**Cause**: Azure Policy on Managed Environment subscriptions blocks KV data plane access from Automation sandboxes.
-
-**Fix**: This package uses Automation encrypted variables instead of Key Vault. If you see KV errors, the runbook is outdated -- re-deploy with:
-```powershell
-.\modules\Deploy-Runbook.ps1 -Config $config -AgentPassword $pwd
-```
-
-### Azure OpenAI returns 403
-
-**Cause**: Automation MI doesn't have `Cognitive Services OpenAI User` role on the OpenAI resource.
-
-**Fix**:
-```powershell
-$aaObjId = az automation account show --name aa-claudia-lab -g rg-claudia-lab --query identity.principalId -o tsv
-$oaiId = az cognitiveservices account show -n oai-claudia-lab -g rg-claudia-lab --query id -o tsv
-az role assignment create --role "Cognitive Services OpenAI User" --assignee-object-id $aaObjId `
-    --assignee-principal-type ServicePrincipal --scope $oaiId
-```
-
-### Content Explorer empty (no files visible)
-
-**Cause**: SharePoint content crawler takes up to 7 days to index new sites. This is a Microsoft backend process.
-
-**Workaround**:
-1. SharePoint Admin Center > Active Sites > your site > Reindex (if available)
-2. Check Activity Explorer instead (real-time audit data)
-3. Wait 24-72h for the initial crawl
-
-### Runbook stops after 30 minutes
-
-**Cause**: Azure Automation Free tier has a 30-minute job timeout.
-
-**Fix**: Upgrade to Basic tier:
-```powershell
-$body = @{properties=@{sku=@{name='Basic'}}} | ConvertTo-Json -Depth 3
-Invoke-RestMethod -Method PATCH -Uri ".../automationAccounts/aa-claudia-lab?api-version=2023-11-01" `
-    -Headers $h -Body $body
+.\tools\Publish-ActivityStoryMapAssets.ps1
 ```
 
 ### Legacy Sentinel rules show no incidents
 
-**Cause**: Older custom rules reference `AzureDiagnostics` or `ClaudIAActivity_CL`, but the current public deployment writes activity telemetry to ADX table `CLAUDIA_Activity`.
+**Cause**
 
-**Fix**: Use the ADX workbook, Activity Story Map, or `tools\Get-BrowserAgentTelemetry.ps1` for the current telemetry path. Only maintain Sentinel rules if you intentionally run a legacy Log Analytics/Sentinel branch.
+Older custom rules may reference legacy Log Analytics tables, while the current public telemetry path writes to ADX table `CLAUDIA_Activity`.
 
-## Logs and Diagnostics
+**Fix**
+
+Use the ADX workbook, Activity Story Map, or ADX queries for the current telemetry path. Maintain legacy Sentinel rules only if you intentionally run a legacy Log Analytics / Sentinel branch.
+
+## BrowserAgent Issues
+
+### BrowserAgent cannot authenticate
+
+**Cause**
+
+The persona password, browser session, Conditional Access policy, or Key Vault secret reference may be invalid.
+
+**Fix**
+
+1. Confirm the persona secret in Key Vault.
+2. Confirm the persona is allowed by the lab Conditional Access design.
+3. Delete stale local session state under `BrowserAgents/.auth` if needed.
+4. Re-run authentication:
+
+```powershell
+.\tools\Invoke-BrowserAgentAuth.ps1 -Agent priya.sharma
+```
+
+### BrowserAgent Azure run fails with Playwright permissions
+
+**Cause**
+
+The runner identity does not have the required role on the Playwright workspace.
+
+**Fix**
+
+Grant the required Playwright Workspace role and validate:
+
+```powershell
+.\tools\Test-BrowserAgentWorkspace.ps1
+```
+
+### BrowserAgent files were accidentally created locally
+
+**Fix**
+
+Do not commit generated BrowserAgent artifacts. Remove or ignore:
+
+- `BrowserAgents/.auth`
+- `BrowserAgents/node_modules`
+- `BrowserAgents/playwright-report`
+- `BrowserAgents/test-results`
+- `.env`
+
+Run:
+
+```powershell
+.\tools\Test-PublicRepoSafety.ps1
+```
+
+## Azure OpenAI And AI Foundry Issues
+
+### Azure OpenAI returns 403
+
+**Cause**
+
+The runtime identity does not have permission to call the Azure OpenAI resource.
+
+**Fix**
+
+Grant `Cognitive Services OpenAI User` to the runtime identity on the Azure OpenAI resource.
+
+```powershell
+$aaObjId = az automation account show --name aa-claudia-lab -g rg-claudia-lab --query identity.principalId -o tsv
+$oaiId = az cognitiveservices account show -n oai-claudia-lab -g rg-claudia-lab --query id -o tsv
+az role assignment create --role "Cognitive Services OpenAI User" --assignee-object-id $aaObjId --assignee-principal-type ServicePrincipal --scope $oaiId
+```
+
+### External AI scenario falls back to simulation
+
+**Cause**
+
+The configured external AI runtime is not available, the deployment name is wrong, or managed identity access is missing.
+
+**Fix**
+
+1. Check `externalAiRuntime` in `config/agents.json`.
+2. Confirm the endpoint, deployment, and auth mode.
+3. Confirm managed identity access.
+4. Keep `fallbackToSimulation` enabled when you want the demo to continue even if the external runtime is unavailable.
+
+## Fabric And OneLake Issues
+
+### OneLake upload fails with 403
+
+**Possible causes**
+
+- Missing `storage.azure.com/user_impersonation` scope on the Entra app.
+- Admin consent was not granted for the storage scope.
+- Fabric capacity is paused.
+- Workspace or Lakehouse IDs are wrong.
+
+**Fix**
+
+1. Confirm the app registration permissions and admin consent.
+2. Confirm Fabric capacity is running.
+3. Confirm workspace and Lakehouse IDs.
+4. Re-run the relevant Fabric setup step.
+
+### Fabric capacity creation fails
+
+**Cause**
+
+The selected Fabric capacity SKU may not be available in the selected region.
+
+**Fix**
+
+Change the configured location to a supported region or use an existing Fabric workspace / Lakehouse when the installer supports that path.
+
+## Logs And Diagnostics
 
 | Source | How to access | What it shows |
 | --- | --- | --- |
-| Automation job output | Azure Portal > Automation > Jobs > Output | Real-time agent activity |
-| Automation job streams | Azure Portal > Automation > Jobs > Errors/Warnings | ROPC failures, API errors |
-| CLAUDIA_Activity | Azure Data Explorer > ADX-CLAUDIA > `CLAUDIA_Activity` | Agent UPN, activity type, prompt, response |
-| Activity Story Map API | Azure Function `func-claudia-story` | Public portal graph data backed by ADX |
-| Activity Explorer | Purview Portal > Activity Explorer | DLP matches, label activity (shows "guest" for AI) |
-| Legacy Sentinel Incidents | Azure Portal > Sentinel > Incidents | Only if a legacy Sentinel workspace was intentionally deployed |
+| Automation job output | Azure Portal > Automation > Jobs > Output | Agent activity and runtime messages. |
+| Automation job streams | Azure Portal > Automation > Jobs > Errors/Warnings | Authentication failures, API errors, script warnings. |
+| `CLAUDIA_Activity` | Azure Data Explorer > configured database > `CLAUDIA_Activity` | Normalized agent activity telemetry. |
+| Activity Story Map API | Azure Function App | Portal graph data backed by ADX. |
+| Activity Explorer | Microsoft Purview portal | Audit, DLP, label, and workload activity where available. |
+| BrowserAgent reports | Local Playwright folders | Local browser automation troubleshooting only; do not commit. |
 
-## Step 4a: M365 Collaboration Issues
+## When To Re-Run The Installer
 
-### Teams team creation fails
+The installer is designed to be re-run for repair or completion. Use dry run mode before applying changes:
 
-**Symptom**: `POST /v1.0/teams` returns 403 or 400
-
-**Cause**: The admin account doesn't have Teams admin role, or Teams is not provisioned in the tenant.
-
-**Fix**:
-1. Ensure your admin account has Teams Administrator or Global Admin role
-2. Verify Teams is enabled: `Get-CsTeamsClientConfiguration` (requires Teams PowerShell)
-3. If multiple teams with the same name exist, delete duplicates in Teams admin center
-
-### SharePoint site not ready
-
-**Symptom**: `[WAIT] Site not ready -- it may take a few minutes.`
-
-**Cause**: M365 group SPO site takes 30-60s to provision after team creation.
-
-**Fix**: Re-run Step 4a — the team already exists (`[EXISTS]`) and the site will be resolved on the retry.
-
-### Teams posts fail with 403
-
-**Symptom**: `[TEAMS] Post failed: 403 (Forbidden)` in runbook output
-
-**Cause**: The agent's ROPC token doesn't carry `ChannelMessage.Send` permission, or admin consent is missing.
-
-**Fix**:
-1. Verify admin consent includes `ChannelMessage.Send`: check `oauth2PermissionGrants` on the service principal
-2. Re-run `modules/Register-AgentApp.ps1` to re-create the app with all scopes
-3. The `AgentTeamsChannels` AA variable must be populated (Step 4a does this automatically)
-
-## Step 4b: Sensitivity Labels Issues
-
-### Connect-IPPSSession hangs or fails
-
-**Symptom**: The wizard hangs at "Connecting to Security & Compliance PowerShell..." or shows `[MANUAL]`
-
-**Cause**: `Connect-IPPSSession` requires interactive browser authentication. On MCAPS/ME tenants, this may open a browser popup.
-
-**Fix (recommended)**: Pre-connect IPPS before running the wizard:
 ```powershell
-Connect-IPPSSession
-# Authenticate in the browser popup
-# Then run the wizard — it will detect the existing session automatically
-.\Install-ClaudIA.ps1 -SkipPrerequisites
+.\Install-ClaudIA.ps1 -DryRun
 ```
 
-**v2.1 behavior**: `Configure-DLP.ps1` now detects existing IPPS sessions via `Get-DlpCompliancePolicy`. If a session is already active, it shows `[OK] (existing session)` instantly instead of trying to reconnect.
+If you know the affected area, use the relevant step or tool instead of rebuilding everything.
 
-### Labels already exist with different names
+## Public-Safety Reminder
 
-**Symptom**: `[SKIP]` for labels that exist but have different display names than expected
+Before sharing logs, screenshots, issues, or documentation updates, remove:
 
-**Cause**: Your tenant already has sensitivity labels with different naming conventions.
+- Tenant IDs.
+- Subscription IDs.
+- App IDs.
+- UPNs from real tenants.
+- Secrets.
+- Tokens.
+- Connection strings.
+- Browser sessions.
+- Production data.
 
-**Fix**: Use `-SkipPublish` flag and map your existing labels in the runbook's `$labelRules` hashtable (line ~56 of `Invoke-AgentRunbook.ps1`).
+Then run:
 
-## Step 4c: Fabric Provisioning Issues
-
-### F2 capacity creation fails
-
-**Symptom**: `[FAIL] Fabric F2 may not be available in <region>`
-
-**Cause**: Fabric F2 is not available in all Azure regions.
-
-**Fix**: Change `location` in `agents.json` to a supported region (e.g., `eastus2`, `westeurope`, `francecentral`), or use existing mode `[E]` and provide an existing workspace/lakehouse ID.
-
-### OneLake uploads fail silently
-
-**Symptom**: Runbook output shows `[WARN] OneLake upload failed` for Emma Leroy
-
-**Cause**: F2 capacity is paused, or workspace/lakehouse IDs are incorrect.
-
-**Fix**:
 ```powershell
-# Resume F2 capacity
-az resource invoke-action --action resume --resource-type "Microsoft.Fabric/capacities" `
-    --name fabriclabcap --resource-group <RG>
-# Verify AA variables
-az automation variable show --automation-account-name <AA> -g <RG> -n AgentFabricWorkspaceId
+.\tools\Test-PublicRepoSafety.ps1
 ```
