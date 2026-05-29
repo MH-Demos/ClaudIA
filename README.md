@@ -2,41 +2,78 @@
 
 **Cloud Activity, Usage & Data Intelligence Architecture**
 
-ClaudIA is a public, lab-first reference architecture for building a synthetic Microsoft 365 and Microsoft Purview activity environment. It helps security, compliance, data governance, and AI adoption teams generate realistic cloud activity, usage telemetry, sensitive content signals, browser interactions, and storyline-driven investigation data without using production users or production data.
+ClaudIA is an open source, lab-first platform for creating a **living Microsoft 365 tenant**: synthetic employees work, collaborate, generate content, interact with AI, trigger security signals, and leave telemetry that can be explored through Microsoft Purview, Microsoft Defender, Azure Data Explorer, and the ClaudIA Activity Story Map.
+
+ClaudIA is designed for people who need a realistic Microsoft 365 environment for demos, learning, workshops, security research, governance storytelling, and AI-readiness conversations without using production users or production data.
 
 > Lab use only. Read [DISCLAIMER.md](DISCLAIMER.md) and [docs/security.md](docs/security.md) before deploying.
 
 ![ClaudIA architecture overview](docs/images/infographic-en.png)
 
-## What ClaudIA Builds
+## What ClaudIA Is
 
-ClaudIA brings together four layers:
+ClaudIA helps you build a Microsoft 365 lab where simulated users behave like a real organization. Instead of showing isolated scripts, static files, or empty portals, ClaudIA creates a repeatable environment where identity, collaboration, data, AI usage, telemetry, and security controls can be connected into a story.
+
+The goal is simple:
+
+> Make Microsoft 365 security and governance easier to understand by showing real-looking activity from fictional users in a controlled lab tenant.
+
+## What ClaudIA Builds
 
 | Layer | Purpose |
 | --- | --- |
-| ClaudIA agents | Simulated employees that create Microsoft 365 activity across SharePoint, OneDrive, Outlook, Teams, Fabric, Copilot, and browser-based workflows. |
-| Data protection scenarios | Synthetic DLP, sensitivity labeling, Insider Risk, DSPM for AI, Defender, Sentinel, ADX, and MDCA scenarios. |
-| Storyline assets | Personas, character images, scenario packs, demo scripts, KQL samples, timelines, and presentation-ready narratives. |
-| Portal and activity map | A static web experience and API layer that can explain the architecture, show the storyline, and surface generated activity. |
+| Synthetic personas | Thirteen fictional employees with roles, relationships, workloads, and demo purposes. |
+| Microsoft 365 activity | SharePoint, OneDrive, Outlook, Teams, Microsoft Lists, Fabric, Copilot-style, and browser-driven workflows. |
+| Data protection scenarios | DLP, sensitivity labels, Insider Risk, DSPM for AI, Defender, Sentinel, ADX, and MDCA-oriented scenarios. |
+| AI interaction patterns | Microsoft 365 Copilot-oriented scenarios and controlled external AI simulations for AI governance discussions. |
+| Telemetry layer | Normalized activity events stored in Azure Data Explorer for analysis, validation, and visualization. |
+| Activity Story Map | A visual portal that explains users, services, activities, relationships, architecture, and generated signals. |
 
-The repository is designed so a new user can start from a clean lab tenant, follow scripts and docs, and reproduce the environment with their own tenant, Azure subscription, Key Vault, and Microsoft 365 licenses.
+## Who This Is For
 
-## Public Repository Safety
+ClaudIA is useful for:
 
-This repository is intended to be public. It must not contain:
+- Microsoft 365 security, compliance, data governance, and AI adoption teams.
+- Consultants and architects who need repeatable demos.
+- Trainers who want a tenant that feels active instead of empty.
+- Builders who want to learn Azure Automation, Key Vault, managed identities, RBAC, ADX, Microsoft Graph, Playwright, and portal-based storytelling.
+- Teams preparing Microsoft Purview, Defender, Sentinel, Copilot readiness, DLP, Insider Risk, or AI governance workshops.
 
-- Real tenant IDs, subscription IDs, app IDs, tokens, passwords, connection strings, or validation secrets.
-- Browser session files such as `BrowserAgents/.auth`.
-- Local environment files such as `.env`.
-- Generated logs, output files, Playwright reports, or `node_modules`.
+## Public Demo Context
 
-Runtime secrets belong in Azure Key Vault, Azure Automation encrypted variables, local environment variables, or ignored local files. Public configuration files use sample values such as `contoso.example`, `00000000-0000-0000-0000-000000000000`, and `kv-claudia-lab`.
+**ClaudIA** is the project and open source platform.
 
-Run this check before publishing:
+**MH Demos** is the fictional company and Microsoft 365 tenant used to demonstrate one implemented ClaudIA environment.
+
+A public implementation of the Activity Story Map is available at:
+
+https://activitymap.mhdemos.com
+
+## Start Here
+
+| Goal | Start with |
+| --- | --- |
+| Understand the concept | [docs/personas.md](docs/personas.md), [docs/branding.md](docs/branding.md), and [Project Documentation/ActivityStoryMap_Technology_Post_Summary.md](Project%20Documentation/ActivityStoryMap_Technology_Post_Summary.md) |
+| Deploy the lab | [How to Start.md](How%20to%20Start.md) |
+| Prepare a brand-new tenant | [If Your Tenant Is Completely New.md](If%20Your%20Tenant%20Is%20Completely%20New.md) |
+| Review security risks | [DISCLAIMER.md](DISCLAIMER.md) and [docs/security.md](docs/security.md) |
+| Understand personas and storylines | [Storyline/profiles.md](Storyline/profiles.md) and [docs/personas.md](docs/personas.md) |
+| Understand localization rules | [docs/localization.md](docs/localization.md) |
+| Understand Codex-assisted development | [docs/codex-assisted-development.md](docs/codex-assisted-development.md) |
+
+## Quick Start
+
+Use a non-production Microsoft 365 tenant and an Azure subscription intended for lab use.
 
 ```powershell
-.\tools\Test-PublicRepoSafety.ps1
+az login --tenant contoso.onmicrosoft.com
+az account set --subscription 11111111-1111-1111-1111-111111111111
+
+.\prerequisites\Test-Prerequisites.ps1
+.\Install-ClaudIA.ps1
 ```
+
+For the complete setup path, including local tools, Azure subscription requirements, Microsoft 365 licensing, Key Vault usage, browser agents, images, and storyline replication, use [How to Start.md](How%20to%20Start.md). If the tenant is brand new, start with [If Your Tenant Is Completely New.md](If%20Your%20Tenant%20Is%20Completely%20New.md).
 
 ## Repository Map
 
@@ -57,29 +94,55 @@ Run this check before publishing:
 | [docs](docs) | Focused technical documentation and operating guides. |
 | [Project Documentation](Project%20Documentation) | Generated script reference and architecture documentation. |
 
-## Quick Start
+## The ClaudIA Personas
 
-1. Open PowerShell 7 as Administrator.
-2. Install Azure CLI, Node.js LTS, Git, and the required PowerShell modules.
-3. Sign in to the target lab tenant with Azure CLI.
-4. Review and customize [config/agents.json](config/agents.json).
-5. Run the prerequisite checker.
-6. Run the deployment wizard.
+ClaudIA uses thirteen synthetic personas connected through an organizational model:
 
-```powershell
-az login --tenant contoso.onmicrosoft.com
-az account set --subscription 11111111-1111-1111-1111-111111111111
-
-.\prerequisites\Test-Prerequisites.ps1
-.\Install-ClaudIA.ps1
+```text
+Alexander Meyer
+├── Emily Johnson
+├── James Wilson
+│   ├── Diego Martinez
+│   │   ├── Carlos Delgado
+│   │   └── Sofia Lopez
+│   └── Laura Gomez
+│       ├── David Chen
+│       └── Miguel Santos
+└── Marcus Olsson
+    └── Ana Rodriguez
+        ├── Devon Reyes
+        └── Priya Sharma
 ```
 
-For the complete setup path, including local tools, Azure subscription requirements, Microsoft 365 licensing, Key Vault usage, browser agents, images, and storyline replication, use [How to Start.md](How%20to%20Start.md). If the tenant is brand new, start with [If Your Tenant Is Completely New.md](If%20Your%20Tenant%20Is%20Completely%20New.md).
+Devon Reyes is intentionally used for controlled risky, suspicious, or incorrect behavior from a security perspective. Devon is not an external attacker; he is a fictional internal persona used to generate investigation material for DLP, Insider Risk, Shadow AI, and security storytelling.
 
-To update only PowerShell scripts without overwriting tenant configuration, run:
+See [docs/personas.md](docs/personas.md) and [Storyline/profiles.md](Storyline/profiles.md).
+
+## Working With Secrets
+
+ClaudIA expects secrets to be resolved at runtime from **Azure Key Vault**.
+
+- Agent passwords are stored in Key Vault by secret name.
+- App secrets are stored in Key Vault by secret name.
+- ADX ingestion credentials are stored in Key Vault or provided through secure runtime mechanisms for local tests.
+- Browser sessions are generated locally under `BrowserAgents/.auth` and never committed.
+- Automation variables should store non-secret configuration or references to Key Vault secret names, not plaintext secrets.
+
+If a value would grant access to a tenant, subscription, app, storage account, database, API, mailbox, or browser session, it does not belong in Git.
+
+## Public Repository Safety
+
+This repository is intended to be public. It must not contain:
+
+- Real tenant IDs, subscription IDs, app IDs, tokens, passwords, connection strings, or validation secrets.
+- Browser session files such as `BrowserAgents/.auth`.
+- Local environment files such as `.env`.
+- Generated logs, output files, Playwright reports, or `node_modules`.
+
+Run this check before publishing:
 
 ```powershell
-.\tools\Update-ClaudIAScripts.ps1
+.\tools\Test-PublicRepoSafety.ps1
 ```
 
 ## Localization Strategy
@@ -102,28 +165,11 @@ The `config/locales` folder is reserved for synthetic data generation locales su
 
 See [docs/localization.md](docs/localization.md) for contribution rules.
 
-## Working With Secrets
+## Built With AI-Assisted Engineering
 
-ClaudIA expects secrets to be resolved at runtime:
+Large portions of ClaudIA were designed, documented, and accelerated with OpenAI Codex as an engineering assistant. Codex helped generate documentation, scripts, refactoring plans, implementation guidance, and review checklists. Human maintainers remain responsible for reviewing, validating, securing, and governing the project.
 
-- Agent passwords: stored in Azure Key Vault or Automation encrypted variables, depending on the script flow.
-- App secrets: stored in Key Vault and referenced by secret name.
-- ADX ingestion credentials: stored in Key Vault or passed through local environment variables for local tests.
-- Browser sessions: generated locally under `BrowserAgents/.auth` and never committed.
-
-If a value would grant access to a tenant, subscription, app, storage account, database, API, or browser session, it does not belong in Git.
-
-## Storyline And Images
-
-The storyline is part of the product, not decoration. Public users should be able to understand:
-
-- Who the personas are.
-- Which activities each persona performs.
-- Which security or compliance signal is created.
-- Which Purview, Defender, Sentinel, ADX, or browser workflow validates the signal.
-- Which images and portal assets support the demo narrative.
-
-Start with [Storyline/profiles.md](Storyline/profiles.md), [Storyline/live_demo_runbook_defender_purview.md](Storyline/live_demo_runbook_defender_purview.md), and [activity-story-map/web](activity-story-map/web).
+See [docs/codex-assisted-development.md](docs/codex-assisted-development.md).
 
 ## Maintenance Rule
 
@@ -133,4 +179,5 @@ When adding new work to this repository:
 2. Update the README or relevant docs in the same change.
 3. Add setup steps to [How to Start.md](How%20to%20Start.md) when they affect new users.
 4. Keep sample configuration generic.
-5. Run `.\tools\Test-PublicRepoSafety.ps1` before publishing.
+5. Store secrets in Azure Key Vault or a secure runtime mechanism; never store them in Git.
+6. Run `.	ools\Test-PublicRepoSafety.ps1` before publishing.
