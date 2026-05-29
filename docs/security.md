@@ -1,116 +1,173 @@
 # Security Considerations
 
+ClaudIA is a lab, demo, training, and testing platform. It is not designed for production tenants or production data.
+
+This guide explains the main security assumptions behind ClaudIA so operators understand the trade-offs before deploying it.
+
 ## Authentication Flow
 
-```
+```text
 Install-ClaudIA.ps1
     |
     +-- Creates Entra App Registration (app-claudia-dataagent)
-    |     - ROPC enabled (Allow public client flows)
-    |     - Delegated permissions (NOT application)
-    |     - Admin consent granted
+    |     - ROPC enabled for lab-only delegated user simulation
+    |     - Delegated permissions, not application permissions for normal persona activity
+    |     - Admin consent required
     |
-    +-- Agent passwords and app secrets stored in Azure Key Vault
-    |     - Automation variables store secret names and non-secret configuration
-    |     - Automation managed identity reads secrets at runtime
+    +-- Stores runtime secrets in Azure Key Vault
+    |     - Agent passwords
+    |     - App client secrets
+    |     - API tokens where applicable
     |
-    +-- At runtime (runbook):
-          1. Automation MI reads required secrets from Key Vault
-          2. For each agent: ROPC token with explicit delegated scopes
-          3. Agent actions (file upload, email) under agent's own identity
-          4. Activity logged to Azure Data Explorer (ADX) table CLAUDIA_Activity
+    +-- Stores non-secret runtime references in Azure Automation variables
+    |     - Tenant ID
+    |     - App ID
+    |     - Key Vault name
+    |     - Key Vault secret names
+    |     - Agent configuration JSON
+    |
+    +-- At runtime
+          1. Automation managed identity reads required secrets from Key Vault.
+          2. For each persona, ClaudIA requests a delegated token through ROPC.
+          3. Persona activity runs under that persona's user identity.
+          4. Activity is logged to Azure Data Explorer table CLAUDIA_Activity.
 ```
 
-## Why ROPC (and why it's risky)
+## Why ROPC Is Used
 
 | Aspect | Detail |
 | --- | --- |
-| **What** | Resource Owner Password Credentials: sends username + password to Azure AD token endpoint |
-| **Why we use it** | Only way to get a **delegated token** (user identity) without interactive browser login |
-| **Risk** | Passwords are sent to Azure AD (over TLS), stored in Automation Account |
-| **MFA bypass** | ROPC cannot work with MFA -- agents must be excluded via Conditional Access |
-| **Microsoft position** | ROPC is "not recommended" and may be deprecated. Use only for testing. |
-| **Alternative** | Service principal + application permissions -- but audit logs show app identity, not user |
+| What | Resource Owner Password Credentials sends a username and password to the Microsoft identity platform token endpoint. |
+| Why ClaudIA uses it | It enables delegated user simulation without interactive browser login for scheduled lab activity. |
+| Risk | Persona passwords are used by automation and must be protected. |
+| MFA limitation | ROPC cannot satisfy MFA. Lab persona accounts require a scoped Conditional Access exclusion. |
+| Microsoft position | ROPC is not recommended for production use. Use ClaudIA only in lab environments. |
+| Alternative | Application permissions are safer for unattended automation, but activity appears as the app rather than the user, which weakens user-attributed demo scenarios. |
 
-## Attack Surface
+## Critical Lab Boundary
+
+Do not deploy ClaudIA in a production tenant.
+
+A safe ClaudIA tenant should contain:
+
+- Fictional users.
+- Fictional data.
+- Lab-only Azure resources.
+- Lab-only Microsoft 365 workloads.
+- Lab-approved external recipients.
+- No production mailboxes.
+- No real customer data.
+- No real regulated records.
+
+## Attack Surface And Mitigations
 
 | Vector | Risk | Mitigation |
 | --- | --- | --- |
-| Automation Account compromised | All agent passwords exposed | AA RBAC restricted, no local auth, MI-only |
-| Agent account compromised | Attacker can impersonate employee | Agents have NO admin roles, scoped CA exclusion |
-| Entra app abused | Broad Graph permissions | Admin consent required, app scoped to delegated only |
-| LA data accessed | Prompt content with fictitious PII visible | LA RBAC restricted, separate workspace from production |
-| MFA exclusion group expanded | More users bypass MFA | Group is dedicated, auditable, review membership regularly |
+| Key Vault compromised | Agent passwords, app secrets, or API tokens could be exposed. | Restrict Key Vault RBAC, monitor access, rotate secrets, and use lab-only credentials. |
+| Automation Account compromised | A compromised automation identity may read Key Vault secrets or run lab activity. | Restrict Automation RBAC, use managed identity, monitor runbook changes, and avoid production scope. |
+| Agent account compromised | An attacker could impersonate a synthetic employee. | Agents must have no admin roles, must be lab-only, and must remain scoped to the MFA exclusion group. |
+| MFA exclusion group expanded | Real users or privileged users could bypass MFA. | Use a dedicated group, review membership, and never add admin accounts. |
+| Entra app abused | Delegated Graph permissions could be misused in the lab tenant. | Use only a lab tenant, review consent, rotate secrets, and remove the app when decommissioning. |
+| Telemetry accessed | Prompt text and generated fictional data may be visible in ADX or logs. | Restrict ADX, Log Analytics, Function App, and Storage access through RBAC. |
+| Browser sessions leaked | Browser session files can provide access to lab personas. | Never commit `BrowserAgents/.auth`; treat local session state as sensitive. |
 
 ## Permissions Granted
 
-### Entra App (Delegated, admin-consented)
+### Entra App: Delegated, Admin-Consented
 
 | Permission | Usage |
 | --- | --- |
-| `openid` | ROPC authentication |
-| `offline_access` | Token refresh |
-| `User.Read` | Get agent identity (/me) |
-| `Files.ReadWrite.All` | Upload files to SharePoint |
-| `Sites.ReadWrite.All` | Upload to SharePoint sites |
-| `Mail.ReadWrite` | Read/write mailbox |
-| `Mail.Send` | Send emails as agent (delegated) |
-| `Chat.Create` | Create Teams 1:1 chats |
-| `Chat.ReadWrite` | Send chat messages |
-| `ChannelMessage.Send` | Post in Teams channels |
-| `Team.ReadBasic.All` | List Teams memberships |
-| `storage.azure.com/user_impersonation` | Write files to OneLake Lakehouse (Fabric) -- separate ROPC token with `https://storage.azure.com/.default` scope |
+| `openid` | ROPC authentication. |
+| `offline_access` | Token refresh where required. |
+| `User.Read` | Read persona identity. |
+| `Files.ReadWrite.All` | Upload or modify files in user context. |
+| `Sites.ReadWrite.All` | Upload or modify SharePoint site content in user context. |
+| `Mail.ReadWrite` | Read or write persona mailbox content. |
+| `Mail.Send` | Send email as the persona. |
+| `Chat.Create` | Create Teams 1:1 chats. |
+| `Chat.ReadWrite` | Send Teams chat messages. |
+| `ChannelMessage.Send` | Post in Teams channels. |
+| `Team.ReadBasic.All` | Read basic Teams membership context. |
+| `storage.azure.com/user_impersonation` | Write to OneLake / Fabric scenarios where enabled. |
 
-### Automation MI (Azure RBAC)
+### Automation Managed Identity: Azure RBAC
 
 | Role | Scope | Usage |
 | --- | --- | --- |
-| Cognitive Services OpenAI User | oai-claudia-lab | Call GPT-4o-mini |
-| ADX Database Ingestor | ADX database | Ingest ClaudIA activity telemetry into Azure Data Explorer |
+| Key Vault Secrets User | ClaudIA Key Vault | Read runtime secrets by secret name. |
+| Cognitive Services OpenAI User | Azure OpenAI account | Generate synthetic content. |
+| ADX Database Ingestor | ADX database | Ingest normalized activity telemetry. |
+| Additional deployment roles | Lab resource group | Deploy and maintain lab infrastructure when required. |
 
-### Automation MI (Graph App Permissions — for remediation runbook)
+### Function App Managed Identity
+
+When the Activity Story Map is enabled, the Function App should query ADX through managed identity instead of exposing ADX credentials to the browser.
+
+| Role | Scope | Usage |
+| --- | --- | --- |
+| ADX database viewer or equivalent query permission | ClaudIA ADX database | Query activity data for the portal API. |
+
+### Remediation Runbook Graph Permissions
+
+Where the privilege-escalation remediation pattern is enabled, the managed identity may need Graph application permissions such as:
 
 | Permission | Usage |
 | --- | --- |
-| `Group.ReadWrite.All` | Remove agents from MFA exclusion group |
-| `User.Read.All` | List user properties and group memberships |
-| `RoleManagement.Read.Directory` | Check if agents have admin role assignments |
+| `Group.ReadWrite.All` | Remove privileged agent accounts from the MFA exclusion group. |
+| `User.Read.All` | Read user properties and group memberships. |
+| `RoleManagement.Read.Directory` | Check whether agents have directory role assignments. |
 
-## Recommendations for Lab Operators
+## MFA Exclusion Rules
 
-1. **Review agent passwords** quarterly -- rotate via the runbook re-deployment
-2. **Monitor the MFA exclusion group** -- ensure only agent accounts are members
-3. **Check Sentinel alerts** -- the 5 analytics rules detect anomalous agent behavior and privilege escalation
-4. **Delete agent accounts** when the lab is decommissioned
-5. **Never promote agent accounts** to any admin role
+The ClaudIA MFA exclusion exists only to support lab automation.
 
-> **CRITICAL: MFA-excluded accounts MUST remain standard users without ANY admin privilege.**
-> Because agent accounts bypass MFA (required for ROPC), granting them admin roles (Global Admin, User Admin, Exchange Admin, etc.) would create a high-severity security risk: an attacker with the password could gain admin access without MFA challenge. The wizard creates agents as standard Member users with no directory roles. This is by design and must not be changed.
+The following rule is mandatory:
 
-### Automated Privilege Escalation Detection + Remediation
+> MFA-excluded ClaudIA agent accounts must remain standard users with no admin roles.
 
-The package deploys two components to enforce the no-admin constraint:
+If an agent receives any privileged directory role, remove it from the MFA exclusion group immediately. The automation pattern can also include a Sentinel alert and remediation runbook to enforce this.
 
-**1. Sentinel Analytics Rule: `Agent-Privilege-Escalation`**
-- KQL monitors `AuditLogs` for `Add member to role` / `Add eligible member to role` targeting agent accounts
-- Runs every 5 minutes, severity: High, MITRE: T1078 (Privilege Escalation)
-- Creates a Sentinel incident when any agent is assigned an admin role
+## Secret Management Rules
 
-**2. Remediation Runbook: `Remediate-AgentPrivilegeEscalation`**
-- Azure Automation runbook using Managed Identity (Graph: `Group.ReadWrite.All`, `User.Read.All`)
-- Scans all MFA exclusion group members for directory role assignments
-- **Auto-removes** any privileged agent from `grp-claudia-agent-mfa-exclusion`
-- Result: the agent falls back under Conditional Access MFA enforcement immediately
-- Can be triggered manually or linked to Sentinel automation rule
+Runtime secrets belong in Azure Key Vault.
 
-**Remediation flow:**
+Do not store the following in Git, config files, screenshots, docs, issues, or chat:
+
+- Agent passwords.
+- Client secrets.
+- API tokens.
+- Connection strings.
+- Browser session files.
+- Real tenant IDs intended to remain private.
+- Production subscription IDs.
+- Real UPNs from production tenants.
+
+Automation variables may store secret **names** and non-secret configuration. They should not store plaintext passwords or client secret values.
+
+## Lab Operator Recommendations
+
+1. Use a dedicated lab tenant.
+2. Use dedicated synthetic users.
+3. Keep agent accounts unprivileged.
+4. Review the MFA exclusion group regularly.
+5. Restrict Key Vault, Automation, ADX, Function App, and Storage access.
+6. Rotate agent passwords and app secrets periodically.
+7. Delete lab identities and resources when the environment is decommissioned.
+8. Run the public repository safety check before publishing changes.
+
+```powershell
+.\tools\Test-PublicRepoSafety.ps1
 ```
-Admin assigns role to agent
-    -> AuditLog: "Add member to role"
-    -> Sentinel rule triggers (5 min)
-    -> High severity incident created
-    -> Remediation runbook runs
-    -> Agent removed from MFA exclusion group
-    -> Agent now requires MFA (ROPC auth will fail)
-    -> Admin notified via Sentinel incident
-```
+
+## Decommissioning Guidance
+
+When the lab is no longer needed:
+
+1. Disable scheduled runbooks and Container Apps jobs.
+2. Remove or disable persona accounts.
+3. Remove persona accounts from MFA exclusion groups.
+4. Delete app registrations created for ClaudIA if no longer needed.
+5. Delete or purge Key Vault secrets.
+6. Remove ADX tables or clusters if no longer required.
+7. Remove public portal endpoints if they should no longer be reachable.
+8. Validate that no generated data was copied into production locations.
