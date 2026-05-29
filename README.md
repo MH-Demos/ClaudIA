@@ -10,6 +10,21 @@ ClaudIA is designed for people who need a realistic Microsoft 365 environment fo
 
 ![ClaudIA architecture overview](docs/images/infographic-en.png)
 
+## New To AI, Azure, Or Microsoft 365?
+
+Start here before deploying anything:
+
+- [docs/learn-from-scratch.md](docs/learn-from-scratch.md) — beginner learning path for students and first-time users.
+- [docs/glossary.md](docs/glossary.md) — simple definitions for AI, Microsoft 365, Azure, Purview, Defender, MDCA, Key Vault, agents, telemetry, sessions, memory, context, and more.
+- [docs/personas.md](docs/personas.md) — explanation of ClaudIA's fictional employees and why they matter.
+
+ClaudIA can be used in two ways:
+
+1. **As an educational portal** to understand AI, cloud activity, data security, governance, and Microsoft 365 concepts.
+2. **As a deployable lab architecture** to create a working synthetic Microsoft 365 environment.
+
+If you are new, use it first as a learning portal. Deploy it only after you understand the lab-only security model.
+
 ## What ClaudIA Is
 
 ClaudIA helps you build a Microsoft 365 lab where simulated users behave like a real organization. Instead of showing isolated scripts, static files, or empty portals, ClaudIA creates a repeatable environment where identity, collaboration, data, AI usage, telemetry, and security controls can be connected into a story.
@@ -33,6 +48,7 @@ The goal is simple:
 
 ClaudIA is useful for:
 
+- Students who are beginning to learn AI, cloud, Microsoft 365, cybersecurity, or data governance.
 - Microsoft 365 security, compliance, data governance, and AI adoption teams.
 - Consultants and architects who need repeatable demos.
 - Trainers who want a tenant that feels active instead of empty.
@@ -53,6 +69,7 @@ https://activitymap.mhdemos.com
 
 | Goal | Start with |
 | --- | --- |
+| Learn from zero | [docs/learn-from-scratch.md](docs/learn-from-scratch.md) and [docs/glossary.md](docs/glossary.md) |
 | Understand the concept | [docs/personas.md](docs/personas.md), [docs/branding.md](docs/branding.md), and [Project Documentation/ActivityStoryMap_Technology_Post_Summary.md](Project%20Documentation/ActivityStoryMap_Technology_Post_Summary.md) |
 | Deploy the lab | [How to Start.md](How%20to%20Start.md) |
 | Prepare a brand-new tenant | [If Your Tenant Is Completely New.md](If%20Your%20Tenant%20Is%20Completely%20New.md) |
