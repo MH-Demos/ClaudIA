@@ -15,10 +15,7 @@ function splitList(value, fallback = []) {
     .filter(Boolean);
 }
 
-const configuredExternalRecipients = Array.isArray(config.externalRecipients)
-  ? config.externalRecipients.filter(Boolean).join(',')
-  : '';
-const defaultExternalRecipients = configuredExternalRecipients || 'demo.recipient@example.com';
+const defaultExternalRecipients = 'mhdemos@kazlivedemos.com,admin@contoso.example';
 
 function findAgents() {
   const allAgents = Array.isArray(config.agents) ? config.agents : [];
@@ -179,7 +176,12 @@ async function main() {
 
   console.log('\n=== BrowserAgent Scheduled Container Results ===');
   console.table(summary);
-  if (summary.some((item) => item.status !== 'success')) {
+  const hasFailures = summary.some((item) => item.status !== 'success');
+  const hasSuccess = summary.some((item) => item.status === 'success');
+  if (!hasSuccess) {
+    console.error('No BrowserAgent completed successfully.');
+    process.exitCode = 1;
+  } else if (hasFailures && !continueOnFailure) {
     process.exitCode = 1;
   }
 }

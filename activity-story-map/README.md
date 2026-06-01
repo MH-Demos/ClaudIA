@@ -23,6 +23,8 @@ A public implementation is available at:
 
 https://activitymap.mhdemos.com
 
+This URL is the current public reference portal. It may change between publications or deployments, so use it as a live example rather than a permanent configuration value.
+
 ## Folder Purpose
 
 This folder contains the static web portal, supporting API assets, activity visualization code, visual assets, and architecture/story map content used to explain a running ClaudIA environment.

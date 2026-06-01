@@ -1,0 +1,29 @@
+{
+  "$schema": "./claudia-pack.schema.json",
+  "schemaVersion": "1.0",
+  "name": "claudia-teams-bot",
+  "displayName": "ClaudIA Teams Bot",
+  "description": "Teams command surface for operating ClaudIA without local PowerShell.",
+  "runtime": {
+    "configPath": "./agents.json",
+    "installationDefinitionsPath": "./Installation_definitions.json",
+    "subscriptionId": "",
+    "adxSubscriptionId": "",
+    "browserAgentsSubscriptionId": "",
+    "resourceGroup": "",
+    "automationAccountName": ""
+  },
+  "bot": {
+    "port": 3978,
+    "powershell": "pwsh",
+    "timeoutSeconds": 900,
+    "outputMaxChars": 3500,
+    "allowedUsers": []
+  },
+  "teamsApp": {
+    "teamsAppId": "",
+    "microsoftAppId": "",
+    "microsoftAppTenantId": "",
+    "botHostname": ""
+  }
+}

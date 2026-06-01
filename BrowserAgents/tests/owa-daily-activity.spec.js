@@ -5,7 +5,9 @@ const { buildEmailScenario } = require('../lib/contentPack');
 
 const owaUrl = process.env.BROWSER_AGENT_OWA_URL || 'https://outlook.office.com/mail/inbox';
 const sendEmail = /^true$/i.test(process.env.BROWSER_AGENT_SEND_EMAIL || '');
-const includeSensitive = !/^false$/i.test(process.env.BROWSER_AGENT_INCLUDE_SENSITIVE || 'true');
+const includeSensitive = !/^false$/i.test(
+  process.env.BROWSER_AGENT_EMAIL_INCLUDE_SENSITIVE || process.env.BROWSER_AGENT_INCLUDE_SENSITIVE || 'true'
+);
 const labelName = process.env.BROWSER_AGENT_EMAIL_LABEL || '';
 
 function splitRecipients(value) {
@@ -36,6 +38,10 @@ function chooseRecipient() {
 }
 
 const recipient = chooseRecipient();
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 async function waitForOwa(page) {
   await page.goto(owaUrl, { waitUntil: 'domcontentloaded' });
@@ -84,6 +90,37 @@ async function dismissBlockingDialogs(page) {
   }
 }
 
+async function resolveRecipient(page, recipientAddress) {
+  const recipientPattern = new RegExp(escapeRegExp(recipientAddress), 'i');
+  const recipientOption = page.getByRole('option', { name: recipientPattern }).first();
+  if (await recipientOption.isVisible().catch(() => false)) {
+    await recipientOption.click();
+    await page.waitForTimeout(1000);
+  }
+
+  const confirmationButtons = [
+    /use this address/i,
+    /add recipient/i,
+    /add/i,
+    /usar esta direcci[oó]n/i,
+    /agregar destinatario/i,
+    /agregar/i
+  ];
+
+  for (const name of confirmationButtons) {
+    const button = page.getByRole('button', { name }).last();
+    if (await button.isVisible().catch(() => false)) {
+      await button.click({ timeout: 10000 }).catch(async () => {
+        await button.click({ force: true, timeout: 10000 }).catch(() => null);
+      });
+      await page.waitForTimeout(1000);
+      break;
+    }
+  }
+
+  await page.keyboard.press('Tab').catch(() => null);
+}
+
 async function handleSendPrompts(page) {
   const confirmButtons = [
     /send anyway/i,
@@ -119,6 +156,84 @@ async function handleSendPrompts(page) {
   }
 }
 
+async function clickSendButton(page) {
+  const candidates = [
+    page.getByRole('button', { name: /^send$/i }).last(),
+    page.getByRole('button', { name: /^enviar$/i }).last(),
+    page.locator('button[aria-label*="Send" i]:visible, button[title*="Send" i]:visible').last(),
+    page.locator('button[aria-label*="Enviar" i]:visible, button[title*="Enviar" i]:visible').last()
+  ];
+
+  for (const button of candidates) {
+    if (await button.isVisible().catch(() => false)) {
+      await button.click({ timeout: 10000 }).catch(async () => button.click({ force: true, timeout: 10000 }));
+      return true;
+    }
+  }
+
+  return false;
+}
+
+async function hasVisibleSendButton(page) {
+  const candidates = [
+    page.getByRole('button', { name: /^send$/i }).last(),
+    page.getByRole('button', { name: /^enviar$/i }).last(),
+    page.locator('button[aria-label*="Send" i]:visible, button[title*="Send" i]:visible').last(),
+    page.locator('button[aria-label*="Enviar" i]:visible, button[title*="Enviar" i]:visible').last()
+  ];
+
+  for (const button of candidates) {
+    if (await button.isVisible().catch(() => false)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+async function attemptSendFromCurrentCompose(page) {
+  for (let pass = 0; pass < 3; pass += 1) {
+    await dismissBlockingDialogs(page);
+    const clicked = await clickSendButton(page);
+    if (!clicked) {
+      await page.keyboard.press('Control+Enter');
+    }
+    await handleSendPrompts(page);
+    await page.waitForTimeout(4000);
+    if (!(await hasVisibleSendButton(page))) {
+      break;
+    }
+  }
+
+  const body = page.locator('body');
+  await expect(body).not.toContainText(/Getting this ready/i, { timeout: 45000 });
+}
+
+async function reopenDraftAndSend(page, subject, recipient) {
+  await page.goto('https://outlook.office.com/mail/drafts', { waitUntil: 'domcontentloaded' });
+  await dismissBlockingDialogs(page);
+  await page.waitForTimeout(5000);
+
+  const draftBySubject = page.getByText(subject, { exact: false }).first();
+  const draftByRecipient = page.getByText(recipient, { exact: false }).first();
+  if (await draftBySubject.isVisible().catch(() => false)) {
+    await draftBySubject.dblclick().catch(async () => draftBySubject.click());
+  } else if (await draftByRecipient.isVisible().catch(() => false)) {
+    await draftByRecipient.dblclick().catch(async () => draftByRecipient.click());
+  } else {
+    return false;
+  }
+
+  await page.waitForTimeout(3000);
+  await page.keyboard.press('Enter').catch(() => null);
+  await page.waitForTimeout(3000);
+  await dismissBlockingDialogs(page);
+  const bodyBox = page.locator('[aria-label*="Message body"], [aria-label*="Cuerpo"], div[contenteditable="true"]').last();
+  await bodyBox.waitFor({ state: 'visible', timeout: 30000 }).catch(() => null);
+  await attemptSendFromCurrentCompose(page);
+  return true;
+}
+
 async function assertMessageInSentItems(page, subject, recipient) {
   await page.goto('https://outlook.office.com/mail/sentitems', { waitUntil: 'domcontentloaded' });
   await dismissBlockingDialogs(page);
@@ -143,8 +258,27 @@ async function assertMessageInSentItems(page, subject, recipient) {
   throw new Error(`Message was not found in Sent Items after send attempt. ${diagnostics.join('; ')}`);
 }
 
+async function assertMessageSentWithDraftRetry(page, subject, recipient) {
+  await attemptSendFromCurrentCompose(page);
+  try {
+    await assertMessageInSentItems(page, subject, recipient);
+    return;
+  } catch (error) {
+    if (!String(error.message || '').includes('drafts=contains message')) {
+      throw error;
+    }
+  }
+
+  const retried = await reopenDraftAndSend(page, subject, recipient);
+  if (!retried) {
+    throw new Error('Message was saved to Drafts after send attempt, but the draft could not be reopened for retry.');
+  }
+
+  await assertMessageInSentItems(page, subject, recipient);
+}
+
 test('OWA daily activity draft with sensitive business context', async ({ page }) => {
-  test.setTimeout(180000);
+  test.setTimeout(300000);
   const ctx = getPersonaContext();
   const telemetry = createTelemetryClient();
 
@@ -176,6 +310,7 @@ test('OWA daily activity draft with sensitive business context', async ({ page }
   await toBox.click();
   await page.keyboard.type(recipient);
   await page.keyboard.press('Enter');
+  await resolveRecipient(page, recipient);
 
   const emailScenario = buildEmailScenario(ctx, includeSensitive);
   const subject = emailScenario?.subject || `BrowserAgent ${ctx.region} - HR sales correlation review - ${ctx.stamp}`;
@@ -241,14 +376,7 @@ test('OWA daily activity draft with sensitive business context', async ({ page }
   }).catch((error) => test.info().annotations.push({ type: 'adx-warning', description: error.message }));
 
   if (sendEmail) {
-    await dismissBlockingDialogs(page);
-    const sendButton = page.locator('button[aria-label="Send"]:visible, button[title^="Send"]:visible, button[aria-label="Enviar"]:visible, button[title^="Enviar"]:visible').last();
-    await sendButton.waitFor({ state: 'visible', timeout: 30000 });
-    await sendButton.click({ timeout: 10000 }).catch(async () => sendButton.click({ force: true, timeout: 10000 }));
-    await handleSendPrompts(page);
-    const body = page.locator('body');
-    await expect(body).not.toContainText(/Getting this ready/i, { timeout: 45000 });
-    await assertMessageInSentItems(page, subject, recipient);
+    await assertMessageSentWithDraftRetry(page, subject, recipient);
     await telemetry.push('email', `Email sent to ${recipient}`, {
       Service: 'Outlook Web',
       Workload: 'Exchange Online',

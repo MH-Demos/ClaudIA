@@ -67,6 +67,8 @@ A public implementation of the Activity Story Map is available at:
 
 https://activitymap.mhdemos.com
 
+This URL is a live reference portal for the current public MH Demos deployment. It may change between publications or deployments, so treat it as an example endpoint rather than a fixed value to reuse in your own lab.
+
 ## Start Here
 
 | Goal | Start with |

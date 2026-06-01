@@ -25,7 +25,7 @@ If you are just starting, do not begin with deployment.
 Start with the learning path:
 
 1. Read this page.
-2. Open the public Activity Story Map at https://activitymap.mhdemos.com.
+2. Open the public Activity Story Map at https://activitymap.mhdemos.com. This is a live reference portal and the URL may change between publications.
 3. Read [personas.md](personas.md) to understand the fictional employees.
 4. Read [glossary.md](glossary.md) when you find a term you do not know.
 5. Read [../Storyline/profiles.md](../Storyline/profiles.md) to connect people and scenarios.
@@ -131,6 +131,8 @@ Read:
 Explore:
 
 - https://activitymap.mhdemos.com
+
+This is the current public reference deployment. Future publications may use a different URL.
 
 Questions to answer:
 

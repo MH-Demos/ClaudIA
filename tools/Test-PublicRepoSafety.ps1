@@ -41,6 +41,8 @@ $blockedPaths = @(
     'BrowserAgents\node_modules',
     'BrowserAgents\playwright-report',
     'BrowserAgents\test-results',
+    'TeamsBot\node_modules',
+    'TeamsBot\logs',
     'logs',
     'out'
 )
@@ -55,13 +57,23 @@ foreach ($relative in $blockedPaths) {
 $blockedFilePatterns = @(
     '.env',
     '*.log',
-    'temp_*.json'
+    'temp_*.json',
+    'TeamsBot\config\claudia.runtime.json',
+    'expansion-packs\claudia-teams-bot\config\agents.json',
+    'expansion-packs\claudia-teams-bot\config\Installation_definitions.json'
 )
 
 foreach ($pattern in $blockedFilePatterns) {
-    Get-ChildItem -LiteralPath $root.Path -Recurse -Force -File -Filter $pattern |
-        Where-Object { $_.FullName -notmatch '\\.git\\' } |
-        ForEach-Object { $issues.Add("Blocked local file exists: $($_.FullName.Substring($root.Path.Length + 1))") }
+    if ($pattern -like '*\*') {
+        $candidate = Join-Path $root.Path $pattern
+        if (Test-Path -LiteralPath $candidate) {
+            $issues.Add("Blocked local file exists: $pattern")
+        }
+    } else {
+        Get-ChildItem -LiteralPath $root.Path -Recurse -Force -File -Filter $pattern |
+            Where-Object { $_.FullName -notmatch '\\.git\\' } |
+            ForEach-Object { $issues.Add("Blocked local file exists: $($_.FullName.Substring($root.Path.Length + 1))") }
+    }
 }
 
 $secretPatterns = [ordered]@{
@@ -78,6 +90,11 @@ $secretPatterns = [ordered]@{
     'Bearer token' = 'Bearer\s+[A-Za-z0-9._-]{20,}'
 }
 
+$allowedPublicReferences = @(
+    'https://activitymap.mhdemos.com',
+    'activitymap.mhdemos.com'
+)
+
 $textFiles = Get-ChildItem -LiteralPath $root.Path -Recurse -Force -File |
     Where-Object {
         $_.FullName -notmatch '\\.git\\' -and
@@ -89,6 +106,9 @@ $textFiles = Get-ChildItem -LiteralPath $root.Path -Recurse -Force -File |
 foreach ($file in $textFiles) {
     $content = Get-Content -LiteralPath $file.FullName -Raw -ErrorAction SilentlyContinue
     if ($null -eq $content) { continue }
+    foreach ($allowed in $allowedPublicReferences) {
+        $content = $content.Replace($allowed, '')
+    }
 
     foreach ($name in $secretPatterns.Keys) {
         if ($content -match $secretPatterns[$name]) {

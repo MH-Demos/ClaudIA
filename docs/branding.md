@@ -20,6 +20,7 @@ A public implementation of the ClaudIA Activity Story Map is available at:
 https://activitymap.mhdemos.com
 
 This portal represents the MH Demos fictional tenant running a ClaudIA-powered activity map.
+The URL is a live public reference for the current published deployment and may change between publications or future deployments.
 
 ## Brand Meaning
 

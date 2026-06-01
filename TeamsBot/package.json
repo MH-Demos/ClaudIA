@@ -1,0 +1,20 @@
+{
+  "name": "claudia-teams-bot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ClaudIA Teams bot for operating the ClaudIA lab without local PowerShell access.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "check": "node --check src/index.js && node --check src/claudiaBot.js && node --check src/commands.js && node --check src/powershell.js && node --check src/config.js"
+  },
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "dependencies": {
+    "botbuilder": "^4.23.3",
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0"
+  }
+}

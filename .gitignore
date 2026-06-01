@@ -6,6 +6,10 @@ config/agents.lab-backup.json
 *.env
 !.env.sample
 BrowserAgents/.auth/
+TeamsBot/.env
+TeamsBot/config/claudia.runtime.json
+expansion-packs/claudia-teams-bot/config/agents.json
+expansion-packs/claudia-teams-bot/config/Installation_definitions.json
 
 # Generated outputs
 logs/
@@ -17,6 +21,8 @@ temp_*.json
 *.log
 BrowserAgents/playwright-report/
 BrowserAgents/test-results/
+TeamsBot/node_modules/
+TeamsBot/logs/
 
 # OS files
 .DS_Store
