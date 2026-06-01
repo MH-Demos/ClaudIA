@@ -28,6 +28,8 @@ If you are new, use it first as a learning portal. Deploy it only after you unde
 ## What ClaudIA Is
 
 ClaudIA helps you build a Microsoft 365 lab where simulated users behave like a real organization. Instead of showing isolated scripts, static files, or empty portals, ClaudIA creates a repeatable environment where identity, collaboration, data, AI usage, telemetry, and security controls can be connected into a story.
+<img width="1672" height="941" alt="what ClaudIA is" src="https://github.com/user-attachments/assets/a3c11b57-beb6-4b2a-ada9-2a26dbe911e6" />
+
 
 The goal is simple:
 
