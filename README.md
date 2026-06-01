@@ -1,6 +1,5 @@
 # ClaudIA
 
-**Cloud Activity, Usage & Data Intelligence Architecture**
 <img width="2048" height="768" alt="Welcome to ClaudIA banner" src="https://github.com/user-attachments/assets/0d8a2eb1-85a9-431d-b9ca-fc1647d15ae4" />
 
 
