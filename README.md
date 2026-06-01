@@ -1,6 +1,8 @@
 # ClaudIA
 
 **Cloud Activity, Usage & Data Intelligence Architecture**
+<img width="2048" height="768" alt="Welcome to ClaudIA banner" src="https://github.com/user-attachments/assets/0d8a2eb1-85a9-431d-b9ca-fc1647d15ae4" />
+
 
 ClaudIA is an open source, lab-first platform for creating a **living Microsoft 365 tenant**: synthetic employees work, collaborate, generate content, interact with AI, trigger security signals, and leave telemetry that can be explored through Microsoft Purview, Microsoft Defender, Azure Data Explorer, and the ClaudIA Activity Story Map.
 
@@ -8,7 +10,6 @@ ClaudIA is designed for people who need a realistic Microsoft 365 environment fo
 
 > Lab use only. Read [DISCLAIMER.md](DISCLAIMER.md) and [docs/security.md](docs/security.md) before deploying.
 
-![ClaudIA architecture overview](docs/images/infographic-en.png)
 
 ## New To AI, Azure, Or Microsoft 365?
 
