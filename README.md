@@ -119,21 +119,8 @@ For the complete setup path, including local tools, Azure subscription requireme
 
 ClaudIA uses thirteen synthetic personas connected through an organizational model:
 
-```text
-Alexander Meyer
-├── Emily Johnson
-├── James Wilson
-│   ├── Diego Martinez
-│   │   ├── Carlos Delgado
-│   │   └── Sofia Lopez
-│   └── Laura Gomez
-│       ├── David Chen
-│       └── Miguel Santos
-└── Marcus Olsson
-    └── Ana Rodriguez
-        ├── Devon Reyes
-        └── Priya Sharma
-```
+<img width="1672" height="941" alt="Organigrama MH Demos 2" src="https://github.com/user-attachments/assets/01609787-754a-4b97-988b-3bc37c666758" />
+
 
 Devon Reyes is intentionally used for controlled risky, suspicious, or incorrect behavior from a security perspective. Devon is not an external attacker; he is a fictional internal persona used to generate investigation material for DLP, Insider Risk, Shadow AI, and security storytelling.
 
