@@ -1,6 +1,8 @@
 # Glossary
 
 This glossary explains common ClaudIA, AI, Microsoft 365, Azure, and security terms in beginner-friendly language.
+<img width="1672" height="941" alt="ClaudIA - Glossary map" src="https://github.com/user-attachments/assets/c586fffe-3352-43e8-8c15-3f8a264e517d" />
+
 
 ## AI Concepts
 
