@@ -6,6 +6,9 @@ This guide explains the main security assumptions behind ClaudIA so operators un
 
 ## Authentication Flow
 
+<img width="1672" height="941" alt="ClaudIA - Authentication flow" src="https://github.com/user-attachments/assets/57f58af5-c7f4-488a-8c45-b360f51e7d14" />
+
+
 ```text
 Install-ClaudIA.ps1
     |
