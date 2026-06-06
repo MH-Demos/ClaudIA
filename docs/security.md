@@ -50,6 +50,8 @@ Install-ClaudIA.ps1
 ## Critical Lab Boundary
 
 Do not deploy ClaudIA in a production tenant.
+<img width="2172" height="724" alt="ClaudIA - Warning" src="https://github.com/user-attachments/assets/24ec8db6-f478-458c-8ad5-4ffbf7fdcae7" />
+
 
 A safe ClaudIA tenant should contain:
 
