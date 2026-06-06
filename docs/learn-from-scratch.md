@@ -1,6 +1,8 @@
 # Learn ClaudIA From Scratch
 
 This page is for people who are new to AI, Microsoft 365, Azure, cloud security, or workplace technology.
+<img width="1672" height="941" alt="ClaudIA learning path" src="https://github.com/user-attachments/assets/e53edaf7-4087-4318-bbaf-fe4382082609" />
+
 
 You do not need to understand every Microsoft security product before reading the ClaudIA repository. ClaudIA can be used as a learning portal: first to understand the concepts, then to explore a live demo, and only later to deploy the full lab.
 
