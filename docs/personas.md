@@ -5,6 +5,7 @@ ClaudIA uses fictional personas to make Microsoft 365 security and governance ea
 A normal lab tenant is often empty. It may contain services, policies, and configuration, but it does not feel like a company. ClaudIA solves that by creating synthetic users who work, collaborate, send messages, create files, interact with AI, and generate security-relevant telemetry.
 
 These personas are not decoration. They are the human layer of the demo.
+<img width="1672" height="941" alt="ClaudIA - MH Demos team" src="https://github.com/user-attachments/assets/ea5fa704-f93e-4902-9f39-8fb007645014" />
 
 ## Why Personas Matter
 
@@ -20,21 +21,7 @@ ClaudIA personas help answer those questions across Microsoft 365, Purview, Defe
 
 ## Organization Chart
 
-```text
-Alexander Meyer
-├── Emily Johnson
-├── James Wilson
-│   ├── Diego Martinez
-│   │   ├── Carlos Delgado
-│   │   └── Sofia Lopez
-│   └── Laura Gomez
-│       ├── David Chen
-│       └── Miguel Santos
-└── Marcus Olsson
-    └── Ana Rodriguez
-        ├── Devon Reyes
-        └── Priya Sharma
-```
+<img width="1672" height="941" alt="Organigrama MH Demos 2" src="https://github.com/user-attachments/assets/d156d14c-535d-4009-9029-150266625fbd" />
 
 ## Persona Summary
 
