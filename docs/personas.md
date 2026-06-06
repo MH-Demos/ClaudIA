@@ -44,6 +44,8 @@ ClaudIA personas help answer those questions across Microsoft 365, Purview, Defe
 ## Devon Reyes And Risk Simulation
 
 Devon Reyes has a special role in the ClaudIA storyline.
+<img width="1536" height="1024" alt="ClaudIA - Devon Reyes - Risky user" src="https://github.com/user-attachments/assets/ce4b7f6e-968e-402e-b500-3ea5e32d0b21" />
+
 
 Devon is not an external attacker. Devon is a fictional internal user used to generate activity that may be considered risky, suspicious, incorrect, or policy-violating from a security perspective.
 
