@@ -20,6 +20,7 @@ const mdcaAutomationAccount = process.env.MDCA_AUTOMATION_ACCOUNT || config.infr
 const mdcaRunbookName = process.env.MDCA_RUNBOOK_NAME || 'Invoke-MdcaAdxDiscoverySync';
 const skipEmail = /^true$/i.test(process.env.BROWSER_AGENT_STATUS_SKIP_EMAIL || '');
 const maxActivityRows = Number(process.env.BROWSER_AGENT_STATUS_ACTIVITY_ROWS || 20);
+const externalSafeReport = !/^false$/i.test(process.env.BROWSER_AGENT_STATUS_EXTERNAL_SAFE || 'true');
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -338,6 +339,31 @@ async function resolveRecipient(page, recipientAddress) {
   await page.waitForTimeout(1000);
 }
 
+async function ensureRecipient(page, recipientAddress) {
+  const bodyText = async () => page.locator('body').innerText({ timeout: 10000 }).catch(() => '');
+  if ((await bodyText()).toLowerCase().includes(recipientAddress.toLowerCase())) return;
+
+  const toBox = page.locator('div[role="textbox"][aria-label*="To"], div[role="textbox"][aria-label*="Para"], div[aria-label*="To"][contenteditable="true"], div[aria-label*="Para"][contenteditable="true"], input[aria-label*="To"], input[aria-label*="Para"]').first();
+  await toBox.waitFor({ state: 'visible', timeout: 30000 });
+  await toBox.click();
+  await page.keyboard.type(`${recipientAddress};`);
+  await page.keyboard.press('Tab').catch(() => null);
+  await page.waitForTimeout(2000);
+  await resolveRecipient(page, recipientAddress);
+
+  if (!(await bodyText()).toLowerCase().includes(recipientAddress.toLowerCase())) {
+    await toBox.click();
+    await page.keyboard.type(recipientAddress);
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(2000);
+    await resolveRecipient(page, recipientAddress);
+  }
+
+  if (!(await bodyText()).toLowerCase().includes(recipientAddress.toLowerCase())) {
+    throw new Error(`Status report recipient '${recipientAddress}' was not resolved in the compose window.`);
+  }
+}
+
 async function clickSendButton(page) {
   const candidates = [
     page.getByRole('button', { name: /^send$/i }).last(),
@@ -396,19 +422,22 @@ async function attemptSendFromCurrentCompose(page) {
   }
 }
 
-async function folderContains(page, folder, subject, recipient) {
+async function folderContains(page, folder, subject, recipient, marker = '') {
   await page.goto(`https://outlook.office.com/mail/${folder}`, { waitUntil: 'domcontentloaded' });
   await dismissBlockingDialogs(page);
   await page.waitForTimeout(folder === 'sentitems' ? 8000 : 5000);
   const text = await page.locator('body').innerText({ timeout: 30000 }).catch(() => '');
+  if (marker) return text.includes(marker);
   return text.includes(subject) || text.toLowerCase().includes(String(recipient || '').toLowerCase());
 }
 
-async function reopenDraftAndSend(page, subject, recipient) {
+async function reopenDraftAndSend(page, subject, recipient, marker = '') {
   await page.goto('https://outlook.office.com/mail/drafts', { waitUntil: 'domcontentloaded' });
   await dismissBlockingDialogs(page);
   await page.waitForTimeout(5000);
-  const draft = page.getByText(subject, { exact: false }).first();
+  const draft = marker
+    ? page.getByText(marker, { exact: false }).first()
+    : page.getByText(subject, { exact: false }).first();
   const draftByRecipient = page.getByText(recipient, { exact: false }).first();
   if (await draft.isVisible().catch(() => false)) {
     await draft.dblclick().catch(async () => draft.click());
@@ -425,14 +454,14 @@ async function reopenDraftAndSend(page, subject, recipient) {
   return true;
 }
 
-async function assertReportSent(page, subject, recipient) {
-  if (await folderContains(page, 'sentitems', subject, recipient)) return;
-  if (await folderContains(page, 'drafts', subject, recipient)) {
-    const retried = await reopenDraftAndSend(page, subject, recipient);
-    if (retried && await folderContains(page, 'sentitems', subject, recipient)) return;
+async function assertReportSent(page, subject, recipient, marker) {
+  if (await folderContains(page, 'sentitems', subject, recipient, marker)) return;
+  if (await folderContains(page, 'drafts', subject, recipient, marker)) {
+    const retried = await reopenDraftAndSend(page, subject, recipient, marker);
+    if (retried && await folderContains(page, 'sentitems', subject, recipient, marker)) return;
     throw new Error('Status report remained in Drafts after retry.');
   }
-  if (await folderContains(page, 'outbox', subject, recipient)) {
+  if (await folderContains(page, 'outbox', subject, recipient, marker)) {
     throw new Error('Status report is still in Outbox after send attempt.');
   }
   throw new Error('Status report was not found in Sent Items after send attempt.');
@@ -459,14 +488,13 @@ function truncateCell(value, maxLength = 42) {
 
 function formatMarkdownTable(rows) {
   if (!rows.length) return ['No ADX activity rows found for this validation window.'];
-  const headers = ['User', 'Activities', 'Services', 'Actions', 'Outcomes', 'External', 'Last activity'];
+  const headers = externalSafeReport
+    ? ['User', 'Activities', 'Last activity']
+    : ['User', 'Activities', 'Services', 'Last activity'];
   const body = rows.map((row) => [
     truncateCell(row.AgentName || row.AgentUPN, 28),
     String(row.Activities || 0),
-    truncateCell(row.Services, 34),
-    truncateCell(row.Actions || row.ActivityTypes, 40),
-    truncateCell(row.Outcomes, 34),
-    String(row.ExternalEvents || 0),
+    ...(externalSafeReport ? [] : [truncateCell(row.Services, 34)]),
     formatColombia(row.LastActivity)
   ]);
   return [
@@ -476,10 +504,40 @@ function formatMarkdownTable(rows) {
   ];
 }
 
-function buildReport({ targetJob, expectedWindowStart, latest, rerun, mdca, activitySummary }) {
+function buildReport({ targetJob, expectedWindowStart, latest, rerun, mdca, activitySummary, reportId }) {
   const status = latest?.properties?.status || 'Missing';
+  if (externalSafeReport) {
+    const lines = [
+      'BrowserAgents execution status report',
+      `Report id: ${reportId}`,
+      '',
+      `Schedule: ${targetJob.replace(/^browseragents-daily-/, '')}`,
+      `Validation time Colombia: ${formatColombia(new Date().toISOString())}`,
+      `Lookback start Colombia: ${formatColombia(expectedWindowStart.toISOString())}`,
+      '',
+      'Execution:',
+      `- Status: ${status}`,
+      `- Started Colombia: ${formatColombia(latest?.properties?.startTime)}`,
+      `- Ended Colombia: ${formatColombia(latest?.properties?.endTime)}`,
+      `- Rerun attempted: ${rerun?.attempted ? 'yes' : 'no'}`,
+      `- Rerun final status: ${rerun?.finalStatus || 'n/a'}`,
+      '',
+      'MDCA log collector:',
+      `- Latest status: ${mdca?.status || 'Unknown'}`,
+      `- Started Colombia: ${formatColombia(mdca?.startTime)}`,
+      `- Ended Colombia: ${formatColombia(mdca?.endTime)}`,
+      '',
+      'Activity by user:',
+      `- Query status: ${activitySummary?.status || 'Unknown'}`,
+      `- Rows shown: ${activitySummary?.rows?.length || 0}`
+    ];
+    if (activitySummary?.error) lines.push(`- Error: ${truncateCell(activitySummary.error, 120)}`);
+    lines.push('', ...formatMarkdownTable(activitySummary?.rows || []));
+    return lines.join('\n');
+  }
   const lines = [
     'BrowserAgents execution status report',
+    `Report id: ${reportId}`,
     '',
     `Target job: ${targetJob}`,
     `Validation time Colombia: ${formatColombia(new Date().toISOString())}`,
@@ -513,7 +571,7 @@ function buildReport({ targetJob, expectedWindowStart, latest, rerun, mdca, acti
   return lines.join('\n');
 }
 
-async function sendReportEmail(body) {
+async function sendReportEmail(body, reportId) {
   const agent = (config.agents || []).find((item) => item.sam === senderSam) || (config.agents || []).find((item) => item.sam === 'devon.reyes');
   if (!agent) throw new Error(`Status sender '${senderSam}' was not found in config.`);
 
@@ -537,24 +595,17 @@ async function sendReportEmail(body) {
 
     await dismissBlockingDialogs(page);
 
-    const newMail = page.getByRole('button', { name: /new mail|new message|nuevo correo|correo nuevo/i }).first();
-    if (await newMail.isVisible().catch(() => false)) {
-      await newMail.click();
-    } else {
-      await page.goto('https://outlook.office.com/mail/deeplink/compose', { waitUntil: 'domcontentloaded' });
-    }
+    await page.goto(`https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(reportRecipient)}`, { waitUntil: 'domcontentloaded' });
+    await dismissBlockingDialogs(page);
 
     const toBox = page.locator('div[role="textbox"][aria-label*="To"], div[role="textbox"][aria-label*="Para"], div[aria-label*="To"][contenteditable="true"], div[aria-label*="Para"][contenteditable="true"], input[aria-label*="To"], input[aria-label*="Para"]').first();
     try {
       await toBox.waitFor({ state: 'visible', timeout: 15000 });
     } catch {
-      await page.goto('https://outlook.office.com/mail/deeplink/compose', { waitUntil: 'domcontentloaded' });
+      await page.goto(`https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(reportRecipient)}`, { waitUntil: 'domcontentloaded' });
       await toBox.waitFor({ state: 'visible', timeout: 90000 });
     }
-    await toBox.click();
-    await page.keyboard.type(reportRecipient);
-    await page.keyboard.press('Enter');
-    await resolveRecipient(page, reportRecipient);
+    await ensureRecipient(page, reportRecipient);
 
     const subjectBox = page.locator('input[aria-label*="Subject"], input[placeholder*="Subject"], input[aria-label*="Asunto"], input[placeholder*="Asunto"]').first();
     await subjectBox.waitFor({ state: 'visible', timeout: 30000 });
@@ -565,7 +616,7 @@ async function sendReportEmail(body) {
     await bodyBox.fill(`${body}\n\nSent by ${ctx.displayName} <${ctx.upn}>`);
 
     await attemptSendFromCurrentCompose(page);
-    await assertReportSent(page, reportSubject, reportRecipient);
+    await assertReportSent(page, reportSubject, reportRecipient, reportId);
   } finally {
     await browser.close();
   }
@@ -607,10 +658,11 @@ async function main() {
     ? new Date(new Date(latest.properties.endTime).getTime() + 10 * 60 * 1000)
     : new Date();
   const activitySummary = await queryAdxActivitySummary(activityWindowStart, activityWindowEnd);
-  const body = buildReport({ targetJob, expectedWindowStart, latest, rerun, mdca, activitySummary });
+  const reportId = `STATUS-${targetJob}-${new Date().toISOString().replace(/[:.]/g, '-')}`;
+  const body = buildReport({ targetJob, expectedWindowStart, latest, rerun, mdca, activitySummary, reportId });
   console.log(body);
   if (!skipEmail) {
-    await sendReportEmail(body);
+    await sendReportEmail(body, reportId);
   }
 }
 
