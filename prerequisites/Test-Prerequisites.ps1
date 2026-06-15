@@ -138,10 +138,23 @@ function Invoke-Check {
             Add-CheckResult -Category $Category -Name $Name -Status 'Fail' -Fix $Fix
         }
     } catch {
+        $msg = $_.Exception.Message
+        # CAE / token-refresh challenges look identical to a generic failure to the
+        # caller. Promote them to a clear remediation so the wizard shows the actual
+        # next action instead of the generic per-check Fix string.
+        # 401 Unauthorized from Graph also means the token is stale (CAS cache hit
+        # but the tenant policy moved on) - same remediation.
+        $isAuth = $msg -match 'Continuous access evaluation|TokenCreatedWithOutdatedPolicies|InteractionRequired|Interactive authentication is needed|AADSTS50173|AADSTS70043|InvalidAuthenticationToken|401 \(Unauthorized\)|Response status code does not indicate success: 401'
+        if ($isAuth) {
+            $tenantHint = if ($config -and $config.tenant -and $config.tenant.tenantId) { " --tenant $($config.tenant.tenantId)" } else { '' }
+            $caeFix = "Azure token expired (Continuous Access Evaluation or 401 from Graph). Run 'az logout' then 'az login$tenantHint', then click Back and Deploy again."
+            Add-CheckResult -Category $Category -Name $Name -Status 'Fail' -Detail $msg -Fix $caeFix
+            return
+        }
         if ($WarningOnly) {
-            Add-CheckResult -Category $Category -Name $Name -Status 'Warn' -Detail $_.Exception.Message -Fix $Fix
+            Add-CheckResult -Category $Category -Name $Name -Status 'Warn' -Detail $msg -Fix $Fix
         } else {
-            Add-CheckResult -Category $Category -Name $Name -Status 'Fail' -Detail $_.Exception.Message -Fix $Fix
+            Add-CheckResult -Category $Category -Name $Name -Status 'Fail' -Detail $msg -Fix $Fix
         }
     }
 }
@@ -202,7 +215,9 @@ function Invoke-M365AzText {
     $oldConfigDir = $env:AZURE_CONFIG_DIR
     $env:AZURE_CONFIG_DIR = $M365AzureConfigDir
     try {
-        & az @Arguments 2>$null
+        $output = & az @Arguments 2>$null
+        if ($LASTEXITCODE -ne 0) { return $null }
+        return (($output | Out-String).Trim())
     } finally {
         if ($null -ne $oldConfigDir) { $env:AZURE_CONFIG_DIR = $oldConfigDir }
         else { Remove-Item Env:\AZURE_CONFIG_DIR -ErrorAction SilentlyContinue }
@@ -210,7 +225,42 @@ function Invoke-M365AzText {
 }
 
 function Get-M365GraphToken {
-    Invoke-M365AzText -Arguments @('account','get-access-token','--resource','https://graph.microsoft.com','--query','accessToken','-o','tsv')
+    # Capture stderr so CAE / interactive-auth challenges surface to the caller
+    # instead of being silently swallowed (which used to fail M365 checks with no detail).
+    $azArgs = @('account','get-access-token','--resource','https://graph.microsoft.com','--query','accessToken','-o','tsv')
+    $oldConfigDir = $env:AZURE_CONFIG_DIR
+    if ($M365AzureConfigDir) { $env:AZURE_CONFIG_DIR = $M365AzureConfigDir }
+    try {
+        $raw = & az @azArgs 2>&1
+        $exit = $LASTEXITCODE
+    } finally {
+        if ($M365AzureConfigDir) {
+            if ($null -ne $oldConfigDir) { $env:AZURE_CONFIG_DIR = $oldConfigDir }
+            else { Remove-Item Env:\AZURE_CONFIG_DIR -ErrorAction SilentlyContinue }
+        }
+    }
+    $token = $null
+    $errText = ''
+    foreach ($line in @($raw)) {
+        if ($null -eq $line) { continue }
+        $s = if ($line -is [string]) { $line } else { $line.ToString() }
+        if ($s -match '^(ERROR|WARNING):' -or $s -match 'Continuous access evaluation|Interactive authentication is needed|TokenCreatedWithOutdatedPolicies|az login|AADSTS\d+') {
+            $errText += "$s`n"
+        } elseif ($s.Trim()) {
+            $token = $s.Trim()
+        }
+    }
+    if ($exit -ne 0 -or -not $token) {
+        if ($errText -match 'Continuous access evaluation|TokenCreatedWithOutdatedPolicies|InteractionRequired|Interactive authentication is needed|AADSTS50173|AADSTS70043') {
+            $tenantHint = if ($config -and $config.tenant -and $config.tenant.tenantId) { " --tenant $($config.tenant.tenantId)" } else { '' }
+            throw "Azure token expired due to a Continuous Access Evaluation policy refresh. Run 'az logout' then 'az login$tenantHint' and rerun the wizard."
+        }
+        if ($errText.Trim()) {
+            throw "Could not acquire Microsoft Graph token: $($errText.Trim())"
+        }
+        return $null
+    }
+    return $token
 }
 
 function Invoke-AzJson {
@@ -325,7 +375,10 @@ Invoke-Check 'Local Host' 'Execution policy allows local scripts' {
 
 Invoke-Check 'Local Host' 'PowerShell Gallery access is available' {
     $repo = Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue
-    if ($repo) { "PSGallery: $($repo.InstallationPolicy)" }
+    if ($repo) {
+        if ($repo.InstallationPolicy -eq 'Untrusted') { "PSGallery: available (Untrusted is the normal default)" }
+        else { "PSGallery: $($repo.InstallationPolicy)" }
+    }
 } "Run: Register-PSRepository -Default"
 
 Invoke-Check 'Local Host' 'Azure CLI installed' {
@@ -445,6 +498,35 @@ if ($Offline) {
         if ($configuredSubscription) {
             Invoke-AzText -Arguments @('account','set','--subscription',$configuredSubscription) | Out-Null
         }
+
+        # --- Cross-tenant safety (BLOCK #1) ---------------------------------
+        # The single worst failure mode: az holds a cached token for a DIFFERENT
+        # tenant than the one configured in agents.json, so every resource would
+        # be created in the wrong tenant. Fail hard if they disagree.
+        $expectedTenantId = if ($config -and $config.tenant) { [string]$config.tenant.tenantId } else { '' }
+        $expectedDomain   = if ($config -and $config.tenant) { [string]$config.tenant.domain } else { '' }
+        $placeholderTenant = ($expectedTenantId -eq '' -or $expectedTenantId -match 'REPLACE_WITH' -or $expectedTenantId -eq '00000000-0000-0000-0000-000000000000')
+
+        Invoke-Check 'Azure CLI / Subscription' 'Signed-in tenant matches configured tenant' {
+            $acct = Invoke-AzJson -Arguments @('account','show','-o','json')
+            if (-not $acct) { throw 'Not signed in to Azure CLI (az login).' }
+            $actualTenantId = [string]$acct.tenantId
+            $signedInUser   = [string]$acct.user.name
+            if ($placeholderTenant) {
+                throw "config/agents.json tenant.tenantId is not set. Set it to the tenant you intend to deploy into (az account show --query tenantId)."
+            }
+            if ($actualTenantId -ne $expectedTenantId) {
+                throw "Azure CLI is signed in to tenant $actualTenantId ($signedInUser) but agents.json targets tenant $expectedTenantId ($expectedDomain). Run: az login --tenant $expectedTenantId"
+            }
+            # Secondary coherence: the signed-in UPN suffix should match the domain.
+            if ($expectedDomain -and $signedInUser -match '@') {
+                $upnSuffix = ($signedInUser -split '@')[-1]
+                if ($upnSuffix -and $expectedDomain -and ($upnSuffix -notlike "*$expectedDomain*") -and ($expectedDomain -notlike "*$upnSuffix*")) {
+                    throw "Signed-in user $signedInUser does not belong to the configured domain $expectedDomain. Sign in with an admin of $expectedDomain."
+                }
+            }
+            "Tenant $actualTenantId matches agents.json ($signedInUser)"
+        } "Run: az login --tenant <your-tenant-id>  (the tenant in config/agents.json), then re-run."
 
         Invoke-Check 'Azure CLI / Subscription' 'Microsoft Graph token can be acquired' {
             $token = Get-M365GraphToken

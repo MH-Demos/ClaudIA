@@ -92,6 +92,8 @@ For a new subscription, the installer can also trigger provider registration dur
 .\Install-ClaudIA.ps1 -RegisterProviders
 ```
 
+If you are deploying into a Microsoft Managed Environment subscription (MCAPS), a Microsoft hardened test tenant, or any subscription that re-applies 'Deny public network access' Azure Policy daily, read [docs/mcaps-hardened-tenant.md](docs/mcaps-hardened-tenant.md) **before** running Step 4. The wizard auto-repairs `publicNetworkAccess` on every run, but the lab will silently degrade overnight unless you also schedule `tools\Restore-LabPublicNetworkAccess.ps1` as a daily Azure Automation runbook (one command: `.\tools\Deploy-LabReachabilityRunbook.ps1 -ResourceGroup rg-claudia-lab`).
+
 ## 3. Clone And Prepare
 
 Preferred source:
@@ -160,7 +162,7 @@ Start from [config/agents.json](config/agents.json). Replace public placeholders
 | `infrastructure.resourceGroup` | Resource group for ClaudIA. |
 | `infrastructure.keyVaultName` | Your Key Vault name. |
 | `infrastructure.openAiAccountName` | Your Azure OpenAI account or deployment host. |
-| `infrastructure.openAiImageModel` | Optional image model. The default is `Dall-e-3`; keep it unless you know your region uses a different model name. |
+| `infrastructure.openAiImageModel` | Optional image model. The default is `gpt-image-1`; keep it unless you know your region uses a different model name. The wizard auto-falls back to any other Standard image model the region offers if the configured one is deprecated or unsupported. |
 | `adx.*` | Your ADX cluster, database, table, and app identity values if ADX is enabled. |
 | `activityStoryMap.*` | Your storage, function app, API, and optional Front Door values. |
 | `agents[*].userPrincipalName` | Persona users in your lab tenant. |

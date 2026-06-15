@@ -430,6 +430,10 @@ Write-AALongRunningNotice -Activity "  Key Vault deployment"
 $kvExists = az keyvault show -n $kvName -g $rg --query name -o tsv 2>$null
 if ($kvExists) {
     Write-Host " [EXISTS]" -ForegroundColor DarkYellow
+    $kvIdForCheck = az keyvault show -n $kvName -g $rg --query id -o tsv 2>$null
+    if ($kvIdForCheck) {
+        Ensure-AAResourcePublicNetworkEnabled -ResourceId $kvIdForCheck -ApiVersion '2023-07-01' -DisplayName "Key Vault $kvName" -ResourceTypeLabel 'Key Vault' | Out-Null
+    }
 } else {
     $kvNameAvailable = az keyvault check-name --name $kvName --query nameAvailable -o tsv 2>$null
     if ($kvNameAvailable -eq 'false') {
@@ -438,7 +442,7 @@ if ($kvExists) {
         Write-Host "  Rerun the installer from Step 0, or update keyVaultName in config\agents.json and config\Installation_definitions.json, then rerun Step 4." -ForegroundColor Yellow
         throw "Key Vault name '$kvName' is not available."
     }
-    $kvCreateOutput = az keyvault create -n $kvName -g $rg -l $loc --enable-rbac-authorization true --retention-days 7 -o json 2>&1
+    $kvCreateOutput = az keyvault create -n $kvName -g $rg -l $loc --enable-rbac-authorization true --retention-days 7 --public-network-access Enabled -o json 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Host " [FAIL]" -ForegroundColor Red
         Write-Host "  Key Vault '$kvName' could not be created." -ForegroundColor Yellow
@@ -501,6 +505,8 @@ $oaiVerified = az cognitiveservices account show -n $oaiName -g $oaiRg --query i
 if (-not $oaiVerified) {
     throw "Azure OpenAI account '$oaiName' was not found after create/resolve. This usually means the configured name points to a resource outside the current tenant."
 }
+
+Ensure-AAResourcePublicNetworkEnabled -ResourceId $oaiVerified -ApiVersion '2024-10-01' -DisplayName "Azure OpenAI $oaiName" -ResourceTypeLabel 'Azure OpenAI' | Out-Null
 
 # Resolve an available chat model/version for this account's region.
 $availableChatModels = Get-AAOpenAIChatModels -AccountName $oaiName -ResourceGroup $oaiRg -Location $loc
@@ -601,7 +607,7 @@ if ($Config.infrastructure.openAiImageModel) {
             Write-Host "  Image model deployment failed: $imgDeploymentOutput" -ForegroundColor DarkYellow
             $failedImageModels += "$imgModel|$imgModelVersion"
 
-            $retryableImageFailure = "$imgDeploymentOutput" -match 'InvalidResourceProperties|DeploymentModelNotSupported|Sku.*not supported|not supported in this region|InsufficientQuota'
+            $retryableImageFailure = "$imgDeploymentOutput" -match 'InvalidResourceProperties|DeploymentModelNotSupported|Sku.*not supported|not supported in this region|InsufficientQuota|ServiceModelDeprecated|ModelDeprecated|model.*deprecated|model.*retired'
             if (-not $retryableImageFailure -or $imgAttempt -ge 2) { break }
 
             $availableImageModels = Get-AAOpenAIImageModels -AccountName $oaiName -ResourceGroup $oaiRg
@@ -653,6 +659,9 @@ if ($aaExists) {
 # Get MI object ID
 $aaObjId = (Invoke-RestMethod "https://management.azure.com/subscriptions/$sub/resourceGroups/$aaRg/providers/Microsoft.Automation/automationAccounts/${aaName}?api-version=2023-11-01" -Headers $h).identity.principalId
 
+$aaResourceId = "/subscriptions/$sub/resourceGroups/$aaRg/providers/Microsoft.Automation/automationAccounts/$aaName"
+Ensure-AAResourcePublicNetworkEnabled -ResourceId $aaResourceId -ApiVersion '2023-11-01' -DisplayName "Automation Account $aaName" -ResourceTypeLabel 'Automation' | Out-Null
+
 # Grant Key Vault secret read access to Automation MI and app-claudia-dataagent.
 Write-Host "  Granting Key Vault secret access..." -NoNewline
 az role assignment create --role "Key Vault Secrets User" --assignee-object-id $aaObjId `
@@ -678,6 +687,8 @@ Write-Host " [OK]" -ForegroundColor Green
 Write-Host "  Telemetry backend: Azure Data Explorer. Run tools\Deploy-AdxTelemetry.ps1 after Step 4 if ADX is not provisioned yet." -ForegroundColor Cyan
 
 Write-Host "  Infrastructure deployment complete." -ForegroundColor Green
+
+Write-AAHardeningTenantWarning
 
 
 

@@ -135,9 +135,36 @@ $aaUri = "https://management.azure.com/subscriptions/${sub}/resourceGroups/${rg}
 
 # Get app registration details. App operations may require the separate M365
 # admin profile when Azure subscription admin and tenant admin are different.
-$appId = Invoke-M365Az -Arguments @('ad','app','list','--display-name','app-claudia-dataagent','--query','[0].appId','-o','tsv') 2>$null
+# Pre-warm a Graph token so any CAE (Continuous Access Evaluation) challenge
+# surfaces here rather than as an empty $appId below, which would falsely
+# trigger 'Run Step 3 first.'
+$graphProbe = & az account get-access-token --resource https://graph.microsoft.com --query expiresOn -o tsv 2>&1
+$caePattern = 'Continuous access evaluation|InteractionRequired|TokenCreatedWithOutdatedPolicies|AADSTS50173|AADSTS70043'
+if ($LASTEXITCODE -ne 0 -or ($graphProbe -is [string] -and $graphProbe -match $caePattern) -or ($graphProbe -is [array] -and ($graphProbe -join "`n") -match $caePattern)) {
+    $tenantHint = if ($Config.tenant.tenantId) { " --tenant $($Config.tenant.tenantId)" } else { '' }
+    throw "Azure token expired due to a Continuous Access Evaluation policy refresh. Run:`n    az logout`n    az login$tenantHint`nThen relaunch the wizard and pick Step 5 to resume."
+}
+
+$appLookupErr = $null
+$appId = & {
+    $err = $null
+    $out = Invoke-M365Az -Arguments @('ad','app','list','--display-name','app-claudia-dataagent','--query','[0].appId','-o','tsv') 2>&1
+    foreach ($line in @($out)) {
+        if ($line -is [System.Management.Automation.ErrorRecord]) { $err = "$err`n$line" }
+        elseif ($line -is [string] -and $line -match '^(ERROR|WARNING):') { $err = "$err`n$line" }
+        elseif ($line -is [string] -and $line.Trim()) { $line }
+    }
+    if ($err) { $script:appLookupErr = $err }
+}
+$appId = ($appId | Select-Object -First 1)
 $tenantId = if ($Config.tenant.tenantId) { [string]$Config.tenant.tenantId } else { az account show --query tenantId -o tsv 2>$null }
-if (-not $appId) { throw "app-claudia-dataagent was not found. Run Step 3 first." }
+if (-not $appId) {
+    if ($appLookupErr -and $appLookupErr -match $caePattern) {
+        $tenantHint = if ($tenantId) { " --tenant $tenantId" } else { '' }
+        throw "Azure token expired during 'az ad app list' (Continuous Access Evaluation). Run:`n    az logout`n    az login$tenantHint`nThen relaunch the wizard and pick Step 5 to resume."
+    }
+    throw "app-claudia-dataagent was not found. Run Step 3 first.$(if ($appLookupErr) { "`nLast error: $appLookupErr" })"
+}
 if (-not $tenantId) { throw "Tenant ID is missing. Re-run Step 0 or update config/agents.json tenant.tenantId." }
 
 Write-Host "  Validating app delegated consent..." -NoNewline
@@ -226,7 +253,7 @@ $secrets = @{
 
 Write-Host "  Storing credentials in Key Vault ($kvName)..." -NoNewline
 try {
-    az keyvault secret set --vault-name $kvName --name 'agent-client-secret' --value $clientSecret -o none 2>$null
+    Set-AAKeyVaultSecretValue -VaultName $kvName -Name 'agent-client-secret' -Value $clientSecret
     $storedClientSecret = az keyvault secret show --vault-name $kvName --name 'agent-client-secret' --query value -o tsv 2>$null
     if ([string]::IsNullOrWhiteSpace($storedClientSecret)) {
         throw "Key Vault secret 'agent-client-secret' was not stored with a client secret value."
@@ -251,7 +278,7 @@ try {
         $secretName = Get-AgentSecretName -Agent $agent -Domain $domain
         $stored = az keyvault secret show --vault-name $kvName --name $secretName --query value -o tsv 2>$null
         if (-not [string]::IsNullOrWhiteSpace($AgentPassword)) {
-            az keyvault secret set --vault-name $kvName --name $secretName --value $AgentPassword -o none 2>$null
+            Set-AAKeyVaultSecretValue -VaultName $kvName -Name $secretName -Value $AgentPassword
             $stored = az keyvault secret show --vault-name $kvName --name $secretName --query value -o tsv 2>$null
         }
         if ([string]::IsNullOrWhiteSpace($stored)) {
@@ -319,6 +346,33 @@ if (-not (Test-Path $runbookPath)) {
     return
 }
 
+# Drift check: the runbook carries standalone copies of Get-AgentUpn /
+# Get-AgentSecretName (it cannot dot-source Common.ps1 in the AA sandbox).
+# If they compute different secret names than Step 5 did, personas fail auth.
+try {
+    $driftErrs = $null; $driftToks = $null
+    $runbookAst = [System.Management.Automation.Language.Parser]::ParseFile($runbookPath, [ref]$driftToks, [ref]$driftErrs)
+    $upnFn = $runbookAst.Find({ param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq 'Get-AgentUpn' }, $true)
+    $secretFn = $runbookAst.Find({ param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq 'Get-AgentSecretName' }, $true)
+    if ($upnFn -and $secretFn) {
+        $driftScope = [scriptblock]::Create(@"
+param(`$ProbeAgents, `$ProbeDomain)
+$($upnFn.Extent.Text)
+$($secretFn.Extent.Text)
+`$ProbeAgents | ForEach-Object { Get-AgentSecretName -AgentConfigItem `$_ -Domain `$ProbeDomain }
+"@)
+        $runbookNames = @(& $driftScope -ProbeAgents $Config.agents -ProbeDomain $domain)
+        $localNames = @($Config.agents | ForEach-Object { Get-AgentSecretName -Agent $_ -Domain $domain })
+        $mismatch = @(0..($localNames.Count - 1) | Where-Object { $localNames[$_] -ne $runbookNames[$_] })
+        if ($mismatch.Count -gt 0) {
+            Write-Host "  [WARN] Runbook helper drift: Get-AgentSecretName differs from Common.ps1 for $($mismatch.Count) agent(s) (e.g. '$($localNames[$mismatch[0]])' vs '$($runbookNames[$mismatch[0]])')." -ForegroundColor Yellow
+            Write-Host "         Persona Key Vault lookups may fail at runtime. Align Get-AgentUpn/Get-AgentSecretName in modules\Invoke-AgentRunbook.ps1 with modules\Common.ps1." -ForegroundColor Yellow
+        }
+    }
+} catch {
+    Write-Host "  [WARN] Helper drift check skipped: $($_.Exception.Message)" -ForegroundColor Yellow
+}
+
 Write-Host "  Uploading runbook..." -NoNewline
 $content = Get-Content $runbookPath -Raw -Encoding utf8
 # Keep UTF-8 content intact (accents, locale-specific chars) — Azure Automation supports UTF-8
@@ -336,30 +390,74 @@ try {
         -Headers $h -Body $rbBody | Out-Null
 } catch {} # Already exists
 
-# Upload draft content
-Invoke-RestMethod -Method PUT -Uri "$aaUri/runbooks/Invoke-AgentRunbook/draft/content?api-version=2023-11-01" `
-    -Headers @{Authorization="Bearer $t"; 'Content-Type'='text/powershell'} `
-    -Body ([System.IO.File]::ReadAllBytes($tmpPath)) | Out-Null
-Remove-Item $tmpPath -Force
-
-# Publish
-Invoke-RestMethod -Method POST -Uri "$aaUri/runbooks/Invoke-AgentRunbook/publish?api-version=2023-11-01" `
-    -Headers $h | Out-Null
+# Upload draft content + publish. A silent failure here would leave the OLD
+# runbook version live in Azure Automation, so fail loudly with a retry.
+try {
+    $uploadAttempts = 3
+    for ($attempt = 1; $attempt -le $uploadAttempts; $attempt++) {
+        try {
+            Invoke-RestMethod -Method PUT -Uri "$aaUri/runbooks/Invoke-AgentRunbook/draft/content?api-version=2023-11-01" `
+                -Headers @{Authorization="Bearer $t"; 'Content-Type'='text/powershell'} `
+                -Body ([System.IO.File]::ReadAllBytes($tmpPath)) -ErrorAction Stop | Out-Null
+            Invoke-RestMethod -Method POST -Uri "$aaUri/runbooks/Invoke-AgentRunbook/publish?api-version=2023-11-01" `
+                -Headers $h -ErrorAction Stop | Out-Null
+            break
+        } catch {
+            if ($attempt -lt $uploadAttempts) {
+                Write-Host " [retry $attempt/$uploadAttempts]" -ForegroundColor DarkYellow -NoNewline
+                Start-Sleep -Seconds (15 * $attempt)
+            } else {
+                Write-Host " [FAIL]" -ForegroundColor Red
+                Write-Host "  Runbook upload/publish failed: $($_.Exception.Message)" -ForegroundColor Red
+                Write-Host "  The previously published runbook version (if any) is still live. Rerun Step 5 or tools\Publish-RunbookOnly.ps1." -ForegroundColor Yellow
+                throw
+            }
+        }
+    }
+} finally {
+    Remove-Item $tmpPath -Force -ErrorAction SilentlyContinue
+}
 Write-Host " [OK]" -ForegroundColor Green
 
-# Create schedules
+# Create schedules. List existing runbook-schedule links first: jobSchedules are
+# keyed by GUID, so re-linking on every rerun would stack duplicate daily runs.
+$existingLinks = @()
+try {
+    $existingLinks = @((Invoke-RestMethod -Method GET -Uri "$aaUri/jobSchedules?api-version=2023-11-01" -Headers $h -ErrorAction Stop).value)
+} catch {
+    Write-Host "  [WARN] Could not list existing job schedules: $($_.Exception.Message)" -ForegroundColor Yellow
+}
 foreach ($sched in $Config.schedules) {
     Write-Host "  Creating schedule $($sched.name)..." -NoNewline
     $startTime = (Get-Date).AddDays(1).ToString('yyyy-MM-dd') + "T$($sched.hour.ToString('D2')):$($sched.minute.ToString('D2')):00Z"
     $schedBody = @{properties=@{frequency='Day'; interval=1; startTime=$startTime; timeZone=$sched.timezone; description="Daily agent activity ($($sched.name))"}} | ConvertTo-Json -Depth 3
-    Invoke-RestMethod -Method PUT -Uri "$aaUri/schedules/$($sched.name)?api-version=2023-11-01" `
-        -Headers $h -Body $schedBody -ErrorAction SilentlyContinue | Out-Null
+    try {
+        Invoke-RestMethod -Method PUT -Uri "$aaUri/schedules/$($sched.name)?api-version=2023-11-01" `
+            -Headers $h -Body $schedBody -ErrorAction Stop | Out-Null
+    } catch {
+        # PUT on an existing schedule that is already linked returns a conflict; keep going.
+        if ($_.Exception.Message -notmatch '409|[Cc]onflict') {
+            Write-Host " [WARN] schedule: $($_.Exception.Message)" -ForegroundColor Yellow -NoNewline
+        }
+    }
+
+    $alreadyLinked = $existingLinks | Where-Object {
+        $_.properties.runbook.name -eq 'Invoke-AgentRunbook' -and $_.properties.schedule.name -eq $sched.name
+    } | Select-Object -First 1
+    if ($alreadyLinked) {
+        Write-Host " [OK] already linked" -ForegroundColor Green
+        continue
+    }
 
     # Link schedule to runbook
     $linkBody = @{properties=@{runbook=@{name='Invoke-AgentRunbook'}; schedule=@{name=$sched.name}; parameters=@{ActivityMode='full'; SkipWeekendCheck='False'}}} | ConvertTo-Json -Depth 4
-    Invoke-RestMethod -Method PUT -Uri "$aaUri/jobSchedules/$(New-Guid)?api-version=2023-11-01" `
-        -Headers $h -Body $linkBody -ErrorAction SilentlyContinue | Out-Null
-    Write-Host " [OK]" -ForegroundColor Green
+    try {
+        Invoke-RestMethod -Method PUT -Uri "$aaUri/jobSchedules/$(New-Guid)?api-version=2023-11-01" `
+            -Headers $h -Body $linkBody -ErrorAction Stop | Out-Null
+        Write-Host " [OK]" -ForegroundColor Green
+    } catch {
+        Write-Host " [FAIL] link: $($_.Exception.Message)" -ForegroundColor Red
+    }
 }
 
 Write-Host "  Runbook deployed with $($Config.schedules.Count) daily schedules." -ForegroundColor Green

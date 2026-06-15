@@ -131,8 +131,59 @@ $capExists = az resource show --resource-type "Microsoft.Fabric/capacities" `
 if ($capExists) {
     Write-Host " [EXISTS]" -ForegroundColor DarkYellow
 } else {
+    # --- Region availability pre-check ---------------------------------------
+    # Confirm the F2 SKU is actually offered in $loc BEFORE the PUT. The create
+    # API returns a generic error that conflates "region unavailable" with
+    # "tenant not onboarded to Fabric", so we resolve the region question first
+    # and use it to classify any later failure accurately.
+    # $f2Available: $true = offered, $false = not offered, $null = check failed.
+    $f2Available = $null
+    try {
+        $skuResp = az rest --method get `
+            --uri "https://management.azure.com/subscriptions/$sub/providers/Microsoft.Fabric/skus?api-version=2023-11-01" `
+            -o json 2>$null | ConvertFrom-Json
+        if ($skuResp -and $skuResp.value) {
+            $locKey = ($loc -replace '\s', '').ToLowerInvariant()
+            $f2Regions = @($skuResp.value |
+                Where-Object { $_.name -eq 'F2' } |
+                ForEach-Object { $_.locations } |
+                ForEach-Object { ($_ -replace '\s', '').ToLowerInvariant() })
+            # Only treat the check as conclusive when we actually got a region
+            # list. An empty list means the response shape changed or F2 was not
+            # enumerated; stay $null (inconclusive) rather than false-skipping.
+            if ($f2Regions.Count -gt 0) {
+                $f2Available = [bool]($f2Regions -contains $locKey)
+            }
+        }
+    } catch { $f2Available = $null }
+
+    if ($f2Available -eq $false) {
+        Write-Host " [SKIP]" -ForegroundColor DarkYellow
+        Write-Host "    Fabric F2 is not offered in region '$loc'. Provisioning skipped (Fabric is optional)." -ForegroundColor Yellow
+        Write-Host "    Action: choose an F2-supported region for the lab, or create the capacity manually in a supported region and rerun with [E] (use existing)." -ForegroundColor Yellow
+        return
+    }
+
     # Get admin UPN for capacity admin
     $adminUpn = az ad signed-in-user show --query userPrincipalName -o tsv 2>$null
+
+    # GUARD: a Fabric capacity requires at least one administrator. When a
+    # Continuous Access Evaluation (CAE) token challenge hits mid-run, the az
+    # call above returns empty and the create would fail later with a confusing
+    # "subCode 12: At least one capacity administrator is required". Detect the
+    # empty admin here and give the real, actionable cause instead.
+    if ([string]::IsNullOrWhiteSpace($adminUpn)) {
+        Write-Host " [SKIP]" -ForegroundColor DarkYellow
+        Write-Host ''
+        Write-Host "    Could not resolve the capacity administrator (az ad signed-in-user returned nothing)." -ForegroundColor Yellow
+        Write-Host "    Cause: the Azure session needs re-authentication (Continuous Access Evaluation / token challenge)." -ForegroundColor Yellow
+        Write-Host "    Fix: refresh your sign-in, then rerun Step 4c:" -ForegroundColor Cyan
+        Write-Host "      az logout" -ForegroundColor Cyan
+        Write-Host "      az login --tenant $($Config.tenant.tenantId)" -ForegroundColor Cyan
+        Write-Host "    Note: Fabric is OPTIONAL - the rest of the lab works without it." -ForegroundColor DarkYellow
+        return
+    }
+
     $capBody = @{
         location = $loc
         sku = @{name = 'F2'; tier = 'Fabric'}
@@ -147,8 +198,51 @@ if ($capExists) {
             -Headers $mgtH -Body $capBody | Out-Null
         Write-Host " [OK]" -ForegroundColor Green
     } catch {
-        Write-Host " [FAIL] $($_.Exception.Message)" -ForegroundColor Red
-        Write-Host "    Fabric F2 may not be available in $loc. Try a different region." -ForegroundColor Yellow
+        # Classify the failure instead of always blaming the region.
+        $failMsg = [string]$_.Exception.Message
+        $failDetail = ''
+        try {
+            if ($_.ErrorDetails -and $_.ErrorDetails.Message) { $failDetail = [string]$_.ErrorDetails.Message }
+            elseif ($_.Exception.InnerException -and $_.Exception.InnerException.Message) { $failDetail = [string]$_.Exception.InnerException.Message }
+        } catch {}
+        $combined = "$failMsg $failDetail"
+        Write-Host " [FAIL]" -ForegroundColor Red
+        if ($combined -match 'recognized by Microsoft Fabric' -or
+            $combined -match 'Sign up for Microsoft Fabric' -or
+            $combined -match 'subCode["\s:]+27(?:\D|$)') {
+            # Tenant is not onboarded to Microsoft Fabric - NOT a region problem,
+            # and NOT something this installer can fix non-interactively. Enabling
+            # Fabric for a tenant lives on the Power BI / Fabric admin plane
+            # (api.fabric.microsoft.com/v1/admin/tenantsettings), which requires a
+            # delegated Tenant.ReadWrite.All token admin-consented to the calling
+            # app. The az CLI first-party app does not carry that scope, so even a
+            # Global Admin gets 401 here. This is a one-time, admin-gated action.
+            $locNote = if ($f2Available -eq $true) { " F2 capacity IS available in '$loc' - the region is not the problem." } else { '' }
+            Write-Host ''
+            Write-Host '    ============================================================' -ForegroundColor Yellow
+            Write-Host '    FABRIC NOT ENABLED ON THIS TENANT (manual one-time action)' -ForegroundColor Yellow
+            Write-Host '    ============================================================' -ForegroundColor Yellow
+            Write-Host "    Cause:  Microsoft Fabric has never been enabled for tenant" -ForegroundColor Yellow
+            Write-Host "            $($Config.tenant.domain) (Azure error subCode 27)." -ForegroundColor Yellow
+            if ($locNote) { Write-Host "   $locNote" -ForegroundColor Yellow }
+            Write-Host '    Why the installer cannot do it: enabling Fabric is a Power BI/' -ForegroundColor Yellow
+            Write-Host '            Fabric ADMIN-plane action (Tenant.ReadWrite.All); the az' -ForegroundColor Yellow
+            Write-Host '            CLI token lacks that scope, so even Global Admin gets 401.' -ForegroundColor Yellow
+            Write-Host '    Fix (pick ONE, do once, then rerun Step 4c):' -ForegroundColor Cyan
+            Write-Host '      1. Portal: https://app.fabric.microsoft.com  -> sign in as a' -ForegroundColor Cyan
+            Write-Host '         Fabric/Power BI admin -> Settings (gear) -> Admin portal ->' -ForegroundColor Cyan
+            Write-Host '         Tenant settings -> enable Microsoft Fabric for the org' -ForegroundColor Cyan
+            Write-Host '         (or start a Fabric trial), wait ~5-10 min to propagate.' -ForegroundColor Cyan
+            Write-Host '      2. Admin portal: https://admin.powerplatform.microsoft.com ->' -ForegroundColor Cyan
+            Write-Host '         enable the Fabric/Power BI service for the tenant.' -ForegroundColor Cyan
+            Write-Host '    Details + CLI option: docs/fabric-tenant-enablement.md' -ForegroundColor Cyan
+            Write-Host "    Note: Fabric is OPTIONAL - the rest of the lab works without it." -ForegroundColor DarkYellow
+            Write-Host '    ============================================================' -ForegroundColor Yellow
+        } elseif ($f2Available -eq $true) {
+            Write-Host "    F2 is available in '$loc' but capacity creation failed: $failMsg" -ForegroundColor Yellow
+        } else {
+            Write-Host "    Could not confirm F2 availability in '$loc'. Creation failed: $failMsg" -ForegroundColor Yellow
+        }
         return
     }
 }

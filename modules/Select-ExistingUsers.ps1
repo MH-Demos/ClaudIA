@@ -144,12 +144,27 @@ Write-Host "  Enter user numbers separated by commas (e.g. 1,3,5,7,9)" -Foregrou
 Write-Host "  Select 5-$MaxAgents users. First 5 = Wave 1, rest = Wave 2." -ForegroundColor Yellow
 $selection = Read-Host "  Selection"
 
-$indices = $selection -split ',' | ForEach-Object { [int]$_.Trim() }
+# Parse defensively: '[int]' casting would throw a terminating error on input
+# like '1,a,5' and abort the whole step. Ignore invalid/out-of-range tokens.
+$indices = @()
+$invalidTokens = @()
+foreach ($token in ($selection -split ',')) {
+    $token = $token.Trim()
+    if ([string]::IsNullOrWhiteSpace($token)) { continue }
+    $parsed = 0
+    if ([int]::TryParse($token, [ref]$parsed) -and $parsed -ge 1 -and $parsed -le $candidates.Count) {
+        $indices += $parsed
+    } else {
+        $invalidTokens += $token
+    }
+}
+if ($invalidTokens.Count -gt 0) {
+    Write-Host "  [WARN] Ignored invalid selection token(s): $($invalidTokens -join ', ')" -ForegroundColor Yellow
+}
+$indices = @($indices | Select-Object -Unique)
 $selected = @()
 foreach ($idx in $indices) {
-    if ($idx -ge 1 -and $idx -le $candidates.Count) {
-        $selected += $candidates[$idx - 1]
-    }
+    $selected += $candidates[$idx - 1]
 }
 
 if ($selected.Count -lt 2) {

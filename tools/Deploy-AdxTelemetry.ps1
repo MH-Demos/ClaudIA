@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.0
+.VERSION 1.2.0
 
 .GUID 37a5c907-b47b-4897-895c-553c3fccfee3
 
@@ -24,7 +24,7 @@ https://github.com/MH-Demos/ClaudIA
 Deploy Azure Data Explorer telemetry resources for autonomous agent activity
 
 .RELEASENOTES
-Initial version metadata for Deploy Azure Data Explorer telemetry resources for autonomous agent activity.
+1.2.0 - Public-facing capacity-stockout fallback. The cluster create is now wrapped in Invoke-AdxClusterCreateWithFallback which walks a (Location, SKU) attempt plan: preferred region + preferred SKU, then preferred region + alternate Dev SKU (D11_v2 <-> E2a_v4), then each FallbackRegion (default eastus2, eastus, westus2, westeurope, francecentral, centralus, southcentralus) with both Dev SKUs. On each attempt, the SKU is checked against the Microsoft.Kusto/locations/{loc}/skus regional listing before the PUT (skip if not offered). After Azure rolls back a failed cluster due to InsufficientResourcesForSubscription (no available resources for the cluster), the next combination is attempted automatically and the chosen (location, sku) is written back to Installation_definitions.json + agents.json (incl. ingestBaseUri/queryBaseUri/activityStoryMap.source.clusterName mirrors) so subsequent steps use the actual deployed region. New parameters: -FallbackRegions, -FallbackSkus. Non-capacity errors (auth, name collision, missing provider) still throw immediately. 1.1.0 - Wait-KustoResourceSucceeded now detects Azure rollbacks. When a cluster create accepts the PUT but Azure fails the provisioning (e.g. InsufficientResourcesForSubscription), the resource is removed and subsequent GETs return 404. The previous loop kept polling 'not found yet' until the 30 min timeout. Now, after 5 consecutive 404s, the script queries the Microsoft.Insights activity log for the most recent 'Write cluster resource' event on the same resource id and, if it shows status=Failed, throws immediately with the Azure error message (typically asking to retry later or use another SKU/region). 1.0.0 - Initial version metadata for Deploy Azure Data Explorer telemetry resources for autonomous agent activity.
 
 #>
 <#
@@ -50,6 +50,8 @@ param(
     [string]$ClientSecretName = 'agent-client-secret',
     [string]$M365Scope = 'https://manage.office.com/.default',
     [string]$PreferredSku = 'Dev(No SLA)_Standard_E2a_v4',
+    [string[]]$FallbackRegions = @('eastus2','eastus','westus2','westeurope','francecentral','centralus','southcentralus'),
+    [string[]]$FallbackSkus    = @('Dev(No SLA)_Standard_E2a_v4','Dev(No SLA)_Standard_D11_v2'),
     [switch]$WhatIf
 )
 
@@ -168,6 +170,137 @@ function Wait-ProviderRegistration {
     } while ($state -ne 'Registered')
 }
 
+function Get-KustoLastWriteFailure {
+    # Returns the most recent Failed 'Write cluster resource' event from the activity log
+    # for the given resource id, within the last $LookbackHours. Null if none.
+    param(
+        [Parameter(Mandatory)] [string]$ResourceId,
+        [int]$LookbackHours = 2
+    )
+    try {
+        $since = (Get-Date).AddHours(-$LookbackHours).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        $tmp = [IO.Path]::GetTempFileName()
+        # Pipe redirection via cmd avoids PowerShell argument-parsing quirks with '?' query strings.
+        $arg = "az monitor activity-log list --max-events 200 --start-time $since -o json > `"$tmp`" 2>nul"
+        cmd /c $arg | Out-Null
+        $raw = Get-Content -LiteralPath $tmp -Raw -Encoding utf8
+        Remove-Item -LiteralPath $tmp -Force -EA SilentlyContinue
+        if (-not $raw) { return $null }
+        $events = $raw | ConvertFrom-Json
+        $match = $events | Where-Object {
+            $_.resourceId -eq $ResourceId -and
+            $_.operationName.value -like '*Microsoft.Kusto*write*' -and
+            $_.status.value -eq 'Failed'
+        } | Sort-Object eventTimestamp -Descending | Select-Object -First 1
+        return $match
+    } catch {
+        return $null
+    }
+}
+
+function Get-AdxSkuInLocation {
+    # Returns the SKU object (with .name + .tier) if listed in $Location with no restrictions, else $null.
+    # Used by the capacity-fallback planner to skip (region, SKU) combos that Azure does not even offer.
+    param(
+        [Parameter(Mandatory)] [string]$SubscriptionId,
+        [Parameter(Mandatory)] [string]$Location,
+        [Parameter(Mandatory)] [string]$Sku
+    )
+    $url = "https://management.azure.com/subscriptions/$SubscriptionId/providers/Microsoft.Kusto/locations/$Location/skus?api-version=2023-08-15"
+    try {
+        $skus = @((Invoke-AzRestJson -Method GET -Url $url).value | Where-Object { $_.resourceType -eq 'clusters' })
+    } catch {
+        return $null
+    }
+    $match = $skus | Where-Object { $_.name -eq $Sku } | Select-Object -First 1
+    if (-not $match) { return $null }
+    # PowerShell quirk: @($null).Count == 1; filter explicitly.
+    $restr = @()
+    if ($match.PSObject.Properties['restrictions'] -and $null -ne $match.restrictions) {
+        $restr = @($match.restrictions | Where-Object { $_ })
+    }
+    if ($restr.Count -gt 0) { return $null }
+    return $match
+}
+
+function Invoke-AdxClusterCreateWithFallback {
+    # Public-facing capacity-stockout fallback. Walks a (Location, SKU) attempt plan:
+    #   1. PreferredLocation + PreferredSku
+    #   2. PreferredLocation + each alternate SKU in FallbackSkus
+    #   3. Each FallbackRegion + PreferredSku, then + each alternate SKU
+    # Skips combos where the SKU is not listed regionally. Retries the next combo on
+    # InsufficientResourcesForSubscription (capacity stockout). Throws on any other error.
+    # Returns @{ Cluster; Location; Sku; ResourceId } for the successful attempt.
+    param(
+        [Parameter(Mandatory)] [string]$SubscriptionId,
+        [Parameter(Mandatory)] [string]$ResourceGroup,
+        [Parameter(Mandatory)] [string]$ClusterName,
+        [Parameter(Mandatory)] [string]$PreferredLocation,
+        [Parameter(Mandatory)] [string]$PreferredSku,
+        [string[]]$FallbackRegions,
+        [string[]]$FallbackSkus
+    )
+    $plan = New-Object System.Collections.Generic.List[object]
+    $plan.Add(@{ Location = $PreferredLocation; Sku = $PreferredSku })
+    foreach ($s in $FallbackSkus) {
+        if ($s -ne $PreferredSku) { $plan.Add(@{ Location = $PreferredLocation; Sku = $s }) }
+    }
+    foreach ($r in $FallbackRegions) {
+        if ($r -eq $PreferredLocation) { continue }
+        $plan.Add(@{ Location = $r; Sku = $PreferredSku })
+        foreach ($s in $FallbackSkus) {
+            if ($s -ne $PreferredSku) { $plan.Add(@{ Location = $r; Sku = $s }) }
+        }
+    }
+
+    $attemptNum = 0
+    foreach ($a in $plan) {
+        $attemptNum++
+        $loc = $a.Location
+        $skuName = $a.Sku
+        Write-Host "  [Attempt $attemptNum/$($plan.Count)] Trying $ClusterName in '$loc' with SKU '$skuName'..." -ForegroundColor Cyan
+
+        $skuObj = Get-AdxSkuInLocation -SubscriptionId $SubscriptionId -Location $loc -Sku $skuName
+        if (-not $skuObj) {
+            Write-Host "    [SKIP] SKU '$skuName' not offered (or restricted) in '$loc'." -ForegroundColor DarkYellow
+            continue
+        }
+
+        $resId = "/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroup/providers/Microsoft.Kusto/clusters/$ClusterName"
+        # Resource group must exist in the target region. For fallback regions, we keep
+        # the original RG but Azure allows clusters in any region within an existing RG.
+        $body = @{
+            location = $loc
+            sku = @{ name = $skuName; tier = $skuObj.tier; capacity = 1 }
+            properties = @{
+                enableStreamingIngest = $true
+                enablePurge = $false
+                enableAutoStop = $false
+                engineType = 'V2'
+                publicIPType = 'IPv4'
+                publicNetworkAccess = 'Enabled'
+                restrictOutboundNetworkAccess = 'Disabled'
+                optimizedAutoscale = @{ isEnabled = $false; minimum = 1; maximum = 1; version = 1 }
+            }
+        }
+
+        try {
+            Invoke-AzRestJson -Method PUT -Url "https://management.azure.com${resId}?api-version=2023-08-15" -Body $body | Out-Null
+            $cluster = Wait-KustoResourceSucceeded -ResourceId $resId -ResourceName "ADX cluster $ClusterName" -TimeoutMinutes 30
+            Write-Host "    [OK] Cluster provisioned in '$loc' with '$skuName'." -ForegroundColor Green
+            return @{ Cluster = $cluster; Location = $loc; Sku = $skuObj; ResourceId = $resId }
+        } catch {
+            $msg = $_.Exception.Message
+            if ($msg -match 'InsufficientResourcesForSubscription|no available resources for the cluster') {
+                Write-Host "    [STOCKOUT] Azure has no capacity for '$skuName' in '$loc' right now. Trying next combination..." -ForegroundColor Yellow
+                continue
+            }
+            throw
+        }
+    }
+    throw "ADX cluster create exhausted all $($plan.Count) (location, SKU) combinations from the fallback plan. Azure capacity is unavailable for the requested Dev SKUs in every fallback region. Try again later, request a quota increase, or override -FallbackRegions / -FallbackSkus."
+}
+
 function Wait-KustoResourceSucceeded {
     param(
         [Parameter(Mandatory)] [string]$ResourceId,
@@ -177,14 +310,25 @@ function Wait-KustoResourceSucceeded {
 
     $deadline = (Get-Date).AddMinutes($TimeoutMinutes)
     $url = "https://management.azure.com${ResourceId}?api-version=2023-08-15"
+    $notFoundStreak = 0
     do {
         try {
             $resource = Invoke-AzRestJson -Method GET -Url $url -AllowNotFound
             if (-not $resource) {
-                Write-Host "  ${ResourceName}: not found yet"
+                $notFoundStreak++
+                Write-Host "  ${ResourceName}: not found yet (streak=$notFoundStreak)"
+                if ($notFoundStreak -ge 5) {
+                    $failEvent = Get-KustoLastWriteFailure -ResourceId $ResourceId
+                    if ($failEvent) {
+                        $msg = $failEvent.properties.statusMessage
+                        throw "$ResourceName provisioning was rolled back by Azure. Activity log says: $msg"
+                    }
+                    $notFoundStreak = 0
+                }
                 Start-Sleep -Seconds 30
                 continue
             }
+            $notFoundStreak = 0
             $state = $resource.properties.provisioningState
             if (-not $state) { $state = $resource.properties.state }
             if ($state -eq 'Succeeded') { return $resource }
@@ -203,6 +347,100 @@ function Wait-KustoResourceSucceeded {
     } while ((Get-Date) -lt $deadline)
 
     throw "Timed out waiting for $ResourceName to reach Succeeded."
+}
+
+function Start-AdxClusterIfStopped {
+    param(
+        [Parameter(Mandatory)] [string]$ClusterResourceId,
+        [Parameter(Mandatory)] [string]$ClusterName,
+        [int]$TimeoutMinutes = 20
+    )
+
+    $url = "https://management.azure.com${ClusterResourceId}?api-version=2023-08-15"
+    $resource = Invoke-AzRestJson -Method GET -Url $url
+    $state = $resource.properties.state
+    if (-not $state) { return $resource }
+    if ($state -in @('Running', 'Starting')) {
+        if ($state -eq 'Starting') {
+            Write-Host "  Cluster '$ClusterName' is $state. Waiting for Running..." -ForegroundColor DarkGray
+        }
+    } elseif ($state -eq 'Stopped') {
+        Write-Host "  Cluster '$ClusterName' is Stopped. Starting it (Dev SKUs auto-stop after inactivity)..." -ForegroundColor Yellow
+        Invoke-AzRestJson -Method POST -Url "https://management.azure.com${ClusterResourceId}/start?api-version=2023-08-15" | Out-Null
+    } else {
+        throw "ADX cluster '$ClusterName' is in unexpected state '$state'. Expected Running, Starting, or Stopped."
+    }
+
+    $deadline = (Get-Date).AddMinutes($TimeoutMinutes)
+    do {
+        Start-Sleep -Seconds 20
+        $resource = Invoke-AzRestJson -Method GET -Url $url
+        $state = $resource.properties.state
+        if ($state -eq 'Running') { Write-Host "  Cluster '$ClusterName' is Running." -ForegroundColor Green; return $resource }
+        if ($state -in @('Stopped', 'Stopping', 'Unavailable')) {
+            throw "ADX cluster '$ClusterName' returned to state '$state' while waiting for Running."
+        }
+        Write-Host "  Cluster '$ClusterName': $state"
+    } while ((Get-Date) -lt $deadline)
+    throw "Timed out waiting for ADX cluster '$ClusterName' to reach Running."
+}
+
+# Tracks resources whose PNA had to be flipped during this tool invocation.
+$script:AdxFlippedPnaResources = [System.Collections.ArrayList]::new()
+
+function Enable-AdxClusterPublicNetworkAccess {
+    <#
+    .SYNOPSIS
+        Ensure the ADX cluster's properties.publicNetworkAccess is 'Enabled'.
+    .DESCRIPTION
+        ADX Dev/Basic clusters in MCAPS / Microsoft Managed Environment / hardened
+        test tenants frequently have publicNetworkAccess flipped back to Disabled
+        by an Azure Policy on a daily schedule. The wizard / runbook talks to ADX
+        over the public REST endpoint (kusto.windows.net) so a disabled state
+        breaks ingestion and queries until the operator re-enables it.
+    #>
+    param(
+        [Parameter(Mandatory)] [string]$ClusterResourceId,
+        [Parameter(Mandatory)] [string]$ClusterName
+    )
+
+    $url = "https://management.azure.com${ClusterResourceId}?api-version=2023-08-15"
+    $resource = Invoke-AzRestJson -Method GET -Url $url
+    $pna = $resource.properties.publicNetworkAccess
+    if (-not $pna -or $pna -eq 'Enabled') { return $true }
+
+    Write-Host "  [INFO] ADX cluster '$ClusterName' has publicNetworkAccess='$pna'. Re-enabling so ingestion + queries can reach the cluster..." -ForegroundColor Yellow
+    try {
+        Invoke-AzRestJson -Method PATCH -Url $url -Body @{ properties = @{ publicNetworkAccess = 'Enabled' } } | Out-Null
+        [void]$script:AdxFlippedPnaResources.Add("ADX cluster $ClusterName")
+        Write-Host "  [OK] ADX cluster publicNetworkAccess set to Enabled." -ForegroundColor Green
+        return $true
+    } catch {
+        Write-Host "  [WARN] Could not flip publicNetworkAccess for ADX cluster '$ClusterName': $($_.Exception.Message)" -ForegroundColor Yellow
+        Write-Host "         Open the cluster in the portal -> Networking -> set 'All networks', or ask the subscription owner to exempt it from the Deny policy." -ForegroundColor Yellow
+        return $false
+    }
+}
+
+function Write-AdxHardeningTenantWarning {
+    if (-not $script:AdxFlippedPnaResources -or $script:AdxFlippedPnaResources.Count -eq 0) { return }
+    Write-Host ""
+    Write-Host "  ==================== HARDENED TENANT DETECTED (ADX) ====================" -ForegroundColor Yellow
+    Write-Host "  This tool had to re-enable publicNetworkAccess on:" -ForegroundColor Yellow
+    foreach ($r in $script:AdxFlippedPnaResources) { Write-Host "    - $r" -ForegroundColor Yellow }
+    Write-Host ""
+    Write-Host "  Likely cause: MCAPS / Microsoft Managed Environment / hardened test tenant" -ForegroundColor Yellow
+    Write-Host "  re-applies 'Deny public network access' on Kusto clusters daily, AND Dev/Basic" -ForegroundColor Yellow
+    Write-Host "  SKU clusters auto-stop after ~5 days of inactivity to save cost." -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "  Without daily automation, ingestion + queries will fail overnight. Mitigations:" -ForegroundColor Yellow
+    Write-Host "    a. (Recommended) Deploy the bundled daily reachability runbook:" -ForegroundColor Yellow
+    Write-Host "         .\tools\Deploy-LabReachabilityRunbook.ps1 -ResourceGroup <your-rg>" -ForegroundColor Green
+    Write-Host "       It re-enables PNA + starts the ADX cluster if Stopped, daily at 06:00 UTC." -ForegroundColor Yellow
+    Write-Host "    b. Move to a non-hardened subscription." -ForegroundColor Yellow
+    Write-Host "  Full background + alternatives: docs\mcaps-hardened-tenant.md" -ForegroundColor Yellow
+    Write-Host "  =======================================================================" -ForegroundColor Yellow
+    Write-Host ""
 }
 
 function Invoke-KustoManagementCommand {
@@ -296,6 +534,11 @@ function Sync-SourceConfigAdx {
         $config.adx = $AdxConfig
     } else {
         $config | Add-Member -NotePropertyName adx -NotePropertyValue $AdxConfig -Force
+    }
+    # Mirror the cluster name into activityStoryMap.source so the workbook / Story Map
+    # query the right cluster after a capacity fallback writes back a new region/name.
+    if ($config.PSObject.Properties['activityStoryMap'] -and $config.activityStoryMap -and $config.activityStoryMap.PSObject.Properties['source'] -and $config.activityStoryMap.source -and $config.activityStoryMap.source.PSObject.Properties['clusterName']) {
+        $config.activityStoryMap.source.clusterName = $AdxConfig.clusterName
     }
     $config | ConvertTo-Json -Depth 50 | Set-Content -Path $configPath -Encoding utf8
 }
@@ -456,35 +699,36 @@ if ($clusterExists) {
     $clusterState = $clusterExists.properties.provisioningState
     if (-not $clusterState) { $clusterState = $clusterExists.properties.state }
     Write-Host " EXISTS ($clusterState)" -ForegroundColor DarkYellow
+    $cluster = Wait-KustoResourceSucceeded -ResourceId $clusterResourceId -ResourceName "ADX cluster $clusterName" -TimeoutMinutes 45
+    $cluster = Start-AdxClusterIfStopped -ClusterResourceId $clusterResourceId -ClusterName $clusterName
+    Enable-AdxClusterPublicNetworkAccess -ClusterResourceId $clusterResourceId -ClusterName $clusterName | Out-Null
 } else {
-    $clusterBody = @{
-        location = $location
-        sku = @{
-            name = $sku.name
-            tier = $sku.tier
-            capacity = 1
-        }
-        properties = @{
-            enableStreamingIngest = $true
-            enablePurge = $false
-            enableAutoStop = $false
-            engineType = 'V2'
-            publicIPType = 'IPv4'
-            publicNetworkAccess = 'Enabled'
-            restrictOutboundNetworkAccess = 'Disabled'
-            optimizedAutoscale = @{
-                isEnabled = $false
-                minimum = 1
-                maximum = 1
-                version = 1
-            }
-        }
+    Write-Host ''
+    Write-Host "  Starting capacity-aware cluster create (preferred region '$location', preferred SKU '$($sku.name)')." -ForegroundColor DarkGray
+    $deployResult = Invoke-AdxClusterCreateWithFallback `
+        -SubscriptionId $subscriptionId `
+        -ResourceGroup $resourceGroup `
+        -ClusterName $clusterName `
+        -PreferredLocation $location `
+        -PreferredSku $sku.name `
+        -FallbackRegions $FallbackRegions `
+        -FallbackSkus $FallbackSkus
+    $cluster = $deployResult.Cluster
+    if ($deployResult.Location -ne $location -or $deployResult.Sku.name -ne $sku.name) {
+        Write-Host "  [INFO] Cluster ended up in '$($deployResult.Location)' with SKU '$($deployResult.Sku.name)' (preferred was '$location' / '$($sku.name)'). Writing back to config..." -ForegroundColor Cyan
+        $location          = $deployResult.Location
+        $sku               = $deployResult.Sku
+        $clusterUri        = "https://$clusterName.$location.kusto.windows.net"
+        $clusterResourceId = $deployResult.ResourceId
+        $databaseResourceId = "$clusterResourceId/databases/$databaseName"
+        $adxConfig.location   = $location
+        $adxConfig.clusterSku = $sku.name
+        $adxConfig.clusterTier = $sku.tier
+        $adxConfig.ingestBaseUri = $clusterUri
+        $adxConfig.queryBaseUri  = $clusterUri
     }
-    Invoke-AzRestJson -Method PUT -Url "https://management.azure.com${clusterResourceId}?api-version=2023-08-15" -Body $clusterBody | Out-Null
-    Write-Host " OK" -ForegroundColor Green
 }
 
-$cluster = Wait-KustoResourceSucceeded -ResourceId $clusterResourceId -ResourceName "ADX cluster $clusterName" -TimeoutMinutes 45
 if ($cluster.properties.uri) {
     $adxConfig.queryBaseUri = $cluster.properties.uri
     $adxConfig.ingestBaseUri = $cluster.properties.uri
@@ -593,6 +837,8 @@ Sync-SourceConfigAdx -DefinitionsPath $InstallationDefinitionsPath -Definitions 
 Write-Host ""
 Write-Host "ADX telemetry configuration saved to:" -ForegroundColor Green
 Write-Host "  $InstallationDefinitionsPath"
+
+Write-AdxHardeningTenantWarning
 
 
 

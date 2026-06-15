@@ -1,6 +1,11 @@
 # Lab-specific backup files
 config/agents.lab-backup.json
 
+# Per-tenant config files contain real tenant/subscription/app identifiers.
+# Only the placeholder template config/agents.json is committed.
+config/tenants/
+config/backups/
+
 # Local secrets and browser sessions
 .env
 *.env

@@ -77,6 +77,9 @@ This URL is a live reference portal for the current public MH Demos deployment. 
 | Understand the concept | [docs/personas.md](docs/personas.md), [docs/branding.md](docs/branding.md), and [Project Documentation/ActivityStoryMap_Technology_Post_Summary.md](Project%20Documentation/ActivityStoryMap_Technology_Post_Summary.md) |
 | Deploy the lab | [How to Start.md](How%20to%20Start.md) |
 | Prepare a brand-new tenant | [If Your Tenant Is Completely New.md](If%20Your%20Tenant%20Is%20Completely%20New.md) |
+| Redeploy on a fresh subscription or tenant | [docs/redeploy-on-new-tenant.md](docs/redeploy-on-new-tenant.md) |
+| Deploy in MCAPS / Microsoft Managed Environment / hardened test tenant | [docs/mcaps-hardened-tenant.md](docs/mcaps-hardened-tenant.md) |
+| Enable Microsoft Fabric for the tenant (Step 4c) | [docs/fabric-tenant-enablement.md](docs/fabric-tenant-enablement.md) |
 | Review security risks | [DISCLAIMER.md](DISCLAIMER.md) and [docs/security.md](docs/security.md) |
 | Understand personas and storylines | [Storyline/profiles.md](Storyline/profiles.md) and [docs/personas.md](docs/personas.md) |
 | Understand localization rules | [docs/localization.md](docs/localization.md) |
