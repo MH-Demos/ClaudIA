@@ -199,8 +199,10 @@ $wbContent = [ordered]@{
 # Use deterministic GUID based on RG + workbook name (idempotent across re-runs).
 $wbSeed = "$rg-Agent-Activity-Monitor-ADX"
 $wbId = [guid]::new([System.Security.Cryptography.MD5]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes($wbSeed))).ToString()
-$existingWorkbookId = az resource list -g $rg --resource-type "Microsoft.Insights/workbooks" `
-    --query "[?tags.\"hidden-title\"=='ClaudIA Activity Monitor'].name | [0]" -o tsv 2>$null
+# Filter in PowerShell: a JMESPath --query with quoted keys ("hidden-title") breaks
+# across the PowerShell/az quoting layers ('invalid jmespath_type value' error).
+$existingWorkbooks = az resource list -g $rg --resource-type "Microsoft.Insights/workbooks" -o json 2>$null | ConvertFrom-Json
+$existingWorkbookId = ($existingWorkbooks | Where-Object { $_.tags.'hidden-title' -eq 'ClaudIA Activity Monitor' } | Select-Object -First 1).name
 if ($existingWorkbookId) { $wbId = $existingWorkbookId }
 
 $body = [ordered]@{

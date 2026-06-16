@@ -2,103 +2,88 @@
   "$schema": "./agents-schema.json",
   "_comment": "Autonomous agent configuration. Customize personas, departments, workloads, and schedules for the M365 lab.",
   "tenant": {
-    "domain": "contoso.example",
-    "subscriptionId": "11111111-1111-1111-1111-111111111111",
-    "location": "westus",
+    "domain": "",
+    "subscriptionId": "",
+    "location": "eastus",
     "country": "US",
-    "tenantId": "00000000-0000-0000-0000-000000000000"
+    "tenantId": ""
   },
   "infrastructure": {
-    "resourceGroup": "rg-claudia-lab",
+    "resourceGroup": "",
     "automationAccountName": "aa-claudia-lab",
-    "openAiAccountName": "oai-claudia-lab",
-    "openAiModel": "gpt-4.1-mini",
-    "openAiTpm": 30,
-    "openAiImageModel": "Dall-e-3",
+    "openAiAccountName": "",
+    "openAiModel": "gpt-4o",
+    "openAiTpm": 10,
+    "openAiImageModel": "",
     "workbookEnabled": true,
-    "fabricEnabled": false,
-    "keyVaultName": "kv-claudia-lab",
-    "openAiModelVersion": "2025-04-14",
+    "fabricEnabled": true,
+    "keyVaultName": "",
+    "openAiModelVersion": "2024-11-20",
     "openAiImageModelVersion": ""
   },
   "adx": {
     "enabled": true,
-    "tenantId": "00000000-0000-0000-0000-000000000000",
-    "clientId": "22222222-2222-2222-2222-222222222222",
+    "tenantId": "",
+    "clientId": "",
     "clientSecretName": "agent-client-secret",
-    "keyVaultName": "kv-claudia-lab",
+    "keyVaultName": "",
     "m365Scope": "https://manage.office.com/.default",
-    "resourceGroup": "rg-claudia-lab",
-    "location": "westus",
-    "clusterName": "adx-claudia-lab",
+    "resourceGroup": "",
+    "location": "eastus",
+    "clusterName": "",
     "clusterSku": "Dev(No SLA)_Standard_E2a_v4",
     "clusterTier": "Basic",
     "streamingIngestion": true,
     "enablePurge": false,
     "autoStopCluster": false,
     "publicNetworkAccess": "Enabled",
-    "ingestBaseUri": "https://adx-claudia-lab.westus.kusto.windows.net",
-    "queryBaseUri": "https://adx-claudia-lab.westus.kusto.windows.net",
+    "ingestBaseUri": "",
+    "queryBaseUri": "",
     "databaseName": "ADX-CLAUDIA",
     "tableName": "CLAUDIA_Activity",
     "mappingName": "CLAUDIA_Activity_mapping",
     "retentionInDays": 365,
-    "ingestorPrincipalId": "22222222-2222-2222-2222-222222222222",
+    "ingestorPrincipalId": "",
     "ingestorPrincipalType": "App",
     "ingestorRole": "Ingestor"
   },
   "activityStoryMap": {
     "enabled": true,
-    "resourceGroup": "rg-claudia-lab",
-    "location": "westus2",
-    "storageAccountName": "stclaudiamap",
-    "functionStorageAccountName": "stclaudiafunc",
-    "functionAppName": "func-claudia-story",
-    "functionPrincipalId": "33333333-3333-3333-3333-333333333333",
-    "staticWebsiteUrl": "https://stclaudiamap.z22.web.core.windows.net/",
-    "apiBaseUrl": "https://func-claudia-story.azurewebsites.net",
-    "launchUrl": "https://activitymap.contoso.example/",
+    "resourceGroup": "",
+    "location": "eastus",
+    "storageAccountName": "",
+    "functionStorageAccountName": "",
+    "functionAppName": "",
+    "functionPrincipalId": "",
+    "staticWebsiteUrl": "",
+    "apiBaseUrl": "",
+    "launchUrl": "",
     "defaultLookbackHours": 24,
     "source": {
-      "clusterName": "adx-claudia-lab",
+      "clusterName": "",
       "databaseName": "ADX-CLAUDIA",
       "tableName": "CLAUDIA_Activity"
-    },
-    "frontDoor": {
-      "enabled": true,
-      "profileName": "afd-claudia-story",
-      "endpointName": "claudia-storymap",
-      "endpointHostName": "claudia-storymap.azurefd.net",
-      "endpointUrl": "https://claudia-storymap.azurefd.net/",
-      "originGroupName": "og-storymap",
-      "originName": "origin-storage-staticweb",
-      "routeName": "route-storymap",
-      "customDomain": "activitymap.contoso.example",
-      "customDomainUrl": "https://activitymap.contoso.example/",
-      "validationTxtRecord": "_dnsauth.activitymap",
-      "validationToken": "<front-door-validation-token>",
-      "cnameTarget": "claudia-storymap.azurefd.net"
     }
   },
   "browserAgents": {
-    "enabled": true,
+    "enabled": false,
     "provider": "Azure App Testing Playwright Workspaces",
-    "subscriptionId": "11111111-1111-1111-1111-111111111111",
-    "resourceGroup": "rg-claudia-lab",
+    "subscriptionId": "",
+    "resourceGroup": "",
     "location": "eastus",
     "workspaceName": "pw-claudia-lab",
-    "workspaceId": "44444444-4444-4444-4444-444444444444",
-    "dataplaneUri": "https://eastus.api.playwright.microsoft.com/playwrightworkspaces/44444444-4444-4444-4444-444444444444",
-    "playwrightServiceUrl": "wss://eastus.api.playwright.microsoft.com/playwrightworkspaces/44444444-4444-4444-4444-444444444444/browsers",
+    "workspaceId": "",
+    "dataplaneUri": "",
+    "playwrightServiceUrl": "",
     "regionalWorkspaces": [
       {
         "key": "americas",
         "displayName": "Americas Browser Agents",
         "location": "eastus",
         "workspaceName": "pw-claudia-lab",
-        "workspaceId": "44444444-4444-4444-4444-444444444444",
-        "dataplaneUri": "https://eastus.api.playwright.microsoft.com/playwrightworkspaces/44444444-4444-4444-4444-444444444444",
-        "playwrightServiceUrl": "wss://eastus.api.playwright.microsoft.com/playwrightworkspaces/44444444-4444-4444-4444-444444444444/browsers",
+        "workspaceId": "",
+        "dataplaneUri": "",
+        "playwrightServiceUrl": "",
         "targetRegions": [
           "North America",
           "South America",
@@ -111,9 +96,9 @@
         "displayName": "Europe Browser Agents",
         "location": "westeurope",
         "workspaceName": "pw-claudia-lab-eu",
-        "workspaceId": "912454ad-12ba-4bd3-809a-dac74dbf1c0f",
-        "dataplaneUri": "https://westeurope.api.playwright.microsoft.com/playwrightworkspaces/912454ad-12ba-4bd3-809a-dac74dbf1c0f",
-        "playwrightServiceUrl": "wss://westeurope.api.playwright.microsoft.com/playwrightworkspaces/912454ad-12ba-4bd3-809a-dac74dbf1c0f/browsers",
+        "workspaceId": "",
+        "dataplaneUri": "",
+        "playwrightServiceUrl": "",
         "targetRegions": [
           "Europe"
         ],
@@ -124,9 +109,9 @@
         "displayName": "Asia Browser Agents",
         "location": "eastasia",
         "workspaceName": "pw-claudia-lab-asia",
-        "workspaceId": "e051aa82-548a-4b13-bdf2-397b5389b802",
-        "dataplaneUri": "https://eastasia.api.playwright.microsoft.com/playwrightworkspaces/e051aa82-548a-4b13-bdf2-397b5389b802",
-        "playwrightServiceUrl": "wss://eastasia.api.playwright.microsoft.com/playwrightworkspaces/e051aa82-548a-4b13-bdf2-397b5389b802/browsers",
+        "workspaceId": "",
+        "dataplaneUri": "",
+        "playwrightServiceUrl": "",
         "targetRegions": [
           "Asia"
         ],
@@ -164,7 +149,7 @@
     "userMode": "create",
     "sitPrecision": true,
     "multiTurnEmailThreads": true,
-    "copilotQueries": true,
+    "copilotQueries": false,
     "externalAiInteractions": true,
     "promptResponseLogging": true,
     "agentActivityWorkbook": true
@@ -286,7 +271,7 @@
   "agents": [
     {
       "sam": "ana.rodriguez",
-      "userPrincipalName": "",
+      "userPrincipalName": null,
       "displayName": "Ana Rodriguez",
       "department": "HR",
       "jobTitle": "Analista de TI/Seguridad",
@@ -313,12 +298,11 @@
         "absences",
         "employee files",
         "privacy compliance"
-      ],
-      "keyVaultSecretName": "ana-rodriguez"
+      ]
     },
     {
       "sam": "carlos.delgado",
-      "userPrincipalName": "",
+      "userPrincipalName": null,
       "displayName": "Carlos Delgado",
       "department": "Finance",
       "jobTitle": "Analista de Datos",
@@ -345,12 +329,11 @@
         "expense reports",
         "budgets",
         "tax filings"
-      ],
-      "keyVaultSecretName": "carlos-delgado"
+      ]
     },
     {
       "sam": "david.chen",
-      "userPrincipalName": "",
+      "userPrincipalName": null,
       "displayName": "David Chen",
       "department": "Legal",
       "jobTitle": "Especialista en atención al cliente",
@@ -377,12 +360,11 @@
         "privacy registers",
         "litigation",
         "NDA"
-      ],
-      "keyVaultSecretName": "david-chen"
+      ]
     },
     {
       "sam": "james.wilson",
-      "userPrincipalName": "",
+      "userPrincipalName": null,
       "displayName": "James Wilson",
       "department": "Engineering",
       "jobTitle": "Director de Operaciones",
@@ -409,12 +391,11 @@
         "debug logs",
         "code reviews",
         "sprint reports"
-      ],
-      "keyVaultSecretName": "james-wilson"
+      ]
     },
     {
       "sam": "marcus.olsson",
-      "userPrincipalName": "",
+      "userPrincipalName": null,
       "displayName": "Marcus Olsson",
       "department": "Sales",
       "jobTitle": "Gerente de Ciberseguridad",
@@ -441,12 +422,11 @@
         "commissions",
         "meeting notes",
         "prospects"
-      ],
-      "keyVaultSecretName": "marcus-olsson"
+      ]
     },
     {
       "sam": "alexander.meyer",
-      "userPrincipalName": "",
+      "userPrincipalName": null,
       "displayName": "Alexander Meyer",
       "department": "HR",
       "jobTitle": "CEO",
@@ -473,12 +453,11 @@
         "absences",
         "employee files",
         "privacy compliance"
-      ],
-      "keyVaultSecretName": "alexander-meyer"
+      ]
     },
     {
       "sam": "diego.martinez",
-      "userPrincipalName": "",
+      "userPrincipalName": null,
       "displayName": "Diego Martinez",
       "department": "Finance",
       "jobTitle": "Gerente Comercial",
@@ -505,12 +484,11 @@
         "expense reports",
         "budgets",
         "tax filings"
-      ],
-      "keyVaultSecretName": "diego-martinez"
+      ]
     },
     {
       "sam": "emily.johnson",
-      "userPrincipalName": "",
+      "userPrincipalName": null,
       "displayName": "Emily Johnson",
       "department": "Legal",
       "jobTitle": "Abogada Corporativa",
@@ -537,12 +515,11 @@
         "privacy registers",
         "litigation",
         "NDA"
-      ],
-      "keyVaultSecretName": "emily-johnson"
+      ]
     },
     {
       "sam": "laura.gomez",
-      "userPrincipalName": "",
+      "userPrincipalName": null,
       "displayName": "Laura Gomez",
       "department": "Engineering",
       "jobTitle": "Analista de RRHH",
@@ -569,12 +546,11 @@
         "debug logs",
         "code reviews",
         "sprint reports"
-      ],
-      "keyVaultSecretName": "laura-gomez"
+      ]
     },
     {
       "sam": "priya.sharma",
-      "userPrincipalName": "",
+      "userPrincipalName": null,
       "displayName": "Priya Sharma",
       "department": "Sales",
       "jobTitle": "Cientifica de Datos",
@@ -601,12 +577,11 @@
         "commissions",
         "meeting notes",
         "prospects"
-      ],
-      "keyVaultSecretName": "priya-sharma"
+      ]
     },
     {
       "sam": "miguel.santos",
-      "userPrincipalName": "",
+      "userPrincipalName": null,
       "displayName": "Miguel Santos",
       "department": "TI / Infraestructura",
       "jobTitle": "Platform Engineer",
@@ -632,12 +607,11 @@
         "business operations",
         "sensitive data handling",
         "project updates"
-      ],
-      "keyVaultSecretName": "miguel-santos"
+      ]
     },
     {
       "sam": "sofia.lopez",
-      "userPrincipalName": "",
+      "userPrincipalName": null,
       "displayName": "Sofia Lopez",
       "department": "PMO",
       "jobTitle": "Project Manager",
@@ -663,18 +637,18 @@
         "business operations",
         "sensitive data handling",
         "project updates"
-      ],
-      "keyVaultSecretName": "sofia-lopez"
+      ]
     },
     {
       "sam": "devon.reyes",
-      "userPrincipalName": "",
+      "userPrincipalName": null,
       "displayName": "Devon Reyes",
       "department": "Operations Support",
       "jobTitle": "Business Operation Analyst",
       "wave": 4.0,
       "workload": "ExternalAI",
       "copilotLicense": false,
+      "existingUser": true,
       "workingHours": {
         "end": 17,
         "start": 8
@@ -693,8 +667,7 @@
         "business operations",
         "sensitive data handling",
         "project updates"
-      ],
-      "existingUser": true
+      ]
     }
   ],
   "externalRecipients": [

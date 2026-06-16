@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.9
+.VERSION 1.1.0
 .GUID eae37755-6eb4-444f-9e77-e8d699645e18
 
 .AUTHOR
@@ -23,7 +23,7 @@ https://github.com/MH-Demos/ClaudIA
 ClaudIA - Interactive Deployment Wizard
 
 .RELEASENOTES
-Version 1.0.9 captures the Step 10 MDCA API token as a secure prompt before storing it in Key Vault.
+Version 1.1.0 natively integrates the cross-tenant pre-flight: clears persisted globally-unique resource names when the subscription changes (Step 0) and verifies worldwide name availability before any resource is created (Step 4 pre-flight). In -Auto mode the pre-flight passes -AutoFix so colliding names are rewritten in agents.json with alternative deterministic candidates and the installer reloads the config in-place before deploying.
 
 #>
 <#
@@ -147,7 +147,10 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-if (-not $ConfigPath) { $ConfigPath = Join-Path $PSScriptRoot 'config\agents.json' }
+# Capture the operator-supplied -ConfigPath (if any). The real resolution happens
+# after modules\Common.ps1 is dot-sourced below, so per-tenant config files in
+# config\tenants\ can be auto-selected. An explicit -ConfigPath always wins.
+$script:ExplicitConfigPath = $ConfigPath
 
 function Test-AARepositoryStructure {
     $requiredPaths = @(
@@ -246,6 +249,12 @@ try {
     Write-Host "  .\Install-ClaudIA.ps1" -ForegroundColor White
     exit 1
 }
+
+# Resolve the config file now that Common.ps1 is available: an explicit
+# -ConfigPath wins, otherwise auto-select a per-tenant file from config\tenants\
+# (CLAUDIA_TENANT env var or the current az login domain), else fall back to the
+# shared config\agents.json.
+$ConfigPath = Resolve-AATenantConfigPath -RepoRoot $PSScriptRoot -ExplicitPath $script:ExplicitConfigPath
 
 $script:AADeploymentResults = @()
 $script:StepParameterSupplied = $PSBoundParameters.ContainsKey('Step')
@@ -891,7 +900,7 @@ function Select-AASubscription {
         Write-Host "           Recommended fix: invite the account to the tenant, accept the invitation, assign Owner or Contributor, then run the installer again." -ForegroundColor DarkYellow
         $manualChoice = if ($Auto) { 'N' } else { Read-Host "    Type a subscription ID manually anyway? Step 4 will fail without access. (y/N)" }
         if ($manualChoice -notin @('y','Y','yes','YES')) { return $null }
-        $manualSub = Read-ConfigValue -Label "Azure subscription ID" -Current $Current -Hint "e.g. 84000b2d-4410-4243-bf7e-f813b43bc2bd"
+        $manualSub = Read-ConfigValue -Label "Azure subscription ID" -Current $Current -Hint "e.g. 00000000-0000-0000-0000-000000000000"
         if ($manualSub -and -not (Test-AAGuid -Value $manualSub)) {
             Write-Host "    [ERROR] Subscription ID must be a GUID." -ForegroundColor Red
             return $null
@@ -975,7 +984,19 @@ if (($needsSetup -or $script:ForceConfigurationPrompt) -and -not $DryRun -and -n
 
     $newSubId = Select-AASubscription -Current $config.tenant.subscriptionId
     if (-not $newSubId) { return }
-    if ($newSubId -ne $config.tenant.subscriptionId) { $config.tenant.subscriptionId = $newSubId; $configChanged = $true }
+    if ($newSubId -ne $config.tenant.subscriptionId) {
+        Write-Host ""
+        Write-Host "  [INFO] Subscription changed - clearing persisted globally-unique resource names" -ForegroundColor Yellow
+        Write-Host "         (Azure OpenAI / Key Vault / Storage / Function App / ADX) so the installer" -ForegroundColor DarkGray
+        Write-Host "         can regenerate fresh deterministic names for the new subscription." -ForegroundColor DarkGray
+        # Persist current state first so Reset-UniqueNames sees the OLD configured sub vs the NEW active az sub.
+        $config | ConvertTo-Json -Depth 30 | Set-Content $ConfigPath -Encoding utf8
+        & (Join-Path $PSScriptRoot 'tools\Reset-UniqueNames.ps1') -ConfigPath $ConfigPath -InstallationDefinitionsPath $installationDefinitionsPath -Force | Out-Host
+        # Reload cleared state, then apply new sub.
+        $config = Get-Content $ConfigPath -Raw -Encoding utf8 | ConvertFrom-Json
+        $config.tenant.subscriptionId = $newSubId
+        $configChanged = $true
+    }
     Sync-AABrowserAgentConfig -Config $config
 
     $activeAccount = Get-AACurrentAzureCliAccount
@@ -1074,7 +1095,7 @@ if (($needsSetup -or $script:ForceConfigurationPrompt) -and -not $DryRun -and -n
         Set-AAConfigProperty -Object $config.infrastructure -Name openAiAccountName -Value (New-AADefaultOpenAiName -Config $config)
         Set-AAConfigProperty -Object $config.infrastructure -Name keyVaultName -Value (New-AADefaultKeyVaultName -Config $config)
         if (-not $config.infrastructure.openAiImageModel) {
-            Set-AAConfigProperty -Object $config.infrastructure -Name openAiImageModel -Value 'Dall-e-3'
+            Set-AAConfigProperty -Object $config.infrastructure -Name openAiImageModel -Value 'gpt-image-1'
         }
         $configChanged = $true
     }
@@ -1226,6 +1247,23 @@ if (-not $DryRun -and $domain -notmatch 'REPLACE_WITH') {
             Write-Host " [FAILED]" -ForegroundColor Red
             $probeResults['subscription'] = 'missing'
         }
+    }
+
+    # -- Credential health check: a failed query must NOT be reported as [NEW] ---
+    # The probes below use 'az ... 2>$null', which looks identical for "resource
+    # missing" and "token expired". Validate both planes once up front instead.
+    az group list --query "[0].name" -o tsv *> $null
+    $armOk = ($LASTEXITCODE -eq 0)
+    az ad signed-in-user show --query id -o tsv *> $null
+    $graphOk = ($LASTEXITCODE -eq 0)
+    if (-not $armOk -or -not $graphOk) {
+        $failedPlanes = @()
+        if (-not $armOk) { $failedPlanes += 'Azure Resource Manager' }
+        if (-not $graphOk) { $failedPlanes += 'Microsoft Graph' }
+        Write-Host "  [WARN] $($failedPlanes -join ' and ') queries are failing (expired session?)." -ForegroundColor Yellow
+        Write-Host "         Items below may show as [NEW] even if they already exist." -ForegroundColor Yellow
+        Write-Host "         Run: az login --tenant $($config.tenant.tenantId)  then rerun the wizard." -ForegroundColor Yellow
+        Write-Host ""
     }
 
     # -- Check Resource Group ---
@@ -1511,7 +1549,7 @@ if (Test-AAInstallStep '1') {
                 if ($resetExistingChoice -ne 'n') {
                     $agentPassword = Read-Host "  Shared lab password to set (blank = generate)"
                     if (-not $agentPassword) {
-                        $agentPassword = -join ((65..90) + (97..122) + (48..57) + (33,35,36,37) | Get-Random -Count 16 | ForEach-Object { [char]$_ })
+                        $agentPassword = New-AALabPassword
                     }
                 } else {
                     $agentPassword = Read-Host "  Enter the existing shared password to store in Key Vault"
@@ -1531,7 +1569,7 @@ if (Test-AAInstallStep '1') {
                     if ($LASTEXITCODE -eq 0) { $resetOk++ }
                 }
                 Write-Host " [OK] $resetOk/$($agents.Count) passwords reset" -ForegroundColor Green
-                Write-Host "  Shared lab password: $agentPassword" -ForegroundColor Yellow
+                Write-AASecretLine -Label 'Shared lab password' -Secret $agentPassword
             } else {
                 Write-Host "  [INFO] Passwords were not reset; the entered password will be stored for ROPC." -ForegroundColor DarkYellow
             }
@@ -1540,7 +1578,7 @@ if (Test-AAInstallStep '1') {
         Write-Host ""
     } else {
         Write-Host "=== Step 1: Creating agent accounts in Entra ID ===" -ForegroundColor Cyan
-        $agentPassword = -join ((65..90) + (97..122) + (48..57) + (33,35,36,37) | Get-Random -Count 16 | ForEach-Object { [char]$_ })
+        $agentPassword = New-AALabPassword
         $existCount = 0
         $createCount = 0
 
@@ -1622,11 +1660,11 @@ if (Test-AAInstallStep '1') {
                         if ($LASTEXITCODE -eq 0) { $resetOk++ }
                     }
                     Write-Host " [OK] $resetOk/$($agents.Count) passwords reset" -ForegroundColor Green
-                    Write-Host "  New shared password: $agentPassword" -ForegroundColor Yellow
+                    Write-AASecretLine -Label 'New shared password' -Secret $agentPassword
                 }
             }
         } elseif ($createCount -gt 0) {
-            Write-Host "  Password for new agents: $agentPassword" -ForegroundColor Yellow
+            Write-AASecretLine -Label 'Password for new agents' -Secret $agentPassword
         }
         Write-Host "  (Password will be stored automatically in Step 5.)" -ForegroundColor Gray
         Write-Host ""
@@ -1881,6 +1919,33 @@ if (Test-AAInstallStep '4') {
     Write-Host "=== Step 4: Deploying Azure infrastructure ===" -ForegroundColor Cyan
 
     if (-not $DryRun) {
+        # Pre-flight: verify globally-unique resource names are still available worldwide
+        # before any resource is created. Avoids partial deployments that leave billable
+        # Automation Account / OpenAI resources orphaned after a mid-run collision.
+        # In -Auto mode we also pass -AutoFix so the wizard rewrites colliding names
+        # to alternative deterministic candidates and reloads agents.json in-place.
+        Write-Host "  Pre-flight: checking globally-unique resource name availability..." -ForegroundColor Cyan
+        $config | ConvertTo-Json -Depth 30 | Set-Content $ConfigPath -Encoding utf8
+        $preflightArgs = @{ ConfigPath = $ConfigPath; InstallationDefinitionsPath = $installationDefinitionsPath }
+        if ($Auto -or $UseInstallationDefinitions) { $preflightArgs['AutoFix'] = $true }
+        & (Join-Path $PSScriptRoot 'tools\Test-NameAvailability.ps1') @preflightArgs | Out-Host
+        $preflightExit = $LASTEXITCODE
+        if ($preflightExit -eq 0 -and ($Auto -or $UseInstallationDefinitions)) {
+            # Reload config in case AutoFix renamed any field on disk.
+            $config = Get-Content -LiteralPath $ConfigPath -Raw -Encoding utf8 | ConvertFrom-Json
+        }
+        if ($preflightExit -eq 1) {
+            Write-Host ""
+            Write-Host "  [BLOCKED] At least one resource name is still taken globally after auto-fix attempts." -ForegroundColor Red
+            Write-Host "            Step 4 aborted before creating any Azure resource." -ForegroundColor Red
+            Write-Host "            Try a different infrastructure.resourceGroup or tenant.subscriptionId, or edit config/agents.json manually, then re-run:" -ForegroundColor Yellow
+            Write-Host "              .\Install-ClaudIA.ps1 -Step 4 -SkipPrerequisites" -ForegroundColor Cyan
+            Stop-Transcript | Out-Null
+            return
+        } elseif ($preflightExit -eq 2) {
+            Write-Host "  [WARN] Some name-availability checks could not complete (not signed in to az?). Continuing." -ForegroundColor Yellow
+        }
+
         $step4Auto = [bool]($Auto -or $UseInstallationDefinitions)
         & (Join-Path $PSScriptRoot 'modules\Deploy-AzureInfra.ps1') -Config $config -Auto:$step4Auto
         if ($config.adx -and $config.adx.enabled -eq $true) {

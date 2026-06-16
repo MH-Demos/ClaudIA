@@ -128,6 +128,37 @@ function Set-AAVariable {
         -Headers $mgtH -Body $body | Out-Null
 }
 
+function Invoke-CollabGraphRetry {
+    # Runs a Graph call with backoff on throttling/transient errors (429/5xx).
+    # Honors Retry-After when the service provides one.
+    param(
+        [Parameter(Mandatory)][scriptblock]$Block,
+        [int]$MaxAttempts = 4
+    )
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+        try {
+            return & $Block
+        } catch {
+            $status = 0
+            try { $status = [int]$_.Exception.Response.StatusCode } catch {}
+            if ($attempt -lt $MaxAttempts -and $status -in @(429, 500, 502, 503, 504)) {
+                $delay = [int]([Math]::Pow(2, $attempt) * 5)   # 10s, 20s, 40s
+                try {
+                    $retryAfter = @($_.Exception.Response.Headers.GetValues('Retry-After'))[0]
+                    $retryAfterSeconds = 0
+                    if ([int]::TryParse([string]$retryAfter, [ref]$retryAfterSeconds) -and $retryAfterSeconds -gt $delay) {
+                        $delay = $retryAfterSeconds
+                    }
+                } catch {}
+                Write-Host " [retry $attempt/$MaxAttempts HTTP $status, ${delay}s]" -ForegroundColor DarkYellow -NoNewline
+                Start-Sleep -Seconds $delay
+                continue
+            }
+            throw
+        }
+    }
+}
+
 function Resolve-CollabUserId {
     param([string]$Sam)
     $agent = $agents | Where-Object { $_.sam -eq $Sam } | Select-Object -First 1
@@ -166,15 +197,17 @@ function Add-CollabTeamMembers {
 
 function Resolve-CollabSharePointSite {
     param([string]$TeamId)
+    # SharePoint site provisioning for a new M365 group can take several minutes;
+    # poll for up to ~2.5 minutes before reporting [WAIT].
     $siteId = $null
     $retries = 0
-    while (-not $siteId -and $retries -lt 6) {
+    while (-not $siteId -and $retries -lt 15) {
         try {
             $site = Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/groups/$TeamId/sites/root?`$select=id" -Headers $gh
             $siteId = $site.id
         } catch {
             $retries++
-            if ($retries -lt 6) { Start-Sleep -Seconds 5 }
+            if ($retries -lt 15) { Start-Sleep -Seconds 10 }
         }
     }
     $siteId
@@ -241,11 +274,23 @@ function Ensure-CollaborationTeam {
             )
         } | ConvertTo-Json -Depth 5
 
-        $resp = Invoke-WebRequest -Method POST -Uri "https://graph.microsoft.com/v1.0/teams" `
-            -Headers $gh -Body $teamBody -ContentType 'application/json'
+        $resp = Invoke-CollabGraphRetry -Block {
+            Invoke-WebRequest -Method POST -Uri "https://graph.microsoft.com/v1.0/teams" `
+                -Headers $gh -Body $teamBody -ContentType 'application/json'
+        }
 
         if ($resp.StatusCode -eq 202) {
             $teamId = ($resp.Headers['Content-Location'] -replace ".*teams\('([^']+)'\).*", '$1')
+            if ($teamId -notmatch '^[0-9a-fA-F-]{36}$') {
+                # Content-Location header missing/unexpected -- resolve by group name instead.
+                Start-Sleep -Seconds 20
+                $lookup = Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/groups?`$filter=displayName eq '$safeTeamName'&`$select=id" -Headers $gh
+                $teamId = @($lookup.value | Select-Object -First 1).id
+            }
+            if (-not $teamId) {
+                Write-Host " [FAIL] team created (202) but its id could not be resolved" -ForegroundColor Red
+                return $null
+            }
             Write-Host " [OK] $teamId" -ForegroundColor Green
             Start-Sleep -Seconds 15
         } else {
@@ -350,12 +395,24 @@ if ($existingTeam) {
         )
     } | ConvertTo-Json -Depth 4
 
-    $resp = Invoke-WebRequest -Method POST -Uri "https://graph.microsoft.com/v1.0/teams" `
-        -Headers $gh -Body $teamBody -ContentType 'application/json'
+    $resp = Invoke-CollabGraphRetry -Block {
+        Invoke-WebRequest -Method POST -Uri "https://graph.microsoft.com/v1.0/teams" `
+            -Headers $gh -Body $teamBody -ContentType 'application/json'
+    }
 
     if ($resp.StatusCode -eq 202) {
         # Extract team ID from Content-Location header
         $teamId = ($resp.Headers['Content-Location'] -replace ".*teams\('([^']+)'\).*", '$1')
+        if ($teamId -notmatch '^[0-9a-fA-F-]{36}$') {
+            # Content-Location header missing/unexpected -- resolve by group name instead.
+            Start-Sleep -Seconds 20
+            $lookup = Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/groups?`$filter=displayName eq 'CorpLab - Departments'&`$select=id" -Headers $gh
+            $teamId = @($lookup.value | Select-Object -First 1).id
+        }
+        if (-not $teamId) {
+            Write-Host " [FAIL] team created (202) but its id could not be resolved" -ForegroundColor Red
+            return
+        }
         Write-Host " [OK] $teamId" -ForegroundColor Green
         Write-Host "    Waiting 15s for team provisioning..." -ForegroundColor Gray
         Start-Sleep -Seconds 15

@@ -213,7 +213,7 @@ The wizard prompts for AI model settings during first-time setup. You can also e
 "infrastructure": {
     "openAiModel": "gpt-4o",          // Chat model for content generation
     "openAiTpm": 30,                   // Tokens-per-minute capacity (10-120)
-    "openAiImageModel": "",            // Set to "dall-e-3" for image generation
+    "openAiImageModel": "",            // Set to "gpt-image-1" for image generation
 }
 ```
 
@@ -230,7 +230,7 @@ See [costs.md](costs.md) for detailed tokenization breakdown.
 
 ### Adding image generation
 
-Set `openAiImageModel` to `"dall-e-3"` to deploy DALL-E alongside the chat model. The runbook does not yet consume images — this is provisioned for future workloads (badge scans, org charts, document images).
+Set `openAiImageModel` to `"gpt-image-1"` to deploy the current Azure OpenAI image model alongside the chat model. (`dall-e-3` v3.0 was deprecated on 2026-03-04 and is rejected with `ServiceModelDeprecated`; the wizard auto-falls back to any other Standard image model the region offers.) The runbook does not yet consume images — this is provisioned for future workloads (badge scans, org charts, document images).
 
 ## Multi-Country Locale Support
 
@@ -292,7 +292,7 @@ Required fields: `country`, `language`, `currency`, `companyName`, `companyDescr
 
 ### Test Results (v2.0)
 
-Tested on Tenant A (MngEnvMCAP711732) with US locale:
+Tested on a lab tenant with US locale:
 
 | Test | Result |
 | --- | --- |

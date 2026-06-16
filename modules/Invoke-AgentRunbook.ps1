@@ -161,8 +161,22 @@ $adxConfig      = $agentConfig.adx
 
 function Get-AgentUpn {
     param($AgentConfigItem, [string]$Domain)
-    if ($AgentConfigItem.userPrincipalName) { return [string]$AgentConfigItem.userPrincipalName }
-    if ($AgentConfigItem.upn) { return [string]$AgentConfigItem.upn }
+    # Keep behavior aligned with modules/Common.ps1 Get-AgentUpn: ignore
+    # placeholder domains so secret names match what Step 5 stored in Key Vault.
+    if ($AgentConfigItem.userPrincipalName) {
+        $configuredUpn = [string]$AgentConfigItem.userPrincipalName
+        $configuredDomain = ($configuredUpn -split '@')[-1]
+        if ($configuredDomain -notin @('contoso.example','example.com','example.test')) {
+            return $configuredUpn
+        }
+    }
+    if ($AgentConfigItem.upn) {
+        $configuredUpn = [string]$AgentConfigItem.upn
+        $configuredDomain = ($configuredUpn -split '@')[-1]
+        if ($configuredDomain -notin @('contoso.example','example.com','example.test')) {
+            return $configuredUpn
+        }
+    }
     if ("$($AgentConfigItem.sam)" -match '@') { return [string]$AgentConfigItem.sam }
     return "$($AgentConfigItem.sam)@$Domain"
 }
@@ -996,11 +1010,27 @@ function Invoke-Graph {
         elseif ($Body -is [string]) { $params.Body = [System.Text.Encoding]::UTF8.GetBytes($Body) }
         else { $params.Body = ConvertTo-AAJsonBody -Value $Body -Depth 20 }
     }
-    try {
-        Invoke-RestMethod @params
-    } catch {
-        $details = if ($_.ErrorDetails.Message) { $_.ErrorDetails.Message } else { $_.Exception.Message }
-        throw "Graph $Method $Uri failed. $details"
+    $maxAttempts = 4
+    for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+        try {
+            return Invoke-RestMethod @params
+        } catch {
+            $statusCode = 0
+            try { $statusCode = [int]$_.Exception.Response.StatusCode } catch { $statusCode = 0 }
+            $retryable = $statusCode -in @(429, 502, 503, 504)
+            if ($retryable -and $attempt -lt $maxAttempts) {
+                $delay = [math]::Pow(2, $attempt)  # 2s, 4s, 8s
+                $retryAfter = $null
+                try { $retryAfter = $_.Exception.Response.Headers.GetValues('Retry-After') | Select-Object -First 1 } catch { $retryAfter = $null }
+                $retryAfterSeconds = 0
+                if ($retryAfter -and [int]::TryParse([string]$retryAfter, [ref]$retryAfterSeconds)) { $delay = [math]::Max($retryAfterSeconds, $delay) }
+                Write-Verbose "  [GRAPH] $Method $Uri returned $statusCode - retry $attempt/$($maxAttempts - 1) in ${delay}s"
+                Start-Sleep -Seconds $delay
+                continue
+            }
+            $details = if ($_.ErrorDetails.Message) { $_.ErrorDetails.Message } else { $_.Exception.Message }
+            throw "Graph $Method $Uri failed. $details"
+        }
     }
 }
 
@@ -1325,7 +1355,7 @@ function Invoke-OAI {
             @{ role = 'system'; content = (ConvertTo-AASafeText -Text $SystemPrompt -MaxLength 12000) }
             @{ role = 'user';   content = (ConvertTo-AASafeText -Text $UserPrompt -MaxLength 20000) }
         )
-        max_tokens  = $MaxTokens
+        max_completion_tokens = $MaxTokens
         temperature = 0.9
     }
     # Inject agent UPN as 'user' field for Azure OpenAI request attribution.
@@ -1392,7 +1422,7 @@ function Invoke-FoundryChatCompletion {
             @{ role = 'system'; content = (ConvertTo-AASafeText -Text $SystemPrompt -MaxLength 12000) }
             @{ role = 'user';   content = (ConvertTo-AASafeText -Text $UserPrompt -MaxLength 20000) }
         )
-        max_tokens = $MaxTokens
+        max_completion_tokens = $MaxTokens
         temperature = 0.3
     }
     if ($UserId) { $body.user = $UserId }

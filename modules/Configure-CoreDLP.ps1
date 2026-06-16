@@ -144,12 +144,47 @@ function New-PolicyIfNotExists {
         return
     }
 
-    try {
-        & $Block
-        Write-Host "    [OK] $Name" -ForegroundColor Green
-    } catch {
-        Write-Host "    [FAIL] $Name -- $($_.Exception.Message)" -ForegroundColor Red
+    for ($attempt = 1; $attempt -le 3; $attempt++) {
+        try {
+            & $Block
+            Write-Host "    [OK] $Name" -ForegroundColor Green
+            return
+        } catch {
+            $msg = $_.Exception.Message
+            if ($attempt -lt 3 -and (Test-DlpTransientError -Message $msg)) {
+                Write-Host "    [retry $attempt/3] $Name -- transient service error, waiting $(15 * $attempt)s..." -ForegroundColor DarkYellow
+                Start-Sleep -Seconds (15 * $attempt)
+                continue
+            }
+            Write-Host "    [FAIL] $Name -- $msg" -ForegroundColor Red
+            return
+        }
     }
+}
+
+$script:deferredRules = New-Object System.Collections.Generic.List[string]
+
+function Get-DlpDeferredMessage {
+    # Purview locks a rule name for 60 minutes after a deletion. Detects that lock
+    # (and the related "already exists in scenario" soft-delete state) and returns
+    # a human-readable deferral message, or $null when the error is unrelated.
+    param([Parameter(Mandatory)][string]$Message)
+
+    if ($Message -match 'ErrorDeleteRetryIntervalRuleException|Rule deletion takes 60 minutes') {
+        $minutes = 60
+        if ($Message -match 'retry after\s+(\d+)\s*min') { $minutes = [int]$Matches[1] }
+        $retryAt = (Get-Date).AddMinutes($minutes).ToString('HH:mm')
+        return "Purview rule-deletion lock active. Rerun Step 6a after $retryAt (~$minutes min)."
+    }
+    if ($Message -match 'ComplianceRuleAlreadyExistsInScenarioException') {
+        return 'A previous deletion of this rule is still completing in Purview. Rerun Step 6a in ~60 minutes.'
+    }
+    return $null
+}
+
+function Test-DlpTransientError {
+    param([Parameter(Mandatory)][string]$Message)
+    return ($Message -match '429|503|504|too many requests|server is busy|timed? out|temporarily unavailable|try again later')
 }
 
 function New-RuleIfNotExists {
@@ -167,8 +202,19 @@ function New-RuleIfNotExists {
                 Remove-DlpComplianceRule -Identity $Name -Confirm:$false -ErrorAction Stop
                 Write-Host "      [repair] $Name (recreated for workload-compatible actions)" -ForegroundColor DarkYellow
             } catch {
-                Write-Host "      [FAIL] $Name -- could not remove incompatible rule: $($_.Exception.Message)" -ForegroundColor Red
-                return
+                $msg = $_.Exception.Message
+                if ($msg -match 'ErrorRuleNotFoundException') {
+                    # Rule already soft-deleted -- fall through and recreate it.
+                } else {
+                    $deferred = Get-DlpDeferredMessage -Message $msg
+                    if ($deferred) {
+                        Write-Host "      [DEFERRED] $Name -- $deferred" -ForegroundColor Yellow
+                        $script:deferredRules.Add($Name)
+                    } else {
+                        Write-Host "      [FAIL] $Name -- could not remove incompatible rule: $msg" -ForegroundColor Red
+                    }
+                    return
+                }
             }
         } else {
             Write-Host "      [skip] $Name (exists)" -ForegroundColor DarkGray
@@ -176,13 +222,32 @@ function New-RuleIfNotExists {
         }
     }
 
+    $previousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Stop'
     try {
-        $previousErrorActionPreference = $ErrorActionPreference
-        $ErrorActionPreference = 'Stop'
-        & $Block
-        Write-Host "      [OK] $Name" -ForegroundColor Green
-    } catch {
-        Write-Host "      [FAIL] $Name -- $($_.Exception.Message)" -ForegroundColor Red
+        $maxAttempts = 3
+        for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+            try {
+                & $Block
+                Write-Host "      [OK] $Name" -ForegroundColor Green
+                return
+            } catch {
+                $msg = $_.Exception.Message
+                $deferred = Get-DlpDeferredMessage -Message $msg
+                if ($deferred) {
+                    Write-Host "      [DEFERRED] $Name -- $deferred" -ForegroundColor Yellow
+                    $script:deferredRules.Add($Name)
+                    return
+                }
+                if ($attempt -lt $maxAttempts -and (Test-DlpTransientError -Message $msg)) {
+                    Write-Host "      [retry $attempt/$maxAttempts] $Name -- transient service error, waiting $(15 * $attempt)s..." -ForegroundColor DarkYellow
+                    Start-Sleep -Seconds (15 * $attempt)
+                    continue
+                }
+                Write-Host "      [FAIL] $Name -- $msg" -ForegroundColor Red
+                return
+            }
+        }
     } finally {
         $ErrorActionPreference = $previousErrorActionPreference
     }
@@ -198,7 +263,15 @@ function Remove-RuleIfExists {
         Remove-DlpComplianceRule -Identity $Name -Confirm:$false -ErrorAction Stop
         Write-Host "      [remove] $Name (unsupported for this workload)" -ForegroundColor DarkYellow
     } catch {
-        Write-Host "      [FAIL] $Name -- could not remove unsupported rule: $($_.Exception.Message)" -ForegroundColor Red
+        $msg = $_.Exception.Message
+        if ($msg -match 'ErrorRuleNotFoundException') { return }
+        $deferred = Get-DlpDeferredMessage -Message $msg
+        if ($deferred) {
+            Write-Host "      [DEFERRED] $Name -- $deferred" -ForegroundColor Yellow
+            $script:deferredRules.Add($Name)
+        } else {
+            Write-Host "      [FAIL] $Name -- could not remove unsupported rule: $msg" -ForegroundColor Red
+        }
     }
 }
 
@@ -414,6 +487,15 @@ foreach ($category in $categories) {
 foreach ($labelPath in @('Confidential/Conf-HR', 'Confidential/Conf-Finance')) {
     $labelRule = "Copilot - Label - $(($labelPath -replace '/', ' - '))"
     Remove-RuleIfExists -Name $labelRule
+}
+
+if ($script:deferredRules.Count -gt 0) {
+    Write-Host ""
+    Write-Host "  [DEFERRED] $($script:deferredRules.Count) rule(s) blocked by the Purview 60-minute rule-deletion lock:" -ForegroundColor Yellow
+    $script:deferredRules | Sort-Object -Unique | ForEach-Object { Write-Host "    - $_" -ForegroundColor Yellow }
+    Write-Host "  This is a Purview service limit, not an error in your setup." -ForegroundColor Yellow
+    Write-Host "  Rerun Step 6a after the lock expires: existing rules are skipped, only the deferred ones are recreated." -ForegroundColor Yellow
+    Write-Host ""
 }
 
 Write-Host "  Category-based core DLP policies deployed ($modeLabel)." -ForegroundColor Green

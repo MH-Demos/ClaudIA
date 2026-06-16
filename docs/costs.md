@@ -12,7 +12,7 @@ The agents use Azure OpenAI for AI-generated PII content. Cost depends on the mo
 | GPT-4o-mini | $0.15 | $0.60 | 128K | Budget mode, sufficient for basic SIT-precise PII | `"openAiModel": "gpt-4o-mini"` |
 | **GPT-4.1-mini** | $0.40 | $1.60 | 1M | Long-form documents, multi-page reports | `"openAiModel": "gpt-4.1-mini"` |
 | **GPT-4.1** | $2.00 | $8.00 | 1M | Maximum quality, complex legal/financial content | `"openAiModel": "gpt-4.1"` |
-| **DALL-E 3** (optional) | $0.04/image (Standard) | - | - | Badge scans, org charts, document images | `"openAiImageModel": "dall-e-3"` |
+| **gpt-image-1** (optional) | $0.04/image (Standard) | - | - | Badge scans, org charts, document images | `"openAiImageModel": "gpt-image-1"` |
 
 ### Tokenization per Run (10 agents, 1 burst, GPT-4o with upgraded tokens)
 

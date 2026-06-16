@@ -88,6 +88,10 @@ $secretPatterns = [ordered]@{
     'Password assignment' = '(password|passwd|AgentPassword)\s*[:=]\s*["''][^<"''][^"'']{7,}'
     'Connection string' = '(AccountKey=|SharedAccessKey=|DefaultEndpointsProtocol=)'
     'Bearer token' = 'Bearer\s+[A-Za-z0-9._-]{20,}'
+    'JWT token' = 'eyJ[A-Za-z0-9_-]{15,}\.eyJ[A-Za-z0-9_-]{15,}\.[A-Za-z0-9_-]{10,}'
+    'SAS token' = '[?&]sv=\d{4}-\d{2}-\d{2}[^\s"'']*&sig=[A-Za-z0-9%+/=]{10,}'
+    'API key assignment' = '(api[_-]?key|apikey|subscription[_-]?key)\s*[:=]\s*["''][A-Za-z0-9+/=_-]{20,}["'']'
+    'GitHub token' = 'gh[pousr]_[A-Za-z0-9]{30,}'
 }
 
 $allowedPublicReferences = @(
@@ -115,6 +119,28 @@ foreach ($file in $textFiles) {
             $relative = $file.FullName.Substring($root.Path.Length + 1)
             $issues.Add("$name pattern found in $relative")
         }
+    }
+}
+
+# Tracked config files ship with placeholders (contoso.example, all-zero GUIDs),
+# but the wizard writes REAL tenant/subscription IDs into them locally. Flag any
+# real-looking GUID so a 'git add -A' cannot leak a lab tenant to the public repo.
+$trackedConfigs = @(
+    'config\agents.json',
+    'config\Installation_definitions.json'
+)
+foreach ($relative in $trackedConfigs) {
+    $candidate = Join-Path $root.Path $relative
+    if (-not (Test-Path -LiteralPath $candidate)) { continue }
+    $content = Get-Content -LiteralPath $candidate -Raw -ErrorAction SilentlyContinue
+    if ($null -eq $content) { continue }
+    $guidMatches = [regex]::Matches($content, '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}') |
+        Where-Object { $_.Value -ne '00000000-0000-0000-0000-000000000000' }
+    if ($guidMatches.Count -gt 0) {
+        $issues.Add("Tracked config $relative contains a real-looking GUID ($($guidMatches[0].Value)). Restore placeholders before committing, or run: git update-index --skip-worktree $($relative -replace '\\', '/')")
+    }
+    if ($content -match '\.onmicrosoft\.com' -and $content -notmatch 'contoso') {
+        $issues.Add("Tracked config $relative contains a real-looking tenant domain. Restore placeholders before committing.")
     }
 }
 
