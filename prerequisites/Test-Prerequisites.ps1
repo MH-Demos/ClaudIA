@@ -535,6 +535,12 @@ if ($Offline) {
 
         Write-Section 'Azure Resource Providers'
         foreach ($provider in (Get-RequiredProviders -Config $config)) {
+            # When -RegisterProviders is set we actively drive each provider to
+            # Registered; if Azure is still propagating (state stays
+            # 'Registering' after --wait on a large/slow tenant) treat it as a
+            # WARNING, not a hard FAIL: registration is in flight and the actual
+            # deployment will proceed once it completes. Without -RegisterProviders
+            # an unregistered provider remains a FAIL so the user is told to fix it.
             Invoke-Check 'Azure Resource Providers' $provider {
                 $state = Invoke-AzText -Arguments @('provider','show','--namespace',$provider,'--query','registrationState','-o','tsv')
                 if ($state -eq 'Registered') {
@@ -544,8 +550,11 @@ if ($Offline) {
                     Invoke-AzText -Arguments @('provider','register','--namespace',$provider,'--wait','--only-show-errors') | Out-Null
                     $state = Invoke-AzText -Arguments @('provider','show','--namespace',$provider,'--query','registrationState','-o','tsv')
                     if ($state -eq 'Registered') { "$provider is Registered" }
+                    # Still 'Registering' after --wait: return nothing so the
+                    # -WarningOnly mapping below records a WARN (in flight, not a
+                    # blocker). The real deployment proceeds once it completes.
                 }
-            } "Run: az provider register --namespace $provider --wait"
+            } "Provider is registering; it will finish shortly. If it persists run: az provider register --namespace $provider --wait" -WarningOnly:$RegisterProviders
         }
 
         Write-Section 'Azure OpenAI'

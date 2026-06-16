@@ -124,6 +124,29 @@ Add-Type -AssemblyName System.Drawing
 # ===========================================================================
 function Test-Tool { param([string]$Name) [bool](Get-Command $Name -ErrorAction SilentlyContinue) }
 
+# HIGH#1: refresh THIS process' PATH from the registry after a winget install so
+# newly-installed CLIs (az, node, git) are resolvable immediately - including by
+# the child pwsh the wizard starts for prereqs/installer, which inherits this
+# process' environment. winget writes the Machine/User PATH in the registry but
+# does not push it into already-running processes; without this, the deployment
+# fails claiming the tool is missing until the user reopens the wizard.
+function Update-ProcessPath {
+    try {
+        $machine = [System.Environment]::GetEnvironmentVariable('Path','Machine')
+        $user    = [System.Environment]::GetEnvironmentVariable('Path','User')
+        $parts = @()
+        foreach ($seg in @($machine, $user)) {
+            if ($seg) { $parts += ($seg -split ';' | Where-Object { $_ -and $_.Trim() }) }
+        }
+        # De-duplicate while preserving order so PATH does not grow on each call.
+        $seen = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        $ordered = foreach ($p in $parts) { if ($seen.Add($p)) { $p } }
+        $env:Path = ($ordered -join ';')
+    } catch { }
+    # Refresh the cmdlet/command cache so Get-Command sees the new executables.
+    try { $null = Get-Command -Name 'reset-nonexistent-claudia-cmd' -ErrorAction SilentlyContinue } catch { }
+}
+
 function Install-WithWinget {
     param([string]$Id)
     if (-not (Test-Tool 'winget')) { return $false }
@@ -132,6 +155,8 @@ function Install-WithWinget {
             'install','--id',$Id,'--source','winget',
             '--accept-package-agreements','--accept-source-agreements'
         ) -Wait -NoNewWindow
+        # Make the freshly-installed tool resolvable in this session right away.
+        Update-ProcessPath
         return $true
     } catch { return $false }
 }
@@ -402,8 +427,9 @@ $btnCheck.Add_Click({
             Install-PsModuleForClaudIA -Name $m | Out-Null
         }
     }
-    $env:Path = [System.Environment]::GetEnvironmentVariable('Path','Machine') + ';' +
-                [System.Environment]::GetEnvironmentVariable('Path','User')
+    # Refresh PATH (registry -> this process) so child pwsh sees new CLIs, and
+    # re-scan available modules so the grid/gate reflect what was just installed.
+    Update-ProcessPath
     Update-ToolGrid
     $btnCheck.Text = 'Check / Install missing tools + modules'
     [System.Windows.Forms.MessageBox]::Show(
@@ -618,15 +644,15 @@ deployment mode it can also register Azure providers. A live log appears below.
 '@
 $lblSummary = New-Object System.Windows.Forms.Label
 $lblSummary.AutoSize = $false
-$lblSummary.Size = New-Object System.Drawing.Size(650, 224)
-$lblSummary.Location = New-Object System.Drawing.Point(30, 110)
+$lblSummary.Size = New-Object System.Drawing.Size(650, 272)
+$lblSummary.Location = New-Object System.Drawing.Point(30, 104)
 $lblSummary.Font = New-Object System.Drawing.Font('Consolas', 10)
 $page5.Controls.Add($lblSummary)
 
 $chkDry = New-Object System.Windows.Forms.CheckBox
 $chkDry.AutoSize = $false
 $chkDry.Size = New-Object System.Drawing.Size(650, 40)
-$chkDry.Location = New-Object System.Drawing.Point(30, 344)
+$chkDry.Location = New-Object System.Drawing.Point(30, 384)
 $chkDry.Text = 'Do a dry run first (saves local config files, creates no Azure/M365 resources).'
 $chkDry.Checked = $true
 $page5.Controls.Add($chkDry)
@@ -650,14 +676,14 @@ $script:StepChoices = @(
 
 $lblScope = New-Object System.Windows.Forms.Label
 $lblScope.AutoSize = $true
-$lblScope.Location = New-Object System.Drawing.Point(30, 392)
+$lblScope.Location = New-Object System.Drawing.Point(30, 432)
 $lblScope.Text = 'Scope:'
 $page5.Controls.Add($lblScope)
 
 $cmbStep = New-Object System.Windows.Forms.ComboBox
 $cmbStep.DropDownStyle = 'DropDownList'
 $cmbStep.Size = New-Object System.Drawing.Size(560, 24)
-$cmbStep.Location = New-Object System.Drawing.Point(90, 388)
+$cmbStep.Location = New-Object System.Drawing.Point(90, 428)
 foreach ($sc in $script:StepChoices) { [void]$cmbStep.Items.Add($sc.Label) }
 $cmbStep.SelectedIndex = 0
 $page5.Controls.Add($cmbStep)
@@ -678,6 +704,10 @@ Resource group  : $($script:State.ResourceGroup)
 Azure region    : $($script:State.Location)
 Country code    : $($script:State.Country)
 Browser agents  : $(if ($script:State.EnableBrowser) {'Yes'} else {'No'})
+
+Note: if a component (e.g. Azure Data Explorer or the OpenAI model) is not
+available in $($script:State.Location), ClaudIA falls back to a nearby region
+automatically and records the region it used. No action needed.
 "@
 }
 $page5.Tag = {
@@ -743,6 +773,13 @@ function Start-Deployment {
         Update-AgentsConfig
         Write-Log "Saved settings to config\agents.json"
 
+        # HIGH#1: refresh PATH from the registry one more time right before we
+        # spawn child pwsh processes (prereq check + installer). If the user
+        # installed a tool on the previous page and clicked Deploy without
+        # reopening the wizard, this guarantees the children inherit a PATH that
+        # includes the new CLIs instead of failing "tool not found".
+        Update-ProcessPath
+
         # Resolve the deployment scope once: $null = full run, otherwise a single
         # step to run in isolation (resume). Reused by the prereq gate and the
         # installer args below so they can never disagree.
@@ -767,8 +804,20 @@ function Start-Deployment {
             if (($cfg.PSObject.Properties.Name -contains 'graphMeteredBilling') -and $cfg.graphMeteredBilling.enabled) { $providers.Add('Microsoft.GraphServices') }
         } catch {}
         if ($chkDry.Checked) {
-            Write-Log '=== Dry run: Azure provider registration skipped ==='
-            Write-Log "Would register/check: $((($providers | Select-Object -Unique) -join ', '))"
+            # HIGH#2: registering resource providers is free, idempotent and
+            # NON-destructive (it only unlocks resource TYPES in the
+            # subscription; it creates nothing and costs nothing). On a brand-new
+            # tenant the providers are unregistered, which previously made the
+            # dry run FAIL on every "<provider> is Registered" prereq check. We
+            # therefore register them even in dry-run mode: this is a "prepare"
+            # action, not a deployment, and it makes the first real run instant.
+            Write-Log '=== Registering Azure resource providers (prepare step, safe in dry run) ==='
+            Write-Log 'This unlocks resource types in the subscription. It creates nothing and has no cost.'
+            foreach ($pr in ($providers | Select-Object -Unique)) {
+                Write-Log "  registering $pr ..."
+                & az provider register -n $pr --only-show-errors 2>$null | Out-Null
+                [System.Windows.Forms.Application]::DoEvents()
+            }
         } else {
             Write-Log '=== Registering Azure resource providers (required by Microsoft) ==='
             foreach ($pr in ($providers | Select-Object -Unique)) {
@@ -801,7 +850,12 @@ function Start-Deployment {
         # -ConfigPath: use the SAME file Update-AgentsConfig wrote (per-tenant
         # file when one exists); without it the child defaults to the shared
         # config\agents.json template, which is intentionally blank.
-        $prereqRaw = & pwsh -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $PrereqPath -ConfigPath $ConfigPath -AsJson 2>$null
+        # -RegisterProviders: we just kicked off provider registration above
+        # (async). Passing this lets the prereq check WAIT for each provider with
+        # 'az provider register --wait' so a provider still in 'Registering' is
+        # driven to 'Registered' instead of being reported as a hard FAIL. This
+        # is what makes a brand-new tenant pass the dry run.
+        $prereqRaw = & pwsh -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $PrereqPath -ConfigPath $ConfigPath -RegisterProviders -AsJson 2>$null
         $prereqText = ($prereqRaw | Out-String)
         $prereq = $null
         try {

@@ -169,6 +169,56 @@ function Get-KeyVaultName {
     return "kv$base$suffix"
 }
 
+function Get-AAGlobalSuffix {
+    # Deterministic 8-char suffix (sub + RG) for globally-unique resource names
+    # (Azure OpenAI account, storage). Mirrors Get-KeyVaultName seeding so all
+    # derived names for a given (subscription, resourceGroup) stay stable across
+    # reruns. ASCII/lowercase only.
+    param(
+        [Parameter(Mandatory)][string]$SubscriptionId,
+        [Parameter(Mandatory)][string]$ResourceGroup,
+        [string]$Salt = ''
+    )
+    $seed = "$SubscriptionId-$ResourceGroup-$Salt"
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($seed)
+    $hash = [System.Security.Cryptography.SHA256]::Create().ComputeHash($bytes)
+    return ([System.BitConverter]::ToString($hash).Replace('-', '').Substring(0, 8)).ToLowerInvariant()
+}
+
+function Set-AAInfrastructureDefaults {
+    # HIGH#3: the shared agents.json template ships with BLANK infrastructure
+    # names so it carries no tenant identity. When the wizard only captures the
+    # resource group, the remaining names (automation account, Azure OpenAI
+    # account, Key Vault) used to stay empty and the deployment failed with
+    # "$kvName" / empty-name errors. This fills any blank name deterministically:
+    #   - automationAccountName -> 'aa-claudia-lab' (RG-scoped, name reuse is safe)
+    #   - openAiAccountName      -> 'oai-claudia-<suffix>' (globally unique)
+    #   - keyVaultName           -> Get-KeyVaultName (globally unique)
+    # Explicit values from a per-tenant config or Installation_definitions.json
+    # always win (only blanks are filled), so existing deployments are untouched.
+    param([Parameter(Mandatory)]$Config)
+
+    if (-not $Config.infrastructure) { return $Config }
+    $sub = [string]$Config.tenant.subscriptionId
+    $rg  = [string]$Config.infrastructure.resourceGroup
+
+    if ([string]::IsNullOrWhiteSpace([string]$Config.infrastructure.automationAccountName)) {
+        Set-AAObjectProperty -Object $Config.infrastructure -Name 'automationAccountName' -Value 'aa-claudia-lab'
+    }
+    if ([string]::IsNullOrWhiteSpace([string]$Config.infrastructure.openAiAccountName)) {
+        $oaiName = if ($sub -and $rg) { "oai-claudia-$(Get-AAGlobalSuffix -SubscriptionId $sub -ResourceGroup $rg -Salt 'oai')" } else { 'oai-claudia-lab' }
+        Set-AAObjectProperty -Object $Config.infrastructure -Name 'openAiAccountName' -Value $oaiName
+    }
+    if ([string]::IsNullOrWhiteSpace([string]$Config.infrastructure.keyVaultName)) {
+        Set-AAObjectProperty -Object $Config.infrastructure -Name 'keyVaultName' -Value (Get-KeyVaultName -Config $Config)
+    }
+    # Keep the adx mirror of keyVaultName coherent when present and blank.
+    if ($Config.adx -and [string]::IsNullOrWhiteSpace([string]$Config.adx.keyVaultName)) {
+        Set-AAObjectProperty -Object $Config.adx -Name 'keyVaultName' -Value ([string]$Config.infrastructure.keyVaultName)
+    }
+    return $Config
+}
+
 function Set-AAObjectProperty {
     param(
         [Parameter(Mandatory)]$Object,
@@ -251,6 +301,11 @@ function Get-AAEffectiveConfig {
     } elseif ($RequireInstallationDefinitions) {
         throw "Installation definitions not found: $InstallationDefinitionsPath"
     }
+
+    # Fill any blank infrastructure names deterministically (template ships blank
+    # so it carries no tenant identity). Explicit/definition values win; only
+    # empties are derived. Prevents empty-name / "$kvName" deployment failures.
+    $config = Set-AAInfrastructureDefaults -Config $config
 
     return [PSCustomObject]@{
         Config = $config
