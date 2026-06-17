@@ -122,7 +122,7 @@ function Set-AAKeyVaultSecretValue {
 function Get-AgentUpn {
     param(
         [Parameter(Mandatory)]$Agent,
-        [Parameter(Mandatory)][string]$Domain
+        [string]$Domain
     )
     if ($Agent.userPrincipalName) {
         $configuredUpn = [string]$Agent.userPrincipalName
@@ -139,13 +139,14 @@ function Get-AgentUpn {
         }
     }
     if ("$($Agent.sam)" -match '@') { return [string]$Agent.sam }
+    if ([string]::IsNullOrWhiteSpace($Domain)) { return [string]$Agent.sam }
     return "$($Agent.sam)@$Domain"
 }
 
 function Get-AgentSecretName {
     param(
         [Parameter(Mandatory)]$Agent,
-        [Parameter(Mandatory)][string]$Domain
+        [string]$Domain
     )
 
     $upn = Get-AgentUpn -Agent $Agent -Domain $Domain
