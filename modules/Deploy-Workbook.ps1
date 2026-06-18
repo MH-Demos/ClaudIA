@@ -103,18 +103,27 @@ function New-AdxWorkbookQueryItem {
         [int]$Size = 0
     )
 
+    # The Azure Workbooks "Azure Data Explorer" data source (queryType 9) wraps the
+    # KQL in an AzureDataExplorerQuery/1.0 envelope that carries the cluster + database.
+    # The older "Logs (Analytics)" path (queryType 0 + resourceType/crossComponentResources)
+    # does NOT expose a database selector and renders against the cluster's default
+    # database (which does not exist on single-database clusters), so every tile fails
+    # with "Failed to resolve table". queryType 9 is the correct ADX data source.
+    $adxQuery = [ordered]@{
+        version      = 'AzureDataExplorerQuery/1.0'
+        queryText    = "$baseKql`n$Query"
+        clusterName  = "$clusterName.$clusterLocation"
+        databaseName = $databaseName
+    } | ConvertTo-Json -Compress -Depth 5
+
     [ordered]@{
         type = 3
         content = [ordered]@{
             version = 'KqlItem/1.0'
-            query = "$baseKql`n$Query"
+            query = $adxQuery
             size = $Size
             title = $Title
-            queryType = 3
-            resourceType = 'microsoft.kusto/clusters'
-            crossComponentResources = @($clusterResourceId)
-            clusterName = "$clusterName.$clusterLocation"
-            databaseName = $databaseName
+            queryType = 9
             visualization = $Visualization
         }
         name = $Name
@@ -125,7 +134,7 @@ $items = @(
     [ordered]@{
         type = 1
         content = [ordered]@{
-            json = "# ClaudIA Activity Monitor`nSource: **Azure Data Explorer** cluster `$clusterName`, database `$databaseName`, table `$tableName`. Each row stores `TimeGenerated` plus dynamic `Event` telemetry."
+            json = "# ClaudIA Activity Monitor`nSource: **Azure Data Explorer** cluster ``$clusterName``, database ``$databaseName``, table ``$tableName``. Each row stores ``TimeGenerated`` plus dynamic ``Event`` telemetry."
         }
         name = 'header'
     }
