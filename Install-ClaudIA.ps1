@@ -316,6 +316,13 @@ $installationDefinitionsPath = Join-Path $PSScriptRoot 'config\Installation_defi
 Start-Transcript -Path $runLogPath -Append | Out-Null
 Write-Host "  Log file: $runLogPath" -ForegroundColor Gray
 
+# Pair the shared state file with the resolved tenant: archives the previous
+# tenant's Installation_definitions.json and restores this tenant's. Prevents a
+# run against tenant A from overwriting tenant B's deployment state (or a
+# template-config run from wiping real state). Runs AFTER Start-Transcript so
+# the switch messages (and any file-lock failure) land in the log.
+Sync-AAInstallationDefinitionsWithTenant -RepoRoot $PSScriptRoot -ConfigPath $ConfigPath
+
 # ============================================================================
 # BANNER + DISCLAIMER
 # ============================================================================

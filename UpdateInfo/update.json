@@ -19,9 +19,9 @@
     {
       "directory": "modules",
       "file": "Common.Config.ps1",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "format": "ps1",
-      "changes": "Config resolution, installation definitions, atomic JSON writes (split from Common.ps1)",
+      "changes": "Per-tenant installation-definitions pairing (Sync-AAInstallationDefinitionsWithTenant) + tenant-mismatch write guard",
       "URI": "modules/Common.Config.ps1"
     },
     {
@@ -147,7 +147,7 @@
     {
       "directory": "ROOT",
       "file": "Install-ClaudIA.ps1",
-      "version": "1.0.9",
+      "version": "1.0.10",
       "format": "ps1",
       "changes": "ClaudIA - Interactive Deployment Wizard",
       "URI": "Install-ClaudIA.ps1"

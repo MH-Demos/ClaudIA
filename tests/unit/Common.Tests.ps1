@@ -234,3 +234,91 @@ Describe 'Save-AAJsonAtomic' {
         Test-Path "$script:target.tmp" | Should -BeFalse
     }
 }
+
+Describe 'Sync-AAInstallationDefinitionsWithTenant' {
+    BeforeEach {
+        $script:root = Join-Path ([System.IO.Path]::GetTempPath()) ("claudia-sync-" + [guid]::NewGuid().ToString('N'))
+        New-Item -ItemType Directory -Path (Join-Path $script:root 'config\tenants') -Force | Out-Null
+        $script:active = Join-Path $script:root 'config\Installation_definitions.json'
+        $script:cfgA = Join-Path $script:root 'config\tenants\alpha.json'
+        $script:cfgB = Join-Path $script:root 'config\tenants\beta.json'
+        Set-Content $script:cfgA -Value '{}'
+        Set-Content $script:cfgB -Value '{}'
+        # helper to fabricate a state file owned by a tenant
+        $script:mkState = { param($Domain) '{"tenant": {"domain": "' + $Domain + '"}, "steps": {"marker": "' + $Domain + '"}}' }
+    }
+    AfterEach {
+        Remove-Item -LiteralPath $script:root -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    It 'is a no-op in legacy single-tenant mode (config not under tenants dir)' {
+        Set-Content $script:active -Value (& $script:mkState 'alpha.onmicrosoft.com')
+        Sync-AAInstallationDefinitionsWithTenant -RepoRoot $script:root -ConfigPath (Join-Path $script:root 'config\agents.json') -Quiet
+        (Get-Content $script:active -Raw | ConvertFrom-Json).tenant.domain | Should -Be 'alpha.onmicrosoft.com'
+        Test-Path (Join-Path $script:root 'config\tenants\alpha.definitions.json') | Should -BeFalse
+    }
+    It 'refreshes the archive when the active state already belongs to the resolved tenant' {
+        Set-Content $script:active -Value (& $script:mkState 'alpha.onmicrosoft.com')
+        Sync-AAInstallationDefinitionsWithTenant -RepoRoot $script:root -ConfigPath $script:cfgA -Quiet
+        (Get-Content (Join-Path $script:root 'config\tenants\alpha.definitions.json') -Raw | ConvertFrom-Json).steps.marker |
+            Should -Be 'alpha.onmicrosoft.com'
+        (Get-Content $script:active -Raw | ConvertFrom-Json).tenant.domain | Should -Be 'alpha.onmicrosoft.com'
+    }
+    It 'archives tenant A and restores tenant B on switch' {
+        Set-Content $script:active -Value (& $script:mkState 'alpha.onmicrosoft.com')
+        Set-Content (Join-Path $script:root 'config\tenants\beta.definitions.json') -Value (& $script:mkState 'beta.onmicrosoft.com')
+        Sync-AAInstallationDefinitionsWithTenant -RepoRoot $script:root -ConfigPath $script:cfgB -Quiet
+        (Get-Content $script:active -Raw | ConvertFrom-Json).tenant.domain | Should -Be 'beta.onmicrosoft.com'
+        (Get-Content (Join-Path $script:root 'config\tenants\alpha.definitions.json') -Raw | ConvertFrom-Json).tenant.domain |
+            Should -Be 'alpha.onmicrosoft.com'
+    }
+    It 'archives tenant A and starts fresh when the resolved tenant has no archive' {
+        Set-Content $script:active -Value (& $script:mkState 'alpha.onmicrosoft.com')
+        Sync-AAInstallationDefinitionsWithTenant -RepoRoot $script:root -ConfigPath $script:cfgB -Quiet
+        Test-Path $script:active | Should -BeFalse
+        Test-Path (Join-Path $script:root 'config\tenants\alpha.definitions.json') | Should -BeTrue
+    }
+    It 'preserves unowned (template) state under backups instead of losing it' {
+        Set-Content $script:active -Value '{"tenant": {"domain": ""}, "steps": {"leftover": true}}'
+        Set-Content (Join-Path $script:root 'config\tenants\alpha.definitions.json') -Value (& $script:mkState 'alpha.onmicrosoft.com')
+        Sync-AAInstallationDefinitionsWithTenant -RepoRoot $script:root -ConfigPath $script:cfgA -Quiet
+        (Get-Content $script:active -Raw | ConvertFrom-Json).tenant.domain | Should -Be 'alpha.onmicrosoft.com'
+        @(Get-ChildItem (Join-Path $script:root 'config\backups') -Filter 'Installation_definitions.unowned-*.json').Count | Should -Be 1
+    }
+}
+
+Describe 'Initialize-AAInstallationDefinitions tenant guard' {
+    BeforeEach {
+        $script:root = Join-Path ([System.IO.Path]::GetTempPath()) ("claudia-guard-" + [guid]::NewGuid().ToString('N'))
+        New-Item -ItemType Directory -Path (Join-Path $script:root 'config') -Force | Out-Null
+        $script:defs = Join-Path $script:root 'config\Installation_definitions.json'
+        $script:mkConfig = { param($Domain) [pscustomobject]@{
+            tenant = [pscustomobject]@{ domain = $Domain; tenantId = 't'; subscriptionId = 's'; location = 'l'; country = 'US' }
+            infrastructure = [pscustomobject]@{ resourceGroup = 'rg'; automationAccountName = 'aa'; openAiAccountName = 'oai'; openAiModel = 'm'; openAiModelVersion = 'v'; openAiImageModel = 'im'; openAiImageModelVersion = 'iv'; openAiTpm = 1; fabricEnabled = $false; keyVaultName = 'kv' }
+            agents = @()
+        } }
+    }
+    AfterEach {
+        Remove-Item -LiteralPath $script:root -Recurse -Force -ErrorAction SilentlyContinue
+        $script:AAInstallationDefinitions = $null
+    }
+    It 'accepts a re-run for the same tenant' {
+        Initialize-AAInstallationDefinitions -Path $script:defs -Config (& $script:mkConfig 'alpha.onmicrosoft.com') -ConfigPath 'x' -RunLogPath 'y' -RunStamp 'z'
+        { Initialize-AAInstallationDefinitions -Path $script:defs -Config (& $script:mkConfig 'alpha.onmicrosoft.com') -ConfigPath 'x' -RunLogPath 'y' -RunStamp 'z2' } |
+            Should -Not -Throw
+    }
+    It 'refuses a template config over real tenant state' {
+        Initialize-AAInstallationDefinitions -Path $script:defs -Config (& $script:mkConfig 'alpha.onmicrosoft.com') -ConfigPath 'x' -RunLogPath 'y' -RunStamp 'z'
+        { Initialize-AAInstallationDefinitions -Path $script:defs -Config (& $script:mkConfig '') -ConfigPath 'x' -RunLogPath 'y' -RunStamp 'z2' } |
+            Should -Throw '*no tenant identity*'
+    }
+    It 'refuses another tenant''s config over existing state' {
+        Initialize-AAInstallationDefinitions -Path $script:defs -Config (& $script:mkConfig 'alpha.onmicrosoft.com') -ConfigPath 'x' -RunLogPath 'y' -RunStamp 'z'
+        { Initialize-AAInstallationDefinitions -Path $script:defs -Config (& $script:mkConfig 'beta.onmicrosoft.com') -ConfigPath 'x' -RunLogPath 'y' -RunStamp 'z2' } |
+            Should -Throw '*Refusing to overwrite*'
+    }
+    It 'allows -Fresh to start over regardless of owner' {
+        Initialize-AAInstallationDefinitions -Path $script:defs -Config (& $script:mkConfig 'alpha.onmicrosoft.com') -ConfigPath 'x' -RunLogPath 'y' -RunStamp 'z'
+        { Initialize-AAInstallationDefinitions -Path $script:defs -Config (& $script:mkConfig 'beta.onmicrosoft.com') -ConfigPath 'x' -RunLogPath 'y' -RunStamp 'z2' -Fresh } |
+            Should -Not -Throw
+    }
+}

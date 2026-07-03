@@ -187,7 +187,8 @@ Write-CheckResult -Check "Locales: $($localeFiles.Count) files have country+sitR
 $schemaPath = Join-Path $repoRoot 'config\agents-schema.json'
 if ((Test-Path -LiteralPath $schemaPath) -and (Get-Command pwsh -ErrorAction SilentlyContinue)) {
     $schemaTargets = @(Get-Item -LiteralPath (Join-Path $repoRoot 'config\agents.json'))
-    $schemaTargets += @(Get-ChildItem -Path (Join-Path $repoRoot 'config\tenants') -Filter *.json -File -ErrorAction SilentlyContinue)
+    $schemaTargets += @(Get-ChildItem -Path (Join-Path $repoRoot 'config\tenants') -Filter *.json -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -notlike '*.definitions.json' }) # per-tenant STATE archives, not configs
     $schemaFailures = @()
     foreach ($t in $schemaTargets) {
         $out = & pwsh -NoProfile -Command "try { if (Test-Json -Json (Get-Content -LiteralPath '$($t.FullName)' -Raw) -SchemaFile '$schemaPath' -ErrorAction Stop) { 'OK' } } catch { 'FAIL: ' + `$_.Exception.Message }"

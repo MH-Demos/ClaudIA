@@ -240,6 +240,89 @@ function Resolve-AATenantConfigPath {
     return $legacyPath
 }
 
+function Sync-AAInstallationDefinitionsWithTenant {
+    <#
+    .SYNOPSIS
+        Pair the ACTIVE state file (config\Installation_definitions.json) with
+        the ACTIVE per-tenant config, so multi-tenant runs never overwrite each
+        other's deployment state.
+    .DESCRIPTION
+        Installation_definitions.json is a single shared file read by 20+ tools.
+        When per-tenant configs (config\tenants\<key>.json) are in use, this
+        function keeps per-tenant archives at config\tenants\<key>.definitions.json
+        and switches the active file to match the resolved config:
+          - active state already belongs to the resolved tenant -> refresh archive
+          - active state belongs to ANOTHER tenant -> archive it, then restore the
+            resolved tenant's archive (or start fresh when none exists)
+          - active state has no tenant identity (template/damaged) -> preserved
+            under config\backups\ before being replaced, never silently lost
+        Legacy single-tenant mode (config\agents.json) is a strict no-op.
+    .PARAMETER RepoRoot
+        Repository root containing config\.
+    .PARAMETER ConfigPath
+        The RESOLVED config path (output of Resolve-AATenantConfigPath).
+    #>
+    param(
+        [Parameter(Mandatory)][string]$RepoRoot,
+        [Parameter(Mandatory)][string]$ConfigPath,
+        [switch]$Quiet
+    )
+
+    $activePath = Join-Path $RepoRoot 'config\Installation_definitions.json'
+    $tenantsDir = Join-Path $RepoRoot 'config\tenants'
+
+    # Legacy single-tenant mode: resolved config is not under config\tenants\.
+    $configDir = Split-Path -Parent $ConfigPath
+    if (-not $configDir -or -not (Test-Path -LiteralPath $tenantsDir)) { return }
+    $inTenantsDir = ([System.IO.Path]::GetFullPath($configDir).TrimEnd('\') -ieq [System.IO.Path]::GetFullPath($tenantsDir).TrimEnd('\'))
+    if (-not $inTenantsDir) { return }
+
+    $expectedKey = [System.IO.Path]::GetFileNameWithoutExtension($ConfigPath)
+    $expectedDefsPath = Join-Path $tenantsDir ($expectedKey + '.definitions.json')
+
+    # Identify the owner of the current active state via its tenant domain.
+    $activeKey = $null
+    $activeExists = Test-Path -LiteralPath $activePath
+    if ($activeExists) {
+        try {
+            $activeDefs = Get-Content -LiteralPath $activePath -Raw -Encoding utf8 | ConvertFrom-Json
+            $activeDomain = [string]$activeDefs.tenant.domain
+            if ($activeDomain -and $activeDomain -notin @('contoso.example', 'example.com', 'example.test')) {
+                $activeKey = ConvertTo-AATenantConfigKey -Domain $activeDomain
+            }
+        } catch {
+            $activeKey = $null # unreadable -> treated as unowned
+        }
+    }
+
+    if ($activeKey -and ($activeKey -ieq $expectedKey)) {
+        # Right tenant already active: refresh its archive copy (doubles as backup).
+        Copy-Item -LiteralPath $activePath -Destination $expectedDefsPath -Force
+        return
+    }
+
+    if ($activeKey) {
+        # Active state belongs to another tenant: archive it under its own key.
+        Copy-Item -LiteralPath $activePath -Destination (Join-Path $tenantsDir ($activeKey + '.definitions.json')) -Force
+        if (-not $Quiet) { Write-Host "  [state] Archived installation definitions of tenant '$activeKey'." -ForegroundColor DarkCyan }
+    } elseif ($activeExists) {
+        # Unowned (template/damaged) state: preserve it in backups, never delete data.
+        $backupDir = Join-Path $RepoRoot 'config\backups'
+        if (-not (Test-Path -LiteralPath $backupDir)) { New-Item -ItemType Directory -Path $backupDir -Force | Out-Null }
+        $unownedPath = Join-Path $backupDir ("Installation_definitions.unowned-" + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.json')
+        Copy-Item -LiteralPath $activePath -Destination $unownedPath -Force
+        if (-not $Quiet) { Write-Host "  [state] Active installation definitions had no tenant identity; preserved at $unownedPath." -ForegroundColor Yellow }
+    }
+
+    if (Test-Path -LiteralPath $expectedDefsPath) {
+        Copy-Item -LiteralPath $expectedDefsPath -Destination $activePath -Force
+        if (-not $Quiet) { Write-Host "  [state] Restored installation definitions of tenant '$expectedKey'." -ForegroundColor DarkCyan }
+    } elseif ($activeExists) {
+        Remove-Item -LiteralPath $activePath -Force
+        if (-not $Quiet) { Write-Host "  [state] Starting fresh installation definitions for tenant '$expectedKey'." -ForegroundColor DarkCyan }
+    }
+}
+
 function Initialize-AAInstallationDefinitions {
     param(
         [Parameter(Mandatory)][string]$Path,
@@ -253,8 +336,43 @@ function Initialize-AAInstallationDefinitions {
     $dir = Split-Path -Parent $Path
     if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir | Out-Null }
 
+    if ((Test-Path $Path) -and $Fresh) {
+        # -Fresh bypasses the tenant guard by design; never let it silently
+        # destroy real state (template-config full runs, incl. -DryRun, reach
+        # this with Fresh=true). Preserve any tenant-owned file first.
+        try {
+            $preFresh = Get-Content $Path -Raw -Encoding utf8 | ConvertFrom-Json
+            $preFreshDomain = [string]$preFresh.tenant.domain
+            if ($preFreshDomain -and $preFreshDomain -notin @('contoso.example', 'example.com', 'example.test')) {
+                $backupDir = Join-Path (Split-Path -Parent $Path) 'backups'
+                if (-not (Test-Path -LiteralPath $backupDir)) { New-Item -ItemType Directory -Path $backupDir -Force | Out-Null }
+                $preFreshBackup = Join-Path $backupDir ("Installation_definitions.pre-fresh-" + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.json')
+                Copy-Item -LiteralPath $Path -Destination $preFreshBackup -Force
+                Write-Host "  [state] Existing definitions of tenant '$preFreshDomain' preserved at $preFreshBackup before fresh start." -ForegroundColor Yellow
+            }
+        } catch {
+            Write-Warning "Could not back up existing installation definitions before -Fresh: $($_.Exception.Message)"
+        }
+    }
+
     if ((Test-Path $Path) -and -not $Fresh) {
         $script:AAInstallationDefinitions = Get-Content $Path -Raw -Encoding utf8 | ConvertFrom-Json
+
+        # Tenant-mismatch guard: never let a template config (blank/placeholder
+        # domain) or another tenant's config overwrite real deployment state.
+        # This is exactly the accident that corrupted the shared state file when
+        # the installer ran without CLAUDIA_TENANT / -ConfigPath.
+        $placeholders = @('', 'contoso.example', 'example.com', 'example.test')
+        $existingDomain = [string]$script:AAInstallationDefinitions.tenant.domain
+        $incomingDomain = [string]$Config.tenant.domain
+        if ($existingDomain -and $existingDomain -notin $placeholders) {
+            if ($incomingDomain -in $placeholders) {
+                throw "Refusing to overwrite installation definitions of tenant '$existingDomain' with a config that has no tenant identity (template?). Set `$env:CLAUDIA_TENANT or pass -ConfigPath to select the right tenant, or delete '$Path' to start fresh."
+            }
+            if ($incomingDomain -ine $existingDomain) {
+                throw "Refusing to overwrite installation definitions of tenant '$existingDomain' with config for '$incomingDomain'. Run Sync-AAInstallationDefinitionsWithTenant (the installer does this automatically), or delete '$Path' to start fresh."
+            }
+        }
     } else {
         $script:AAInstallationDefinitions = [PSCustomObject][ordered]@{
             schemaVersion = '1.0'
@@ -351,6 +469,37 @@ function Save-AAInstallationDefinitions {
     if (-not $script:AAInstallationDefinitions) { return }
     $script:AAInstallationDefinitions.updatedAt = (Get-Date).ToString('o')
     Save-AAJsonAtomic -Path $Path -Json ($script:AAInstallationDefinitions | ConvertTo-Json -Depth 50)
+
+    # Keep the per-tenant archive in sync so a later tenant switch restores
+    # up-to-date state (see Sync-AAInstallationDefinitionsWithTenant). Key
+    # derivation MUST match Sync's: the resolved config FILENAME when the
+    # config lives under config\tenants\ (falling back to the tenant domain),
+    # otherwise a filename/domain mismatch would let this mirror overwrite the
+    # safety archive Sync just made.
+    try {
+        $tenantsDir = Join-Path (Split-Path -Parent $Path) 'tenants'
+        if (Test-Path -LiteralPath $tenantsDir) {
+            $key = $null
+            $srcCfg = [string]$script:AAInstallationDefinitions.sourceConfigPath
+            if ($srcCfg) {
+                $srcDir = Split-Path -Parent $srcCfg
+                if ($srcDir -and ([System.IO.Path]::GetFullPath($srcDir).TrimEnd('\') -ieq [System.IO.Path]::GetFullPath($tenantsDir).TrimEnd('\'))) {
+                    $key = [System.IO.Path]::GetFileNameWithoutExtension($srcCfg)
+                }
+            }
+            if (-not $key) {
+                $domain = [string]$script:AAInstallationDefinitions.tenant.domain
+                if ($domain -and $domain -notin @('contoso.example', 'example.com', 'example.test')) {
+                    $key = ConvertTo-AATenantConfigKey -Domain $domain
+                }
+            }
+            if ($key) {
+                Copy-Item -LiteralPath $Path -Destination (Join-Path $tenantsDir ($key + '.definitions.json')) -Force
+            }
+        }
+    } catch {
+        Write-Warning "Could not refresh the per-tenant definitions archive: $($_.Exception.Message)"
+    }
 }
 
 function Set-AAInstallationDefinition {
