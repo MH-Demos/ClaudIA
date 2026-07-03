@@ -3,10 +3,34 @@
     {
       "directory": "modules",
       "file": "Common.ps1",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "format": "ps1",
-      "changes": "Common script",
+      "changes": "Facade loading Common.Core/Common.Config/Common.Azure part files",
       "URI": "modules/Common.ps1"
+    },
+    {
+      "directory": "modules",
+      "file": "Common.Core.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Pure helpers: passwords, identity, naming, object utils (split from Common.ps1)",
+      "URI": "modules/Common.Core.ps1"
+    },
+    {
+      "directory": "modules",
+      "file": "Common.Config.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Config resolution, installation definitions, atomic JSON writes (split from Common.ps1)",
+      "URI": "modules/Common.Config.ps1"
+    },
+    {
+      "directory": "modules",
+      "file": "Common.Azure.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "az CLI, Key Vault, Graph consent, PNA handling, connections (split from Common.ps1)",
+      "URI": "modules/Common.Azure.ps1"
     },
     {
       "directory": "modules",
@@ -503,6 +527,278 @@
       "format": "ps1",
       "changes": "Upload a Cloud Discovery log file to Microsoft Defender for Cloud Apps using ClaudIA Key Vault settings",
       "URI": "tools/Upload-MdcaCloudDiscoveryLog.ps1"
+    },
+    {
+      "directory": "modules/steps",
+      "file": "Step0-Prerequisites.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Installer step body (dot-sourced by Install-ClaudIA.ps1)",
+      "URI": "modules/steps/Step0-Prerequisites.ps1"
+    },
+    {
+      "directory": "modules/steps",
+      "file": "Step1-AgentUsers.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Installer step body (dot-sourced by Install-ClaudIA.ps1)",
+      "URI": "modules/steps/Step1-AgentUsers.ps1"
+    },
+    {
+      "directory": "modules/steps",
+      "file": "Step10-MdcaConnector.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Installer step body (dot-sourced by Install-ClaudIA.ps1)",
+      "URI": "modules/steps/Step10-MdcaConnector.ps1"
+    },
+    {
+      "directory": "modules/steps",
+      "file": "Step2-Licenses.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Installer step body (dot-sourced by Install-ClaudIA.ps1)",
+      "URI": "modules/steps/Step2-Licenses.ps1"
+    },
+    {
+      "directory": "modules/steps",
+      "file": "Step3-EntraApp.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Installer step body (dot-sourced by Install-ClaudIA.ps1)",
+      "URI": "modules/steps/Step3-EntraApp.ps1"
+    },
+    {
+      "directory": "modules/steps",
+      "file": "Step4-AzureInfra.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Installer step body (dot-sourced by Install-ClaudIA.ps1)",
+      "URI": "modules/steps/Step4-AzureInfra.ps1"
+    },
+    {
+      "directory": "modules/steps",
+      "file": "Step4a-M365Collaboration.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Installer step body (dot-sourced by Install-ClaudIA.ps1)",
+      "URI": "modules/steps/Step4a-M365Collaboration.ps1"
+    },
+    {
+      "directory": "modules/steps",
+      "file": "Step4b-SensitivityLabels.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Installer step body (dot-sourced by Install-ClaudIA.ps1)",
+      "URI": "modules/steps/Step4b-SensitivityLabels.ps1"
+    },
+    {
+      "directory": "modules/steps",
+      "file": "Step4c-Fabric.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Installer step body (dot-sourced by Install-ClaudIA.ps1)",
+      "URI": "modules/steps/Step4c-Fabric.ps1"
+    },
+    {
+      "directory": "modules/steps",
+      "file": "Step5-SecretsRunbook.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Installer step body (dot-sourced by Install-ClaudIA.ps1)",
+      "URI": "modules/steps/Step5-SecretsRunbook.ps1"
+    },
+    {
+      "directory": "modules/steps",
+      "file": "Step6a-CoreDLP.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Installer step body (dot-sourced by Install-ClaudIA.ps1)",
+      "URI": "modules/steps/Step6a-CoreDLP.ps1"
+    },
+    {
+      "directory": "modules/steps",
+      "file": "Step6b-DspmAI.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Installer step body (dot-sourced by Install-ClaudIA.ps1)",
+      "URI": "modules/steps/Step6b-DspmAI.ps1"
+    },
+    {
+      "directory": "modules/steps",
+      "file": "Step6c-IRM.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Installer step body (dot-sourced by Install-ClaudIA.ps1)",
+      "URI": "modules/steps/Step6c-IRM.ps1"
+    },
+    {
+      "directory": "modules/steps",
+      "file": "Step7-Workbook.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Installer step body (dot-sourced by Install-ClaudIA.ps1)",
+      "URI": "modules/steps/Step7-Workbook.ps1"
+    },
+    {
+      "directory": "modules/steps",
+      "file": "Step8-StoryMap.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Installer step body (dot-sourced by Install-ClaudIA.ps1)",
+      "URI": "modules/steps/Step8-StoryMap.ps1"
+    },
+    {
+      "directory": "modules/steps",
+      "file": "Step9-BrowserAgents.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Installer step body (dot-sourced by Install-ClaudIA.ps1)",
+      "URI": "modules/steps/Step9-BrowserAgents.ps1"
+    },
+    {
+      "directory": "modules/runbook",
+      "file": "00-Header.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Runbook source part (assembled by tools/Build-Runbook.ps1)",
+      "URI": "modules/runbook/00-Header.ps1"
+    },
+    {
+      "directory": "modules/runbook",
+      "file": "01-Config.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Runbook source part (assembled by tools/Build-Runbook.ps1)",
+      "URI": "modules/runbook/01-Config.ps1"
+    },
+    {
+      "directory": "modules/runbook",
+      "file": "02-SitReference.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Runbook source part (assembled by tools/Build-Runbook.ps1)",
+      "URI": "modules/runbook/02-SitReference.ps1"
+    },
+    {
+      "directory": "modules/runbook",
+      "file": "03-Agents.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Runbook source part (assembled by tools/Build-Runbook.ps1)",
+      "URI": "modules/runbook/03-Agents.ps1"
+    },
+    {
+      "directory": "modules/runbook",
+      "file": "04-EmailScenarios.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Runbook source part (assembled by tools/Build-Runbook.ps1)",
+      "URI": "modules/runbook/04-EmailScenarios.ps1"
+    },
+    {
+      "directory": "modules/runbook",
+      "file": "05-ThreadsConfig.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Runbook source part (assembled by tools/Build-Runbook.ps1)",
+      "URI": "modules/runbook/05-ThreadsConfig.ps1"
+    },
+    {
+      "directory": "modules/runbook",
+      "file": "06-CopilotConfig.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Runbook source part (assembled by tools/Build-Runbook.ps1)",
+      "URI": "modules/runbook/06-CopilotConfig.ps1"
+    },
+    {
+      "directory": "modules/runbook",
+      "file": "07-FileTypes.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Runbook source part (assembled by tools/Build-Runbook.ps1)",
+      "URI": "modules/runbook/07-FileTypes.ps1"
+    },
+    {
+      "directory": "modules/runbook",
+      "file": "08-ScannedImages.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Runbook source part (assembled by tools/Build-Runbook.ps1)",
+      "URI": "modules/runbook/08-ScannedImages.ps1"
+    },
+    {
+      "directory": "modules/runbook",
+      "file": "09-AuthGraph.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Runbook source part (assembled by tools/Build-Runbook.ps1)",
+      "URI": "modules/runbook/09-AuthGraph.ps1"
+    },
+    {
+      "directory": "modules/runbook",
+      "file": "10-AdxTelemetry.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Runbook source part (assembled by tools/Build-Runbook.ps1)",
+      "URI": "modules/runbook/10-AdxTelemetry.ps1"
+    },
+    {
+      "directory": "modules/runbook",
+      "file": "11-OpenAI.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Runbook source part (assembled by tools/Build-Runbook.ps1)",
+      "URI": "modules/runbook/11-OpenAI.ps1"
+    },
+    {
+      "directory": "modules/runbook",
+      "file": "12-Purview.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Runbook source part (assembled by tools/Build-Runbook.ps1)",
+      "URI": "modules/runbook/12-Purview.ps1"
+    },
+    {
+      "directory": "modules/runbook",
+      "file": "13-Scheduler.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Runbook source part (assembled by tools/Build-Runbook.ps1)",
+      "URI": "modules/runbook/13-Scheduler.ps1"
+    },
+    {
+      "directory": "modules/runbook",
+      "file": "14-Main.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Runbook source part (assembled by tools/Build-Runbook.ps1)",
+      "URI": "modules/runbook/14-Main.ps1"
+    },
+    {
+      "directory": "modules/runbook",
+      "file": "15-ThreadsExecution.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Runbook source part (assembled by tools/Build-Runbook.ps1)",
+      "URI": "modules/runbook/15-ThreadsExecution.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Build-Runbook.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Assembles the runbook artifact from modules/runbook parts",
+      "URI": "tools/Build-Runbook.ps1"
+    },
+    {
+      "directory": "config",
+      "file": "agents-schema.json",
+      "version": "1.0.0",
+      "format": "json",
+      "changes": "JSON schema for agents.json validated by the static net",
+      "URI": "config/agents-schema.json"
     }
   ]
 }

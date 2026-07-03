@@ -429,7 +429,7 @@ $storyMapConfig = [ordered]@{
 if (Test-Path $ConfigPath) {
     $rawConfig = Get-Content -LiteralPath $ConfigPath -Raw -Encoding utf8 | ConvertFrom-Json
     Set-AAObjectProperty -Object $rawConfig -Name 'activityStoryMap' -Value $storyMapConfig
-    $rawConfig | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $ConfigPath -Encoding utf8
+    Save-AAJsonAtomic -Path $ConfigPath -Json ($rawConfig | ConvertTo-Json -Depth 50)
 }
 
 if (Test-Path $InstallationDefinitionsPath) {
@@ -450,7 +450,7 @@ if (Test-Path $InstallationDefinitionsPath) {
     if ($existingStep) { $existingStep.Value = $step8 }
     else { $defs.steps.PSObject.Properties.Add([System.Management.Automation.PSNoteProperty]::new('8', $step8)) }
     $defs.updatedAt = (Get-Date).ToString('o')
-    $defs | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $InstallationDefinitionsPath -Encoding utf8
+    Save-AAJsonAtomic -Path $InstallationDefinitionsPath -Json ($defs | ConvertTo-Json -Depth 50)
 }
 
 Write-Host ''

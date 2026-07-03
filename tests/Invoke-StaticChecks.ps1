@@ -182,6 +182,23 @@ foreach ($f in $localeFiles) {
 Write-CheckResult -Check "Locales: $($localeFiles.Count) files have country+sitReference+fileTypes" -Ok ($localeFailures.Count -eq 0) `
     -Detail $(if ($localeFailures.Count -gt 0) { $localeFailures -join '; ' } else { ($localeFiles | ForEach-Object BaseName) -join ', ' })
 
+# JSON Schema validation (config\agents-schema.json). Test-Json needs PS 6+;
+# under plain 5.1 the structural checks above remain the enforcement layer.
+$schemaPath = Join-Path $repoRoot 'config\agents-schema.json'
+if ((Test-Path -LiteralPath $schemaPath) -and (Get-Command pwsh -ErrorAction SilentlyContinue)) {
+    $schemaTargets = @(Get-Item -LiteralPath (Join-Path $repoRoot 'config\agents.json'))
+    $schemaTargets += @(Get-ChildItem -Path (Join-Path $repoRoot 'config\tenants') -Filter *.json -File -ErrorAction SilentlyContinue)
+    $schemaFailures = @()
+    foreach ($t in $schemaTargets) {
+        $out = & pwsh -NoProfile -Command "try { if (Test-Json -Json (Get-Content -LiteralPath '$($t.FullName)' -Raw) -SchemaFile '$schemaPath' -ErrorAction Stop) { 'OK' } } catch { 'FAIL: ' + `$_.Exception.Message }"
+        if ("$out" -notmatch '^OK') { $schemaFailures += "$($t.Name): $out" }
+    }
+    Write-CheckResult -Check "Schema: $($schemaTargets.Count) config file(s) vs agents-schema.json" -Ok ($schemaFailures.Count -eq 0) `
+        -Detail $(if ($schemaFailures.Count -gt 0) { ($schemaFailures -join '; ') } else { ($schemaTargets | ForEach-Object Name) -join ', ' })
+} else {
+    Write-CheckResult -Check 'Schema validation skipped' -Ok $true -Detail 'pwsh (Test-Json) or config\agents-schema.json not available'
+}
+
 # =============================================================================
 # CHECK 4: DRIFT - duplicated runbook helpers behave like Common.ps1
 # =============================================================================
@@ -201,7 +218,7 @@ try {
     $probeDomain = 'unit.test'
 
     $implementations = @{}
-    foreach ($src in @('modules\Common.ps1', 'modules\Invoke-AgentRunbook.ps1')) {
+    foreach ($src in @('modules\Common.Core.ps1', 'modules\Invoke-AgentRunbook.ps1')) {
         $tokens = $null; $errors = $null
         $ast = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $repoRoot $src), [ref]$tokens, [ref]$errors)
         $defs = $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst] }, $true)
@@ -218,7 +235,7 @@ try {
     }
     if ($driftFailures.Count -eq 0) {
         for ($i = 0; $i -lt $probeAgents.Count; $i++) {
-            $common  = & $implementations['modules\Common.ps1'] $probeAgents[$i] $probeDomain
+            $common  = & $implementations['modules\Common.Core.ps1'] $probeAgents[$i] $probeDomain
             $runbook = & $implementations['modules\Invoke-AgentRunbook.ps1'] $probeAgents[$i] $probeDomain
             if ($common -ne $runbook) {
                 $driftFailures += "probe '$($probeAgents[$i].sam)': Common='$common' vs Runbook='$runbook'"

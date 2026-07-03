@@ -155,9 +155,14 @@ $script:ExplicitConfigPath = $ConfigPath
 function Test-AARepositoryStructure {
     $requiredPaths = @(
         'modules\Common.ps1',
+        'modules\Common.Core.ps1',
+        'modules\Common.Config.ps1',
+        'modules\Common.Azure.ps1',
         'modules\Deploy-AzureInfra.ps1',
         'modules\Deploy-Runbook.ps1',
         'modules\Invoke-AgentRunbook.ps1',
+        'modules\steps',
+        'modules\runbook',
         'prerequisites\Test-Prerequisites.ps1',
         'config\agents.json',
         'config\locales',

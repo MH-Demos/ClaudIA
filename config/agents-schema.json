@@ -1,0 +1,109 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "agents-schema.json",
+  "title": "ClaudIA agents.json configuration",
+  "description": "Schema for config/agents.json and config/tenants/*.json. Validated by tests/Invoke-StaticChecks.ps1 (Test-Json under PowerShell 7 when available, structural checks under PowerShell 5.1 otherwise).",
+  "type": "object",
+  "required": ["tenant", "infrastructure", "agents", "schedules", "features"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "_comment": { "type": "string" },
+    "tenant": {
+      "type": "object",
+      "required": ["domain", "subscriptionId", "location"],
+      "properties": {
+        "domain": { "type": "string", "description": "Blank in the shipped template; filled by setup." },
+        "subscriptionId": { "type": "string" },
+        "location": { "type": "string" },
+        "country": {
+          "type": "string",
+          "description": "Content locale. Must match a file name under config/locales/ (US, FR, UK, DE). GB is accepted as a UK alias by the installer. Empty string defaults to US.",
+          "pattern": "^$|^[A-Za-z]{2}$"
+        },
+        "tenantId": { "type": "string" }
+      }
+    },
+    "infrastructure": {
+      "type": "object",
+      "required": ["resourceGroup"],
+      "properties": {
+        "resourceGroup": { "type": "string", "description": "Blank in the shipped template; filled by setup." },
+        "automationAccountName": { "type": "string" },
+        "openAiAccountName": { "type": "string" },
+        "openAiModel": { "type": "string" },
+        "openAiModelVersion": { "type": "string" },
+        "openAiImageModel": { "type": "string" },
+        "openAiImageModelVersion": { "type": "string" },
+        "keyVaultName": { "type": "string" },
+        "fabricEnabled": { "type": "boolean" }
+      }
+    },
+    "adx": { "type": "object" },
+    "activityStoryMap": { "type": "object" },
+    "browserAgents": { "type": "object" },
+    "schedules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "hour", "minute", "timezone"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "hour": { "type": "integer", "minimum": 0, "maximum": 23 },
+          "minute": { "type": "integer", "minimum": 0, "maximum": 59 },
+          "timezone": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "features": {
+      "type": "object",
+      "properties": {
+        "userMode": { "enum": ["create", "existing"] },
+        "sitPrecision": { "type": "boolean" },
+        "multiTurnEmailThreads": { "type": "boolean" },
+        "copilotQueries": { "type": "boolean" },
+        "externalAiInteractions": { "type": "boolean" },
+        "promptResponseLogging": { "type": "boolean" },
+        "agentActivityWorkbook": { "type": "boolean" }
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "properties": {
+        "alertEmail": {
+          "type": "string",
+          "description": "Optional email for the Automation job-failure alert (action group ag-claudia-alerts). Empty = portal-only alert.",
+          "pattern": "^$|^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
+        }
+      }
+    },
+    "externalAiServices": { "type": "array" },
+    "externalAiRuntime": { "type": "object" },
+    "collaborationTeams": { "type": "array" },
+    "agents": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["sam", "displayName", "department"],
+        "properties": {
+          "sam": { "type": "string", "minLength": 1, "pattern": "^[^@\\s]+(@[^@\\s]+)?$" },
+          "userPrincipalName": { "type": ["string", "null"] },
+          "displayName": { "type": "string", "minLength": 1 },
+          "department": { "type": "string", "minLength": 1 },
+          "jobTitle": { "type": "string" },
+          "wave": { "type": ["number", "string"] },
+          "workload": { "type": "string" },
+          "copilotLicense": { "type": "boolean" },
+          "existingUser": { "type": "boolean" },
+          "workingHours": { "type": "object" },
+          "filesPerDay": { "type": "array" },
+          "emailsPerDay": { "type": "array" },
+          "style": { "type": "string" },
+          "topics": { "type": "array" }
+        }
+      }
+    },
+    "externalRecipients": { "type": "array" }
+  }
+}
