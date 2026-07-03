@@ -993,8 +993,15 @@ function New-AAXlsxBytes {
             Add-AAZipEntry -Archive $archive -Name 'xl/workbook.xml' -Content '<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="AgentData" sheetId="1" r:id="rId1"/></sheets></workbook>'
             $rows = [System.Collections.Generic.List[string]]::new()
             $rowIndex = 1
+            # Detect the dominant delimiter once: splitting on [,;] per line used
+            # to break semicolon CSVs whose values contain commas (French decimals
+            # like "45 000,00" or addresses), splitting SIT values apart and
+            # weakening keyword-proximity detection.
+            $delimiter = ';'
+            $firstDataLine = @($Content -split "`r?`n" | Where-Object { $_ -match '\S' } | Select-Object -First 1)
+            if (-not $firstDataLine -or ([string]$firstDataLine).IndexOf(';') -lt 0) { $delimiter = ',' }
             foreach ($line in @($Content -split "`r?`n" | Select-Object -First 80)) {
-                $columns = @($line -split '[,;]' | Select-Object -First 12)
+                $columns = @($line -split [regex]::Escape($delimiter) | Select-Object -First 12)
                 if ($columns.Count -eq 0) { $columns = @($line) }
                 $cells = [System.Collections.Generic.List[string]]::new()
                 for ($i = 0; $i -lt $columns.Count; $i++) {
@@ -1066,6 +1073,13 @@ function Invoke-Graph {
         } catch {
             $statusCode = 0
             try { $statusCode = [int]$_.Exception.Response.StatusCode } catch { $statusCode = 0 }
+            if ($statusCode -eq 429) {
+                # Record throttling in script scope so the main loop can slow the
+                # aggregate request rate (per-request retries alone keep hammering
+                # Graph and cascade 429s into the next agents).
+                $script:graphThrottle429Count++
+                $script:graphLastThrottleAt = Get-Date
+            }
             $retryable = $statusCode -in @(429, 502, 503, 504)
             if ($retryable -and $attempt -lt $maxAttempts) {
                 $delay = [math]::Pow(2, $attempt)  # 2s, 4s, 8s
@@ -1274,6 +1288,12 @@ $script:adxDatabase      = $null
 $script:adxTable         = $null
 $script:adxMapping       = $null
 $script:adxToken         = $null
+$script:adxTokenAcquiredAt = $null
+$script:adxTenantIdForRefresh = $null
+$script:adxClientIdForRefresh = $null
+$script:adxClientSecretForRefresh = $null
+$script:graphThrottle429Count = 0
+$script:graphLastThrottleAt = $null
 
 function Get-AdxAppToken {
     param(
@@ -1318,6 +1338,12 @@ function Initialize-AdxIngestion {
         $script:adxTable = ConvertTo-AAPlainString $adxConfig.tableName
         $script:adxMapping = ConvertTo-AAPlainString $adxConfig.mappingName
         $script:adxToken = Get-AdxAppToken -TenantId $adxConfig.tenantId -ClientId $adxConfig.clientId -ClientSecret $adxSecret
+        # Keep what is needed to refresh the app token mid-run: client-credential
+        # tokens live ~1h and a full run (10 agents + threads) can exceed that.
+        $script:adxTokenAcquiredAt = Get-Date
+        $script:adxTenantIdForRefresh = $adxConfig.tenantId
+        $script:adxClientIdForRefresh = $adxConfig.clientId
+        $script:adxClientSecretForRefresh = $adxSecret
         Write-Output "  [ADX] Ingestion initialized for $($script:adxDatabase).$($script:adxTable)"
     }
     catch {
@@ -1339,6 +1365,19 @@ function Push-AgentActivity {
         [hashtable]$Properties = @{}
     )
     if (-not $script:adxToken -or -not $script:adxIngestBaseUri) { return }
+
+    # Refresh the ADX app token before it expires (~60 min lifetime): long runs
+    # previously failed every ingest silently once the initial token aged out.
+    if ($script:adxTokenAcquiredAt -and ((Get-Date) - $script:adxTokenAcquiredAt).TotalMinutes -gt 50 -and $script:adxClientSecretForRefresh) {
+        try {
+            $script:adxToken = Get-AdxAppToken -TenantId $script:adxTenantIdForRefresh -ClientId $script:adxClientIdForRefresh -ClientSecret $script:adxClientSecretForRefresh
+            $script:adxTokenAcquiredAt = Get-Date
+            Write-Output "  [ADX] App token refreshed"
+        }
+        catch {
+            Write-Warning "  [ADX] Token refresh failed (keeping current token): $($_.Exception.Message)"
+        }
+    }
 
     # Keep payloads compact and bounded for near-real-time ingestion.
     if ($PromptContent.Length -gt 30000) { $PromptContent = $PromptContent.Substring(0, 30000) + '...[truncated]' }
@@ -2205,7 +2244,26 @@ Initialize-AdxIngestion
 # -- Get Azure OpenAI token via Managed Identity (RBAC) ----------------------
 Write-Output "Acquiring OpenAI token via Managed Identity RBAC..."
 $oaiToken = Get-OaiToken
+$script:oaiTokenAcquiredAt = Get-Date
 Write-Output "OpenAI token acquired (length=$($oaiToken.Length))"
+
+function Update-OaiTokenIfStale {
+    # Managed Identity tokens live ~60 min; a full run (10 agents + threads)
+    # can exceed that, and every Invoke-OAI after expiry used to fail with 401.
+    # Get-AzAccessToken re-issues from the Az context, so refresh is cheap.
+    # NOTE: returns nothing (callers read $script:oaiTokenCurrent) so that
+    # Write-Output logging does not pollute a captured return value.
+    if (((Get-Date) - $script:oaiTokenAcquiredAt).TotalMinutes -le 45) { return }
+    try {
+        $script:oaiTokenCurrent = Get-OaiToken
+        $script:oaiTokenAcquiredAt = Get-Date
+        Write-Output "  [AUTH] OpenAI token refreshed"
+    }
+    catch {
+        Write-Warning "  [AUTH] OpenAI token refresh failed (keeping current token): $($_.Exception.Message)"
+    }
+}
+$script:oaiTokenCurrent = $oaiToken
 
 # -- Filter agents if specified -----------------------------------------------
 $activeAgents = $agents
@@ -2234,6 +2292,18 @@ foreach ($agent in $activeAgents) {
     Write-Output "  $($agent.Name) | $($agent.Dept) | $($agent.Title)"
     Write-Output "  Working hours: $($agent.StartHour):00 - $($agent.EndHour):00"
     Write-Output "========================================================"
+
+    # Throttle-aware pacing: if Graph returned 429s in the last 5 minutes, cool
+    # down before this agent instead of cascading throttling across the run.
+    if ($script:graphLastThrottleAt -and ((Get-Date) - $script:graphLastThrottleAt).TotalMinutes -lt 5) {
+        $coolDown = Get-Random -Minimum 30 -Maximum 61
+        Write-Output "  [THROTTLE] Graph throttling detected ($($script:graphThrottle429Count) x 429 so far) -- cooling down ${coolDown}s"
+        Start-Sleep -Seconds $coolDown
+    }
+
+    # Refresh the shared OpenAI token if it is close to expiry.
+    Update-OaiTokenIfStale
+    $oaiToken = $script:oaiTokenCurrent
 
     # -- Authenticate as this agent (ROPC) ------------------------------------
     $agentPwdSecretName = Get-AutomationVariable -Name "AgentPwdSecret-$($agent.Sam)" -ErrorAction SilentlyContinue
@@ -2808,6 +2878,12 @@ if ($runThreadEmails -and $validThreads.Count -lt $emailThreads.Count) {
 $todayThreads = @()
 if ($validThreads.Count -gt 0) {
     $todayThreads = $validThreads | Get-Random -Count ([Math]::Min(2, $validThreads.Count))
+}
+
+# Threads run AFTER the whole agent loop: refresh the OpenAI token if stale.
+if ($todayThreads.Count -gt 0) {
+    Update-OaiTokenIfStale
+    $oaiToken = $script:oaiTokenCurrent
 }
 
 foreach ($thread in $todayThreads) {
