@@ -177,8 +177,12 @@ try {
     Write-Host "  Run Step 3 with a Global Admin or Privileged Role Admin if ROPC returns consent_required." -ForegroundColor Yellow
 }
 
-# Get client secret (user must provide or we generate a new one)
-$clientSecret = Invoke-M365Az -Arguments @('ad','app','credential','reset','--id',$appId,'--display-name','agent-deploy','--years','1','--query','password','-o','tsv') 2>$null
+# Get client secret. --append keeps existing credentials valid: without it a
+# mid-run Step 5 failure (KV write, ROPC validation) invalidated the secret
+# that scheduled runbooks were still using, bricking daily runs until a full
+# rerun. Stale 'agent-deploy' secrets are pruned at the end of this script
+# once the new one is stored and live.
+$clientSecret = Invoke-M365Az -Arguments @('ad','app','credential','reset','--id',$appId,'--append','--display-name','agent-deploy','--years','1','--query','password','-o','tsv') 2>$null
 if ([string]::IsNullOrWhiteSpace($clientSecret)) {
     throw "Could not generate a new client secret for app-claudia-dataagent ($appId). Run Step 3 with a Global Administrator or Privileged Role Administrator, then rerun Step 5."
 }
@@ -476,6 +480,30 @@ foreach ($sched in $Config.schedules) {
 }
 
 Write-Host "  Runbook deployed with $($Config.schedules.Count) daily schedules." -ForegroundColor Green
+
+# Prune stale 'agent-deploy' app secrets now that the new one is stored in the
+# Automation variables and the runbook is published (keep only the newest).
+try {
+    $appCreds = Invoke-M365Az -Arguments @('ad','app','credential','list','--id',$appId,'-o','json') 2>$null | ConvertFrom-Json
+    # Keep the newest by endDateTime AND never touch a credential created in the
+    # last 15 minutes (the reset output has no keyId, so the fresh secret is
+    # protected by its startDateTime even if an odd longer-lived secret sorts first).
+    $pruneCutoff = (Get-Date).AddMinutes(-15)
+    $staleCreds = @($appCreds | Where-Object { $_.displayName -eq 'agent-deploy' } |
+        Sort-Object endDateTime -Descending | Select-Object -Skip 1 |
+        Where-Object { [datetime]$_.startDateTime -lt $pruneCutoff })
+    $pruned = 0
+    foreach ($cred in $staleCreds) {
+        Invoke-M365Az -Arguments @('ad','app','credential','delete','--id',$appId,'--key-id',$cred.keyId) 2>$null | Out-Null
+        if ($LASTEXITCODE -eq 0) { $pruned++ }
+        else { Write-Host "  [WARN] Could not delete stale app secret $($cred.keyId) (non-blocking)" -ForegroundColor Yellow }
+    }
+    if ($pruned -gt 0) {
+        Write-Host "  Pruned $pruned stale agent-deploy app secret(s)." -ForegroundColor Gray
+    }
+} catch {
+    Write-Host "  [WARN] Could not prune stale app secrets: $($_.Exception.Message) (non-blocking)" -ForegroundColor Yellow
+}
 
 # =============================================================================
 # JOB-FAILURE ALERTING (Azure Monitor metric alert on the Automation Account)

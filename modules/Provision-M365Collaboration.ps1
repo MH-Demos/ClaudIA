@@ -404,10 +404,17 @@ if ($existingTeam) {
         # Extract team ID from Content-Location header
         $teamId = ($resp.Headers['Content-Location'] -replace ".*teams\('([^']+)'\).*", '$1')
         if ($teamId -notmatch '^[0-9a-fA-F-]{36}$') {
-            # Content-Location header missing/unexpected -- resolve by group name instead.
-            Start-Sleep -Seconds 20
-            $lookup = Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/groups?`$filter=displayName eq 'CorpLab - Departments'&`$select=id" -Headers $gh
-            $teamId = @($lookup.value | Select-Object -First 1).id
+            # Content-Location header missing/unexpected -- poll by group name.
+            # A single 20s wait was often too short: the id stayed unresolved,
+            # the step aborted, and a rerun created a DUPLICATE team.
+            $teamId = $null
+            for ($teamLookup = 1; $teamLookup -le 6 -and -not $teamId; $teamLookup++) {
+                Start-Sleep -Seconds 20
+                try {
+                    $lookup = Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/groups?`$filter=displayName eq 'CorpLab - Departments'&`$select=id" -Headers $gh
+                    $teamId = @($lookup.value | Select-Object -First 1).id
+                } catch {}
+            }
         }
         if (-not $teamId) {
             Write-Host " [FAIL] team created (202) but its id could not be resolved" -ForegroundColor Red
@@ -464,14 +471,17 @@ Write-Host "  Resolving SharePoint site..." -NoNewline
 
 $spoSiteId = $null
 $retries = 0
-while (-not $spoSiteId -and $retries -lt 5) {
+# 15 x 10s: SharePoint site provisioning for a new M365 group regularly takes
+# 1-2 minutes; the previous 5 x 5s window missed it and 4a completed without
+# storing AgentSpoSiteId, breaking every agent file upload until a rerun.
+while (-not $spoSiteId -and $retries -lt 15) {
     try {
         $site = Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/groups/$teamId/sites/root?`$select=id" -Headers $gh
         $spoSiteId = $site.id
-    } catch {
-        $retries++
-        if ($retries -lt 5) { Start-Sleep -Seconds 5 }
-    }
+    } catch {}
+    # Increment unconditionally: a 200 with an empty id must not hot-spin.
+    $retries++
+    if (-not $spoSiteId -and $retries -lt 15) { Start-Sleep -Seconds 10 }
 }
 
 if ($spoSiteId) {

@@ -1997,6 +1997,7 @@ if (Test-AAInstallStep '4a') {
     Write-Host "  Agents upload files and post activity here." -ForegroundColor Gray
     Write-Host ""
 
+    $step4aBlocked = $false
     if (-not $DryRun) {
         if (-not (Test-AAAutomationAccountAvailable -Config $config)) {
             Write-Host "  [ERROR] Automation Account '$($config.infrastructure.automationAccountName)' was not found." -ForegroundColor Red
@@ -2010,32 +2011,38 @@ if (Test-AAInstallStep '4a') {
                 status = 'blocked'
                 reason = 'Automation Account missing. Step 4 must complete before Step 4a.'
             })
-            return
+            # Skip 4a only: 4b (labels) and 4c (Fabric) do not depend on the
+            # Automation Account, so aborting the whole run here lost their work.
+            $step4aBlocked = $true
         }
-        Write-Host "    [C] Create new site + team (default)" -ForegroundColor Gray
-        Write-Host "    [E] Use existing resources (enter IDs)" -ForegroundColor Gray
-        $m365Mode = if ($Auto) { 'C' } else { Read-Host "    Choice (C/E)" }
-        $m365ModeStr = if ($m365Mode -eq 'E') { 'existing' } else { 'create' }
-        $oldGraphToken = $env:CLAUDIA_GRAPH_TOKEN
-        if ($script:AAM365AzConfigDir) { $env:CLAUDIA_GRAPH_TOKEN = Get-AAGraphAccessToken }
-        try {
-            & (Join-Path $PSScriptRoot 'modules\Provision-M365Collaboration.ps1') -Config $config -Mode $m365ModeStr
-        } finally {
-            if ($null -ne $oldGraphToken) { $env:CLAUDIA_GRAPH_TOKEN = $oldGraphToken }
-            else { Remove-Item Env:\CLAUDIA_GRAPH_TOKEN -ErrorAction SilentlyContinue }
+        if (-not $step4aBlocked) {
+            Write-Host "    [C] Create new site + team (default)" -ForegroundColor Gray
+            Write-Host "    [E] Use existing resources (enter IDs)" -ForegroundColor Gray
+            $m365Mode = if ($Auto) { 'C' } else { Read-Host "    Choice (C/E)" }
+            $m365ModeStr = if ($m365Mode -eq 'E') { 'existing' } else { 'create' }
+            $oldGraphToken = $env:CLAUDIA_GRAPH_TOKEN
+            if ($script:AAM365AzConfigDir) { $env:CLAUDIA_GRAPH_TOKEN = Get-AAGraphAccessToken }
+            try {
+                & (Join-Path $PSScriptRoot 'modules\Provision-M365Collaboration.ps1') -Config $config -Mode $m365ModeStr
+            } finally {
+                if ($null -ne $oldGraphToken) { $env:CLAUDIA_GRAPH_TOKEN = $oldGraphToken }
+                else { Remove-Item Env:\CLAUDIA_GRAPH_TOKEN -ErrorAction SilentlyContinue }
+            }
         }
     } else {
         Write-Host "  [DRY-RUN] Would provision SharePoint site + Teams team" -ForegroundColor DarkYellow
     }
-    Set-AAInstallationStepDefinition -Path $installationDefinitionsPath -Step '4a' -Value ([ordered]@{
-        activity = 'M365 collaboration'
-        completedAt = (Get-Date).ToString('o')
-        dryRun = [bool]$DryRun
-        mode = if ($m365ModeStr) { $m365ModeStr } else { 'dry-run' }
-        teamName = 'CorpLab - Departments'
-        departments = @('HR', 'Finance', 'Legal', 'Engineering', 'Sales')
-        agentUpns = @($agents | ForEach-Object { Get-AgentUpn -Agent $_ -Domain $domain })
-    })
+    if (-not $step4aBlocked) {
+        Set-AAInstallationStepDefinition -Path $installationDefinitionsPath -Step '4a' -Value ([ordered]@{
+            activity = 'M365 collaboration'
+            completedAt = (Get-Date).ToString('o')
+            dryRun = [bool]$DryRun
+            mode = if ($m365ModeStr) { $m365ModeStr } else { 'dry-run' }
+            teamName = 'CorpLab - Departments'
+            departments = @('HR', 'Finance', 'Legal', 'Engineering', 'Sales')
+            agentUpns = @($agents | ForEach-Object { Get-AgentUpn -Agent $_ -Domain $domain })
+        })
+    }
     Write-Host ""
 }
 
