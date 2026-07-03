@@ -33,7 +33,7 @@ function Get-ROPCToken {
             Write-Verbose "  [AUTH] Requesting ROPC token for $Username (client=$ClientId, scope=$scope, secretLength=$($ClientSecret.Length))"
             $resp = Invoke-RestMethod -Method POST `
                 -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token" `
-                -ContentType 'application/x-www-form-urlencoded' -Body $encodedBody -ErrorAction Stop
+                -ContentType 'application/x-www-form-urlencoded' -Body $encodedBody -TimeoutSec 60 -ErrorAction Stop
             return $resp.access_token
         } catch {
             $lastError = if ($_.ErrorDetails.Message) { $_.ErrorDetails.Message } else { $_.Exception.Message }
@@ -64,7 +64,7 @@ function Get-OneLakeToken {
     try {
         $resp = Invoke-RestMethod -Method POST `
             -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token" `
-            -ContentType 'application/x-www-form-urlencoded' -Body $encodedBody -ErrorAction Stop
+            -ContentType 'application/x-www-form-urlencoded' -Body $encodedBody -TimeoutSec 60 -ErrorAction Stop
         $resp.access_token
     } catch {
         $details = if ($_.ErrorDetails.Message) { $_.ErrorDetails.Message } else { $_.Exception.Message }
@@ -77,11 +77,11 @@ function Write-OneLake {
     $baseUri = "https://onelake.dfs.fabric.microsoft.com/$WorkspaceId/$LakehouseId/Files/$Path"
     $headers = @{Authorization = "Bearer $Token"}
     # Step 1: Create file
-    Invoke-RestMethod -Method PUT -Uri "$baseUri`?resource=file&overwrite=true" -Headers $headers -ContentType 'application/octet-stream' | Out-Null
+    Invoke-RestMethod -Method PUT -Uri "$baseUri`?resource=file&overwrite=true" -Headers $headers -ContentType 'application/octet-stream' -TimeoutSec 120 | Out-Null
     # Step 2: Append data
-    Invoke-RestMethod -Method PATCH -Uri "$baseUri`?action=append&position=0" -Headers $headers -Body $Content -ContentType 'application/octet-stream' | Out-Null
+    Invoke-RestMethod -Method PATCH -Uri "$baseUri`?action=append&position=0" -Headers $headers -Body $Content -ContentType 'application/octet-stream' -TimeoutSec 120 | Out-Null
     # Step 3: Flush
-    Invoke-RestMethod -Method PATCH -Uri "$baseUri`?action=flush&position=$($Content.Length)" -Headers $headers | Out-Null
+    Invoke-RestMethod -Method PATCH -Uri "$baseUri`?action=flush&position=$($Content.Length)" -Headers $headers -TimeoutSec 120 | Out-Null
 }
 
 function ConvertTo-AASafeText {
@@ -236,7 +236,11 @@ function ConvertTo-AALabelFriendlyFile {
 function Invoke-Graph {
     param([string]$Token, [string]$Method = 'GET', [string]$Uri, $Body, [string]$ContentType = 'application/json')
     $headers = @{ Authorization = "Bearer $Token"; 'Content-Type' = $ContentType }
-    $params  = @{ Method = $Method; Uri = $Uri; Headers = $headers; ContentType = $ContentType }
+    # TimeoutSec is CRITICAL: PS 5.1 Invoke-RestMethod defaults to an INFINITE
+    # timeout; one dead TCP connection froze an entire run for 8+ hours (job
+    # stuck Running, zero errors). A timeout becomes a catchable error handled
+    # by this retry loop instead of an eternal zombie job.
+    $params  = @{ Method = $Method; Uri = $Uri; Headers = $headers; ContentType = $ContentType; TimeoutSec = 120 }
     if ($Body) {
         if ($Body -is [byte[]]) { $params.Body = $Body }
         elseif ($Body -is [string]) { $params.Body = [System.Text.Encoding]::UTF8.GetBytes($Body) }
@@ -283,7 +287,7 @@ function Get-GraphContentBytes {
     param([string]$Token, [string]$Uri)
     $headers = @{ Authorization = "Bearer $Token" }
     try {
-        $response = Invoke-WebRequest -Method GET -Uri $Uri -Headers $headers -ErrorAction Stop
+        $response = Invoke-WebRequest -Method GET -Uri $Uri -Headers $headers -TimeoutSec 120 -ErrorAction Stop
         return $response.RawContentStream.ToArray()
     }
     catch {

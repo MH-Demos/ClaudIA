@@ -98,7 +98,7 @@ function Get-KeyVaultSecretValue {
         $secretUri = "https://${cleanVaultName}.vault.azure.net/secrets/${encodedSecretName}?api-version=7.4"
         $secret = Invoke-RestMethod -Method GET `
             -Uri $secretUri `
-            -Headers $headers -ErrorAction Stop
+            -Headers $headers -TimeoutSec 60 -ErrorAction Stop
         Write-Verbose "  [KV] Secret '$cleanSecretName' read from '$cleanVaultName' (length=$($secret.value.Length))"
         return $secret.value
     } catch {

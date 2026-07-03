@@ -29,7 +29,7 @@ function Invoke-OAI {
     try {
         $resp = Invoke-RestMethod -Method POST -Uri $uri `
             -Headers @{ Authorization = "Bearer $OaiToken"; 'Content-Type' = 'application/json' } `
-            -ContentType 'application/json' -Body $jsonBody
+            -ContentType 'application/json' -Body $jsonBody -TimeoutSec 300
     } catch {
         $details = if ($_.ErrorDetails.Message) { $_.ErrorDetails.Message } else { $_.Exception.Message }
         throw "Azure OpenAI chat completion failed. $details"
@@ -91,7 +91,7 @@ function Invoke-FoundryChatCompletion {
     try {
         $resp = Invoke-RestMethod -Method POST -Uri $uri `
             -Headers @{ Authorization = "Bearer $token"; 'Content-Type' = 'application/json' } `
-            -ContentType 'application/json' -Body (ConvertTo-AAJsonBody -Value $body -Depth 8)
+            -ContentType 'application/json' -Body (ConvertTo-AAJsonBody -Value $body -Depth 8) -TimeoutSec 300
         return $resp.choices[0].message.content
     } catch {
         $details = if ($_.ErrorDetails.Message) { $_.ErrorDetails.Message } else { $_.Exception.Message }

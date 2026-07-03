@@ -29,7 +29,7 @@ function Get-AdxAppToken {
     $tokenResponse = Invoke-RestMethod -Method POST `
         -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token" `
         -ContentType 'application/x-www-form-urlencoded' `
-        -Body $body -ErrorAction Stop
+        -Body $body -TimeoutSec 60 -ErrorAction Stop
     return $tokenResponse.access_token
 }
 
@@ -137,7 +137,7 @@ function Push-AgentActivity {
             -Uri $ingestUri `
             -ContentType 'application/json' `
             -Headers @{ Authorization = "Bearer $($script:adxToken)" } `
-            -Body $record | Out-Null
+            -Body $record -TimeoutSec 120 | Out-Null
     }
     catch {
         $details = if ($_.ErrorDetails.Message) { $_.ErrorDetails.Message } else { $_.Exception.Message }
