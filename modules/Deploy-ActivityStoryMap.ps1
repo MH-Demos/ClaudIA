@@ -482,7 +482,7 @@ if (Test-AAMcapsHardenedTenant -Domain ([string]$Config.tenant.domain)) {
     $aaName = $null
     $aaCandidate = [string]$Config.infrastructure.automationAccountName
     if ($aaCandidate) {
-        $aaExists = az automation account show -n $aaCandidate -g $resourceGroup --query name -o tsv 2>$null
+        $aaExists = az automation account show --only-show-errors -n $aaCandidate -g $resourceGroup --query name -o tsv 2>$null
         if ($aaExists) { $aaName = $aaCandidate }
     }
     if (-not $aaName) {

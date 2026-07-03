@@ -589,10 +589,10 @@ function Test-AAAutomationAccountAvailable {
     $subscriptionId = [string]$Config.tenant.subscriptionId
     if (-not $aaName -or -not $rg) { return $false }
 
-    $aa = az automation account show -n $aaName -g $rg --query id -o tsv 2>$null
+    $aa = az automation account show --only-show-errors -n $aaName -g $rg --query id -o tsv 2>$null
     if ($aa) { return $true }
 
-    $aaOther = az automation account list --query "[?name=='$aaName'].id | [0]" -o tsv 2>$null
+    $aaOther = az automation account list --only-show-errors --query "[?name=='$aaName'].id | [0]" -o tsv 2>$null
     if ($aaOther) { return $true }
 
     if ($subscriptionId) {

@@ -115,13 +115,13 @@ function Show-Status {
 
     # Automation account state
     Write-Host ""
-    $aaInfo = az automation account show -n $aaName -g $rg --query "{state:state,sku:sku.name}" -o json 2>$null | ConvertFrom-Json
+    $aaInfo = az automation account show --only-show-errors -n $aaName -g $rg --query "{state:state,sku:sku.name}" -o json 2>$null | ConvertFrom-Json
     if ($aaInfo) {
         Write-Host "  Automation: $($aaInfo.state) ($($aaInfo.sku))" -ForegroundColor White
     }
 
     # Active schedules
-    $schedules = az automation schedule list --automation-account-name $aaName -g $rg --query "[?isEnabled].name" -o json 2>$null | ConvertFrom-Json
+    $schedules = az automation schedule list --only-show-errors --automation-account-name $aaName -g $rg --query "[?isEnabled].name" -o json 2>$null | ConvertFrom-Json
     Write-Host "  Active schedules: $($schedules.Count)" -ForegroundColor White
     foreach ($s in $schedules) {
         Write-Host "    - $s" -ForegroundColor Gray
@@ -255,7 +255,7 @@ function Set-ScheduleMode([bool]$Full) {
     $h = @{Authorization="Bearer $token";'Content-Type'='application/json'}
     $aaUri = "https://management.azure.com/subscriptions/$sub/resourceGroups/$rg/providers/Microsoft.Automation/automationAccounts/$aaName"
 
-    $schedules = az automation schedule list --automation-account-name $aaName -g $rg --query "[].{name:name,isEnabled:isEnabled}" -o json 2>$null | ConvertFrom-Json
+    $schedules = az automation schedule list --only-show-errors --automation-account-name $aaName -g $rg --query "[].{name:name,isEnabled:isEnabled}" -o json 2>$null | ConvertFrom-Json
 
     if ($Full) {
         Write-Host "  Enabling all schedules (3x/day)..." -ForegroundColor Cyan
@@ -304,7 +304,7 @@ function Show-Recommendations {
 
     # Check schedule count
     $aaName = $config.infrastructure.automationAccountName
-    $activeScheds = az automation schedule list --automation-account-name $aaName -g $rg --query "[?isEnabled].name" -o json 2>$null | ConvertFrom-Json
+    $activeScheds = az automation schedule list --only-show-errors --automation-account-name $aaName -g $rg --query "[?isEnabled].name" -o json 2>$null | ConvertFrom-Json
     if ($activeScheds.Count -gt 1) {
         $recs += @{ Severity='MEDIUM'; Saving='~$2/mo'; Action="Reduce to 1x/day schedule: .\Manage-Costs.ps1 -Action ReduceSchedule" }
     }

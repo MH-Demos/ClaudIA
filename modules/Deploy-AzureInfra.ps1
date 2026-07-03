@@ -410,9 +410,9 @@ $oaiRg = $rg
 
 # Detect if key resources already exist in a different RG (idempotent re-deploy)
 $aaName = $Config.infrastructure.automationAccountName
-$aaCheck = az automation account show -n $aaName -g $rg --query name -o tsv 2>$null
+$aaCheck = az automation account show --only-show-errors -n $aaName -g $rg --query name -o tsv 2>$null
 if (-not $aaCheck) {
-    $aaOther = az automation account list --query "[?name=='$aaName'].resourceGroup" -o tsv 2>$null
+    $aaOther = az automation account list --only-show-errors --query "[?name=='$aaName'].resourceGroup" -o tsv 2>$null
     if ($aaOther -and $aaOther -ne $rg) {
         Write-Host "  [INFO] Automation '$aaName' found in '$aaOther'" -ForegroundColor DarkYellow
         $aaRg = $aaOther
@@ -637,12 +637,12 @@ $aaName = $Config.infrastructure.automationAccountName
 Write-Host "  Creating Automation Account ($aaName, Basic)..." -NoNewline
 $t = az account get-access-token --query accessToken -o tsv 2>$null
 $h = @{Authorization="Bearer $t"; 'Content-Type'='application/json'}
-$aaExists = az automation account show -n $aaName -g $aaRg --query name -o tsv 2>$null
+$aaExists = az automation account show --only-show-errors -n $aaName -g $aaRg --query name -o tsv 2>$null
 if ($aaExists) {
     Write-Host " [EXISTS]" -ForegroundColor DarkYellow
 } else {
     # Check other RGs (redundant with top-level check but defensive)
-    $aaOtherRg = az automation account list --query "[?name=='$aaName'].resourceGroup" -o tsv 2>$null
+    $aaOtherRg = az automation account list --only-show-errors --query "[?name=='$aaName'].resourceGroup" -o tsv 2>$null
     if ($aaOtherRg) {
         Write-Host " [EXISTS in $aaOtherRg]" -ForegroundColor DarkYellow
         $aaRg = $aaOtherRg

@@ -82,10 +82,10 @@ function Resolve-AutomationAccountResourceGroup {
         [Parameter(Mandatory)][string]$AutomationAccountName
     )
 
-    $aaCheck = az automation account show -n $AutomationAccountName -g $ResourceGroup --query name -o tsv 2>$null
+    $aaCheck = az automation account show --only-show-errors -n $AutomationAccountName -g $ResourceGroup --query name -o tsv 2>$null
     if ($aaCheck) { return $ResourceGroup }
 
-    $aaOther = az automation account list --query "[?name=='$AutomationAccountName'].resourceGroup | [0]" -o tsv 2>$null
+    $aaOther = az automation account list --only-show-errors --query "[?name=='$AutomationAccountName'].resourceGroup | [0]" -o tsv 2>$null
     if ($aaOther) { return [string]$aaOther }
 
     $escapedRg = [System.Uri]::EscapeDataString($ResourceGroup)

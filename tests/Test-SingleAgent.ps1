@@ -201,9 +201,9 @@ $subId = $config.tenant.subscriptionId
 az account set -s $subId 2>$null
 
 # Automation may exist in a different RG when reusing definitions.
-$aaExists = az automation account show -n $aaName -g $rg --query name -o tsv 2>$null
+$aaExists = az automation account show --only-show-errors -n $aaName -g $rg --query name -o tsv 2>$null
 if (-not $aaExists) {
-    $aaRg = az automation account list --query "[?name=='$aaName'].resourceGroup | [0]" -o tsv 2>$null
+    $aaRg = az automation account list --only-show-errors --query "[?name=='$aaName'].resourceGroup | [0]" -o tsv 2>$null
     if ($aaRg) {
         Write-Host "[INFO] Automation '$aaName' found in resource group '$aaRg'." -ForegroundColor DarkYellow
         $rg = $aaRg

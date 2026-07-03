@@ -88,7 +88,7 @@ Write-Host ""
 $sub = az account show --query id -o tsv
 
 # 1. Grant AA managed identity Contributor on the RG (idempotent)
-$aaMi = az automation account show -n $AutomationAccountName -g $ResourceGroup --query identity.principalId -o tsv 2>$null
+$aaMi = az automation account show --only-show-errors -n $AutomationAccountName -g $ResourceGroup --query identity.principalId -o tsv 2>$null
 if (-not $aaMi) { throw "Automation Account '$AutomationAccountName' has no system-assigned managed identity. Enable it first." }
 Write-Host "  Granting Contributor on '$ResourceGroup' to Automation MI..." -NoNewline
 az role assignment create --role Contributor --assignee-object-id $aaMi --assignee-principal-type ServicePrincipal `
@@ -141,10 +141,10 @@ Write-Host " [OK]" -ForegroundColor Green
 # 3. Create or update the daily schedule (start tomorrow at ScheduleTime UTC)
 Write-Host "  Creating daily schedule '$scheduleName' at $ScheduleTime UTC..." -NoNewline
 $startTime = ([datetime]::UtcNow.Date.AddDays(1).Add([timespan]$ScheduleTime)).ToString('o')
-$scheduleExists = az automation schedule show --automation-account-name $AutomationAccountName -g $ResourceGroup `
+$scheduleExists = az automation schedule show --only-show-errors --automation-account-name $AutomationAccountName -g $ResourceGroup `
     --name $scheduleName --query name -o tsv 2>$null
 if (-not $scheduleExists) {
-    az automation schedule create --automation-account-name $AutomationAccountName -g $ResourceGroup `
+    az automation schedule create --only-show-errors --automation-account-name $AutomationAccountName -g $ResourceGroup `
         --name $scheduleName --frequency Day --interval 1 --start-time $startTime --time-zone UTC -o none
 }
 Write-Host " [OK]" -ForegroundColor Green
@@ -169,7 +169,7 @@ if ($alreadyLinked) {
     if ($rgMatches -and $miMatches) {
         Write-Host " [OK] already linked" -ForegroundColor Green
     } else {
-        az automation job-schedule delete --automation-account-name $AutomationAccountName -g $ResourceGroup --job-schedule-id $($alreadyLinked.name) -o none 2>$null
+        az automation job-schedule delete --only-show-errors --automation-account-name $AutomationAccountName -g $ResourceGroup --job-schedule-id $($alreadyLinked.name) -o none 2>$null
         $alreadyLinked = $null
     }
 }
@@ -192,5 +192,5 @@ $paramsJson = @{
 Write-Host ""
 Write-Host "Done. The runbook will run daily at $ScheduleTime UTC starting $startTime." -ForegroundColor Green
 Write-Host "To run it once manually now:" -ForegroundColor Cyan
-Write-Host "  az automation runbook start --automation-account-name $AutomationAccountName -g $ResourceGroup --name $runbookName --parameters '$paramsJson'"
+Write-Host "  az automation runbook start --only-show-errors --automation-account-name $AutomationAccountName -g $ResourceGroup --name $runbookName --parameters '$paramsJson'"
 Write-Host ""

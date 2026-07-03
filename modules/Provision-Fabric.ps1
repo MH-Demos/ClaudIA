@@ -74,9 +74,9 @@ $aaName  = $Config.infrastructure.automationAccountName
 
 # Resolve actual AA resource group
 $aaRg = $rg
-$aaCheck = az automation account show -n $aaName -g $rg --query name -o tsv 2>$null
+$aaCheck = az automation account show --only-show-errors -n $aaName -g $rg --query name -o tsv 2>$null
 if (-not $aaCheck) {
-    $aaOther = az automation account list --query "[?name=='$aaName'].resourceGroup" -o tsv 2>$null
+    $aaOther = az automation account list --only-show-errors --query "[?name=='$aaName'].resourceGroup" -o tsv 2>$null
     if ($aaOther) { $aaRg = $aaOther }
 }
 
