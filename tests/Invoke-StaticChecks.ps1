@@ -232,6 +232,23 @@ Write-CheckResult -Check 'Helper drift: Get-AgentUpn/Get-AgentSecretName' -Ok ($
     -Detail $(if ($driftFailures.Count -gt 0) { $driftFailures -join '; ' } else { "$($probeAgents.Count) probes identical across both copies" })
 
 # =============================================================================
+# CHECK 4b: RUNBOOK BUILD - artifact matches its source parts
+# =============================================================================
+Write-Host ""
+Write-Host "--- 4b. Runbook artifact freshness ---" -ForegroundColor Cyan
+# modules\Invoke-AgentRunbook.ps1 is GENERATED from modules\runbook\NN-*.ps1 by
+# tools\Build-Runbook.ps1. Editing the artifact directly (or a part without
+# rebuilding) desynchronizes them and the wrong version ships at Step 5.
+try {
+    & (Join-Path $repoRoot 'tools\Build-Runbook.ps1') -Check *> $null
+    $runbookFresh = ($LASTEXITCODE -eq 0)
+    Write-CheckResult -Check 'Runbook artifact matches modules\runbook\ parts' -Ok $runbookFresh `
+        -Detail $(if (-not $runbookFresh) { 'run tools\Build-Runbook.ps1 (and never edit modules\Invoke-AgentRunbook.ps1 directly)' } else { 'generated artifact in sync' })
+} catch {
+    Write-CheckResult -Check 'Runbook artifact freshness' -Ok $false -Detail "check crashed: $($_.Exception.Message)"
+}
+
+# =============================================================================
 # CHECK 5: UNIT - Pester unit tests on Common.ps1 pure functions
 # =============================================================================
 Write-Host ""
