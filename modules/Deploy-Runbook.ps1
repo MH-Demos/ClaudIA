@@ -344,8 +344,15 @@ if (Test-Path $threadsPath) {
 }
 Write-Host "  Storing $($secrets.Count) Automation variables..." -NoNewline
 foreach ($kv in $secrets.GetEnumerator()) {
-    # Use ConvertTo-Json to properly escape the value (handles quotes, newlines, backslashes)
-    $jsonValue = $kv.Value | ConvertTo-Json -Compress
+    # Use ConvertTo-Json to properly escape the value (handles quotes, newlines, backslashes).
+    # CRITICAL: cast to [string] first. Under PowerShell 5.1, strings returned by
+    # Get-Content -Raw carry ETS NoteProperties (PSPath, PSParentPath...) and
+    # ConvertTo-Json serializes them as an OBJECT {"value":...,"PSPath":...}
+    # instead of a plain JSON string. Get-AutomationVariable then hands the
+    # runbook a PSObject and every ConvertFrom-Json fails with
+    # "Unexpected character: @" (silent French-locale fallback). pwsh 7 does not
+    # have this quirk, which is why wizard-driven runs never hit it.
+    $jsonValue = [string]$kv.Value | ConvertTo-Json -Compress
     $varBody = @{properties=@{value=$jsonValue; isEncrypted=$true}} | ConvertTo-Json -Depth 3 -Compress
     try {
         Invoke-RestMethod -Method PUT -Uri "$aaUri/variables/$($kv.Key)?api-version=2023-11-01" `
