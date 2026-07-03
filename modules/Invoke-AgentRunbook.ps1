@@ -507,6 +507,22 @@ foreach ($es in $emailScenarios) {
     $emailScenariosBySam[$es.From].Add($es)
 }
 
+# Business-context flavors mixed into email prompts so daily runs do not
+# converge on near-identical subjects/bodies (each agent has only 1-2 fixed
+# scenario contexts; temperature alone is not enough entropy).
+$emailDayFlavors = @(
+    'Quarter-end reporting deadlines are approaching and everyone is under time pressure.'
+    'The company is preparing for an internal compliance audit next week.'
+    'A post-incident review is underway following a recent security event.'
+    'Annual budget planning discussions are in full swing.'
+    'Several new hires joined this week and processes are being re-explained.'
+    'A system migration is scheduled for the weekend and teams are coordinating.'
+    'Performance review season has started across departments.'
+    'A major client escalation is consuming attention across teams.'
+    'Mandatory compliance training must be completed by end of month.'
+    'Leadership requested tighter data-handling discipline after a near-miss.'
+)
+
 # =============================================================================
 # MULTI-TURN EMAIL CONVERSATIONS (loaded from config variable)
 # =============================================================================
@@ -1532,6 +1548,10 @@ function Invoke-FoundryChatCompletion {
 # =============================================================================
 $script:labelCache    = $null
 $script:teamCache     = $null
+$script:teamsConfigWarned = $false
+$script:teamsPostFailures = 0
+$script:teamsPostWarnings = 0
+$script:teamsLastPostError = ''
 $script:lastLabelError = ''
 
 function Get-SensitivityLabels {
@@ -1944,11 +1964,18 @@ Notes: Raw customer support evidence copied for external AI triage and off-platf
 }
 
 function Get-TeamAndChannels {
+    # NOTE: populates $script:teamCache and returns NOTHING -- callers read the
+    # script variable. Returning the cache while also using Write-Output made
+    # the captured value an [object[]] of log lines + hashtable, and the
+    # one-time [TEAMS] log lines never reached the job output.
     param([string]$Token)
-    if ($script:teamCache) { return $script:teamCache }
+    if ($script:teamCache) { return }
     if (-not $teamsGroupId) {
-        Write-Warning "  [TEAMS] AgentTeamsGroupId not configured -- skipping Teams"
-        return $null
+        if (-not $script:teamsConfigWarned) {
+            Write-Warning "  [TEAMS] AgentTeamsGroupId not configured -- skipping Teams"
+            $script:teamsConfigWarned = $true
+        }
+        return
     }
     # Primary: use pre-resolved channel mapping from AA variable (no Graph call needed)
     if ($teamsChannelsJson) {
@@ -1958,8 +1985,8 @@ function Get-TeamAndChannels {
             foreach ($prop in $chMap.PSObject.Properties) {
                 $script:teamCache.Channels[$prop.Name] = $prop.Value
             }
-            Write-Output "  [TEAMS] Loaded $($script:teamCache.Channels.Count) channels from config"
-            return $script:teamCache
+            Write-Information "  [TEAMS] Loaded $($script:teamCache.Channels.Count) channels from config" -InformationAction Continue
+            return
         } catch {
             Write-Warning "  [TEAMS] Failed to parse AgentTeamsChannels: $($_.Exception.Message)"
         }
@@ -1971,31 +1998,50 @@ function Get-TeamAndChannels {
         foreach ($ch in $channels.value) {
             $script:teamCache.Channels[$ch.displayName] = $ch.id
         }
-        Write-Output "  [TEAMS] Resolved team $teamsGroupId with $($channels.value.Count) channels"
+        Write-Information "  [TEAMS] Resolved team $teamsGroupId with $($channels.value.Count) channels" -InformationAction Continue
     }
     catch {
         Write-Warning "  [TEAMS] Resolve failed: $($_.Exception.Message)"
-        return $null
     }
-    $script:teamCache
+}
+
+function Register-TeamsPostFailure {
+    # Track Teams posting failures for the end-of-run summary and emit capped
+    # warnings (403 on every post used to be swallowed silently, hiding broken
+    # ChannelMessage.Send permissions for entire runs).
+    param([string]$Context, [string]$Message)
+    $script:teamsPostFailures++
+    $script:teamsLastPostError = $Message
+    if ($script:teamsPostWarnings -lt 3) {
+        $script:teamsPostWarnings++
+        Write-Warning "  [TEAMS] Post failed ($Context): $Message"
+        if ($script:teamsPostWarnings -eq 3) {
+            Write-Warning "  [TEAMS] Further Teams post failure warnings suppressed (totals reported at end of run)"
+        }
+    }
 }
 
 function Post-TeamsActivity {
     param([string]$Token, [string]$Dept, [string]$HtmlContent)
-    $teamInfo = Get-TeamAndChannels -Token $Token
-    if (-not $teamInfo) { return }
+    Get-TeamAndChannels -Token $Token
+    $teamInfo = $script:teamCache
+    if (-not $teamInfo) { return $false }
     $channelId = $teamInfo.Channels[$Dept]
     if (-not $channelId) { $channelId = $teamInfo.Channels['General'] }
-    if (-not $channelId) { return }
+    if (-not $channelId) { return $false }
     $msg = @{ body = @{ contentType = 'html'; content = $HtmlContent } }
     try {
         Invoke-Graph -Token $Token -Method POST `
             -Uri "https://graph.microsoft.com/v1.0/teams/$($teamInfo.TeamId)/channels/$channelId/messages" `
             -Body $msg | Out-Null
+        return $true
     }
     catch {
         # Best effort -- Teams posting is optional. 403 is common on MCAPS tenants
         # where ChannelMessage.Send is restricted by CA policies on ROPC tokens.
+        # Failures are now counted + surfaced (capped) instead of swallowed.
+        Register-TeamsPostFailure -Context "channel /$Dept" -Message $_.Exception.Message
+        return $false
     }
 }
 
@@ -2031,7 +2077,9 @@ function Post-CollaborationActivity {
         Invoke-Graph -Token $Token -Method POST `
             -Uri "https://graph.microsoft.com/v1.0/teams/$($Target.TeamId)/channels/$channelId/messages" `
             -Body $msg | Out-Null
-    } catch {}
+    } catch {
+        Register-TeamsPostFailure -Context "collaboration $($Target.DisplayName)" -Message $_.Exception.Message
+    }
 }
 
 function Invoke-ExternalAiSimulation {
@@ -2484,9 +2532,13 @@ foreach ($agent in $activeAgents) {
                     'Teams' {
                         # Post content as a Teams channel message (Julien - HR, Olivier - Sales)
                         $htmlContent = "<h3>$($ft.Type) - $date</h3><pre>$([System.Net.WebUtility]::HtmlEncode($content.Substring(0, [math]::Min($content.Length, 2000))))</pre>"
-                        Post-TeamsActivity -Token $token -Dept $agent.Dept -HtmlContent $htmlContent
-                        Write-Output "    [$timeStr] Teams post: $($ft.Type) in /$($agent.Dept)"
-                        $totalFiles++
+                        $posted = Post-TeamsActivity -Token $token -Dept $agent.Dept -HtmlContent $htmlContent
+                        if ($posted) {
+                            Write-Output "    [$timeStr] Teams post: $($ft.Type) in /$($agent.Dept)"
+                            $totalFiles++
+                        } else {
+                            Write-Warning "    [$timeStr] Teams post NOT delivered: $($ft.Type) in /$($agent.Dept)"
+                        }
                     }
                     'Chat' {
                         # Send as Teams 1:1 chat message to a random colleague (Karim - Legal)
@@ -2561,7 +2613,7 @@ foreach ($agent in $activeAgents) {
                         Write-Output "    [$timeStr] Meeting notes: $folder/$fileName"
                         # Also post a summary in Teams
                         $summary = "<b>Meeting notes</b> - $($ft.Type) ($date)<br/><small>By $($agent.Name) ($($agent.Title))</small>"
-                        Post-TeamsActivity -Token $token -Dept $agent.Dept -HtmlContent $summary
+                        $null = Post-TeamsActivity -Token $token -Dept $agent.Dept -HtmlContent $summary
                         $totalFiles++
                     }
                     default {
@@ -2659,7 +2711,7 @@ foreach ($agent in $activeAgents) {
                 $deptDlp = $dlpPolicies[$agent.ContentDept]
                 $labelTag = if ($labelApplied) { " | Label: <em>$labelApplied</em>" } else { '' }
                 $htmlMsg = "<b>$($agent.Name)</b> ($($agent.Title)) a publie <b>$fileName</b> dans /$folder$labelTag<br/><small>Politiques DLP actives: $deptDlp</small>"
-                Post-TeamsActivity -Token $token -Dept $agent.Dept -HtmlContent $htmlMsg
+                $null = Post-TeamsActivity -Token $token -Dept $agent.Dept -HtmlContent $htmlMsg
             }
             catch {
                 Write-Warning "    [$timeStr] Upload failed: $fileName -- $($_.Exception.Message)"
@@ -2673,7 +2725,12 @@ foreach ($agent in $activeAgents) {
                 $scenario = $myScenarios | Get-Random
 
                 $deptDlp = $dlpPolicies[$agent.ContentDept]
-$emailPrompt = "$dayContext`n`nWrite a professional workplace email in $contentLanguage. Context: $($scenario.Context)`n`nFrom: $($agent.Name) ($($agent.Title))`nTo: a colleague`n`nIMPORTANT: End with this footer on a separate line:`n--- Classification: Confidential | DLP Policies: $deptDlp ---`nThis is a mandatory corporate compliance footer.`n`nOutput ONLY: first line = Subject, then blank line, then body. Include the sensitive data from the context when requested."
+                # Entropy: vary business context, tone, and a unique reference per
+                # email so subjects/bodies differ across runs of the same scenario.
+                $emailFlavor = $emailDayFlavors | Get-Random
+                $emailTone = @('concise and direct','detailed and formal','friendly but professional','urgent and action-oriented','neutral and factual') | Get-Random
+                $emailRef = 'REF-{0}-{1:D4}' -f (Get-Date -Format 'yyMM'), (Get-Random -Minimum 0 -Maximum 10000)
+$emailPrompt = "$dayContext $emailFlavor`n`nWrite a professional workplace email in $contentLanguage. Tone: $emailTone. Context: $($scenario.Context)`n`nFrom: $($agent.Name) ($($agent.Title))`nTo: a colleague`n`nInclude the internal reference $emailRef in the subject or the first line. Write a specific, non-generic subject line.`n`nIMPORTANT: End with this footer on a separate line:`n--- Classification: Confidential | DLP Policies: $deptDlp ---`nThis is a mandatory corporate compliance footer.`n`nOutput ONLY: first line = Subject, then blank line, then body. Include the sensitive data from the context when requested."
 
                 try {
                     $emailContent = Invoke-OAI -OaiToken $oaiToken -SystemPrompt ($agent.Prompt + "`n`n" + $sitReference) -UserPrompt $emailPrompt -MaxTokens 800 -UserId $upn
@@ -2743,12 +2800,12 @@ $emailPrompt = "$dayContext`n`nWrite a professional workplace email in $contentL
     if ($unlabeled -and $unlabeled.Count -gt 0) {
         $fileList = ($unlabeled | Select-Object -First 5 | ForEach-Object { $_.name }) -join ', '
         $complianceHtml = "&#9888; <b>Compliance alert ($($agent.Dept))</b>: $($unlabeled.Count) unlabeled file(s) detected.<br/><small>Files: $fileList</small><br/><small>Recommended action: apply a sensitivity label in Microsoft Purview.</small>"
-        Post-TeamsActivity -Token $token -Dept $agent.Dept -HtmlContent $complianceHtml
+        $null = Post-TeamsActivity -Token $token -Dept $agent.Dept -HtmlContent $complianceHtml
         Write-Output "  [SCAN] $($unlabeled.Count) unlabeled files in /$($agent.Dept)"
     }
     else {
         $complianceHtml = "&#9989; <b>Compliance ($($agent.Dept))</b>: All files are labeled. Active DLP policies: $($dlpPolicies[$agent.ContentDept])"
-        Post-TeamsActivity -Token $token -Dept $agent.Dept -HtmlContent $complianceHtml
+        $null = Post-TeamsActivity -Token $token -Dept $agent.Dept -HtmlContent $complianceHtml
         Write-Output "  [SCAN] All files labeled in /$($agent.Dept)"
     }
 
@@ -2758,10 +2815,10 @@ $emailPrompt = "$dayContext`n`nWrite a professional workplace email in $contentL
     if ($copilotQueriesEnabled -and (Test-ServiceRequested -Aliases @('copilot','microsoft 365 copilot','m365 copilot')) -and $copilotPrompts.ContainsKey($agent.Sam)) {
         try {
             # Generate unique search queries via Azure OpenAI per persona
-            $dayContext = "Today is $(Get-Date -Format 'dddd d MMMM yyyy'). Generate queries relevant to this period."
+            $copilotDayContext = "Today is $(Get-Date -Format 'dddd d MMMM yyyy'). Generate queries relevant to this period."
             $aiQueries = Invoke-OAI -OaiToken $oaiToken `
                 -SystemPrompt $copilotPrompts[$agent.Sam] `
-                -UserPrompt $dayContext -UserId $upn
+                -UserPrompt $copilotDayContext -UserId $upn
             $queryList = ($aiQueries -split "`n") | Where-Object { $_.Trim().Length -gt 5 } | Select-Object -First 3
             Write-Output "    [COPILOT] AI generated $($queryList.Count) search queries"
         }
@@ -3019,6 +3076,9 @@ Please review and advise on the next action.$historyNote
 }
 
 Write-Output "`n=== COMPLETE: $totalFiles files uploaded, $($script:totalFileOps) file operations, $totalEmails emails + $totalThreadEmails thread emails sent, $totalExternalAi external AI interactions, $totalInsiderRisk insider risk events ==="
+if ($script:teamsPostFailures -gt 0) {
+    Write-Warning "=== TEAMS: $($script:teamsPostFailures) channel post(s) FAILED this run. Last error: $($script:teamsLastPostError). Check ChannelMessage.Send permission / CA policy for ROPC tokens. ==="
+}
 
 
 
