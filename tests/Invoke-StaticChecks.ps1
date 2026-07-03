@@ -18,7 +18,10 @@
                       Invoke-AgentRunbook.ps1 (AA sandbox cannot dot-source
                       Common.ps1). Both copies are executed against a probe
                       matrix and must produce identical results.
-      5. NODE       - opt-in (-IncludeNode): BrowserAgents content pack
+      5. UNIT       - Pester 5 unit tests (tests\unit\*.Tests.ps1) on the pure
+                      functions of Common.ps1. Soft-skipped when Pester 5+ is
+                      not installed.
+      6. NODE       - opt-in (-IncludeNode): BrowserAgents content pack
                       validation. Opt-in because it REGENERATES
                       synthetic-m365-purview-pack/content-pack.json (side effect).
 
@@ -229,11 +232,36 @@ Write-CheckResult -Check 'Helper drift: Get-AgentUpn/Get-AgentSecretName' -Ok ($
     -Detail $(if ($driftFailures.Count -gt 0) { $driftFailures -join '; ' } else { "$($probeAgents.Count) probes identical across both copies" })
 
 # =============================================================================
-# CHECK 5 (opt-in): Node content pack validation
+# CHECK 5: UNIT - Pester unit tests on Common.ps1 pure functions
+# =============================================================================
+Write-Host ""
+Write-Host "--- 5. Unit tests (Pester) ---" -ForegroundColor Cyan
+$pester5 = Get-Module Pester -ListAvailable | Where-Object { $_.Version.Major -ge 5 } | Select-Object -First 1
+if ($pester5) {
+    try {
+        Import-Module Pester -MinimumVersion 5.0 -ErrorAction Stop
+        $pesterConfig = New-PesterConfiguration
+        $pesterConfig.Run.Path = Join-Path $PSScriptRoot 'unit'
+        $pesterConfig.Run.PassThru = $true
+        $pesterConfig.Output.Verbosity = 'None'
+        $result = Invoke-Pester -Configuration $pesterConfig
+        $unitOk = ($result.FailedCount -eq 0 -and $result.TotalCount -gt 0)
+        Write-CheckResult -Check "Pester: $($result.PassedCount)/$($result.TotalCount) unit tests" -Ok $unitOk `
+            -Detail $(if (-not $unitOk) { ($result.Failed | ForEach-Object { $_.ExpandedPath }) -join '; ' } else { "$([int]$result.Duration.TotalSeconds)s" })
+    } catch {
+        Write-CheckResult -Check 'Pester: unit tests' -Ok $false -Detail "Pester run crashed: $($_.Exception.Message)"
+    }
+} else {
+    Write-CheckResult -Check 'Pester: unit tests skipped' -Ok $true `
+        -Detail 'Pester 5+ not installed (pwsh: Save-Module Pester -Path <5.1 module dir>); unit layer not enforced on this machine'
+}
+
+# =============================================================================
+# CHECK 6 (opt-in): Node content pack validation
 # =============================================================================
 if ($IncludeNode) {
     Write-Host ""
-    Write-Host "--- 5. BrowserAgents content pack (npm) ---" -ForegroundColor Cyan
+    Write-Host "--- 6. BrowserAgents content pack (npm) ---" -ForegroundColor Cyan
     $baDir = Join-Path $repoRoot 'BrowserAgents'
     if (Test-Path (Join-Path $baDir 'node_modules')) {
         Push-Location $baDir
