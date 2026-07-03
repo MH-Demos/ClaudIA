@@ -851,12 +851,32 @@ function Initialize-AAInstallationDefinitions {
     Save-AAInstallationDefinitions -Path $Path
 }
 
+function Save-AAJsonAtomic {
+    # Atomic JSON file write: write to a temp file in the same directory,
+    # validate the JSON round-trips, then swap it over the target. Prevents
+    # truncated/corrupt agents.json or Installation_definitions.json when the
+    # process is interrupted (Ctrl+C, crash, OneDrive sync lock) mid-write.
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][string]$Json
+    )
+    $tmp = "$Path.tmp"
+    Set-Content -LiteralPath $tmp -Value $Json -Encoding utf8 -ErrorAction Stop
+    try {
+        $null = (Get-Content -LiteralPath $tmp -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop)
+    } catch {
+        Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
+        throw "Refusing to overwrite $Path -- staged JSON failed validation: $($_.Exception.Message)"
+    }
+    Move-Item -LiteralPath $tmp -Destination $Path -Force -ErrorAction Stop
+}
+
 function Save-AAInstallationDefinitions {
     param([Parameter(Mandatory)][string]$Path)
 
     if (-not $script:AAInstallationDefinitions) { return }
     $script:AAInstallationDefinitions.updatedAt = (Get-Date).ToString('o')
-    $script:AAInstallationDefinitions | ConvertTo-Json -Depth 50 | Set-Content -Path $Path -Encoding utf8
+    Save-AAJsonAtomic -Path $Path -Json ($script:AAInstallationDefinitions | ConvertTo-Json -Depth 50)
 }
 
 function Set-AAInstallationDefinition {

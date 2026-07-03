@@ -990,7 +990,7 @@ if (($needsSetup -or $script:ForceConfigurationPrompt) -and -not $DryRun -and -n
         Write-Host "         (Azure OpenAI / Key Vault / Storage / Function App / ADX) so the installer" -ForegroundColor DarkGray
         Write-Host "         can regenerate fresh deterministic names for the new subscription." -ForegroundColor DarkGray
         # Persist current state first so Reset-UniqueNames sees the OLD configured sub vs the NEW active az sub.
-        $config | ConvertTo-Json -Depth 30 | Set-Content $ConfigPath -Encoding utf8
+        Save-AAJsonAtomic -Path $ConfigPath -Json ($config | ConvertTo-Json -Depth 30)
         & (Join-Path $PSScriptRoot 'tools\Reset-UniqueNames.ps1') -ConfigPath $ConfigPath -InstallationDefinitionsPath $installationDefinitionsPath -Force | Out-Host
         # Reload cleared state, then apply new sub.
         $config = Get-Content $ConfigPath -Raw -Encoding utf8 | ConvertFrom-Json
@@ -1150,7 +1150,7 @@ if (($needsSetup -or $script:ForceConfigurationPrompt) -and -not $DryRun -and -n
     # --- SAVE ---
     if ($configChanged -or $script:ForceConfigurationPrompt) {
         Write-Host ""
-        $config | ConvertTo-Json -Depth 5 | Set-Content $ConfigPath -Encoding utf8
+        Save-AAJsonAtomic -Path $ConfigPath -Json ($config | ConvertTo-Json -Depth 5)
         Initialize-AAInstallationDefinitions -Path $installationDefinitionsPath -Config $config -ConfigPath $ConfigPath `
             -RunLogPath $runLogPath -RunStamp $runStamp
         Write-Host "  Configuration saved to $ConfigPath" -ForegroundColor Green
@@ -1187,7 +1187,7 @@ if ($freshDefinitions -and $UseExistingUsers -and -not $DryRun) {
     $agents = $selectedAgents
     $config.agents = $selectedAgents
     $config.features.userMode = 'existing'
-    $config | ConvertTo-Json -Depth 5 | Set-Content $ConfigPath -Encoding utf8
+    Save-AAJsonAtomic -Path $ConfigPath -Json ($config | ConvertTo-Json -Depth 5)
     Initialize-AAInstallationDefinitions -Path $installationDefinitionsPath -Config $config -ConfigPath $ConfigPath `
         -RunLogPath $runLogPath -RunStamp $runStamp
     Set-AAInstallationDefinition -Path $installationDefinitionsPath -Section 'selectedUsers' -Value @($selectedAgents | ForEach-Object {
@@ -1518,7 +1518,7 @@ if (Test-AAInstallStep '1') {
             $configObj = Get-Content $ConfigPath -Raw | ConvertFrom-Json
             $configObj.agents = $selectedAgents
             $configObj.features.userMode = 'existing'
-            $configObj | ConvertTo-Json -Depth 5 | Set-Content $ConfigPath -Encoding utf8
+            Save-AAJsonAtomic -Path $ConfigPath -Json ($configObj | ConvertTo-Json -Depth 5)
             $config = $configObj
             Initialize-AAInstallationDefinitions -Path $installationDefinitionsPath -Config $config -ConfigPath $ConfigPath `
                 -RunLogPath $runLogPath -RunStamp $runStamp
@@ -1799,7 +1799,7 @@ if (Test-AAInstallStep '2') {
             if ($disableCopilot -notin @('n','N','no','NO')) {
                 Set-AACopilotQueriesFeature -Config $config -Enabled:$false
                 $configChanged = $true
-                $config | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $ConfigPath -Encoding utf8
+                Save-AAJsonAtomic -Path $ConfigPath -Json ($config | ConvertTo-Json -Depth 20)
                 Write-Host "  [OK] features.copilotQueries set to false. Use tools\\Set-CopilotTasks.ps1 -Mode Enable after assigning Copilot licenses." -ForegroundColor Green
             }
         }
@@ -1926,7 +1926,7 @@ if (Test-AAInstallStep '4') {
         # In -Auto mode we also pass -AutoFix so the wizard rewrites colliding names
         # to alternative deterministic candidates and reloads agents.json in-place.
         Write-Host "  Pre-flight: checking globally-unique resource name availability..." -ForegroundColor Cyan
-        $config | ConvertTo-Json -Depth 30 | Set-Content $ConfigPath -Encoding utf8
+        Save-AAJsonAtomic -Path $ConfigPath -Json ($config | ConvertTo-Json -Depth 30)
         $preflightArgs = @{ ConfigPath = $ConfigPath; InstallationDefinitionsPath = $installationDefinitionsPath }
         if ($Auto -or $UseInstallationDefinitions) { $preflightArgs['AutoFix'] = $true }
         & (Join-Path $PSScriptRoot 'tools\Test-NameAvailability.ps1') @preflightArgs | Out-Host
@@ -1957,7 +1957,7 @@ if (Test-AAInstallStep '4') {
                 else { $config | Add-Member -NotePropertyName adx -NotePropertyValue $savedAfterAdx.adx -Force }
             }
         }
-        $config | ConvertTo-Json -Depth 30 | Set-Content $ConfigPath -Encoding utf8
+        Save-AAJsonAtomic -Path $ConfigPath -Json ($config | ConvertTo-Json -Depth 30)
         Initialize-AAInstallationDefinitions -Path $installationDefinitionsPath -Config $config -ConfigPath $ConfigPath `
             -RunLogPath $runLogPath -RunStamp $runStamp
         if (-not (Test-AAAutomationAccountAvailable -Config $config)) {
@@ -2378,7 +2378,7 @@ if (Test-AAInstallStep '9') {
                 }
             }
 
-            $config | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $ConfigPath -Encoding utf8
+            Save-AAJsonAtomic -Path $ConfigPath -Json ($config | ConvertTo-Json -Depth 30)
 
             $deployJobs = if ($Auto) { 'n' } else { Read-Host "  Deploy scheduled Container Apps Jobs for BrowserAgents? Requires .auth files. (y/N)" }
             if ($deployJobs -in @('y','Y','yes','YES')) {

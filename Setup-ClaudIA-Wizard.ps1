@@ -774,7 +774,17 @@ function Update-AgentsConfig {
     if ($json.browserAgents) { $json.browserAgents.enabled = [bool]$script:State.EnableBrowser }
     if ($json.adx -and $json.adx.PSObject.Properties['tenantId']) { $json.adx.tenantId = $script:State.TenantId }
     # Depth 20 so deeply nested sections are never silently truncated.
-    $json | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $ConfigPath -Encoding utf8
+    # Atomic write: stage to .tmp, validate the JSON round-trips, then swap.
+    # Prevents a corrupt agents.json if the wizard is killed mid-write.
+    $tmpPath = "$ConfigPath.tmp"
+    $json | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $tmpPath -Encoding utf8
+    try {
+        $null = (Get-Content -LiteralPath $tmpPath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop)
+    } catch {
+        Remove-Item -LiteralPath $tmpPath -Force -ErrorAction SilentlyContinue
+        throw "Refusing to overwrite $ConfigPath -- staged JSON failed validation: $($_.Exception.Message)"
+    }
+    Move-Item -LiteralPath $tmpPath -Destination $ConfigPath -Force
 }
 
 function Start-Deployment {
