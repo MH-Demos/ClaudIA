@@ -43,6 +43,7 @@ Version 1.0.2 removes Log Analytics provider registration because Container Apps
 .EXAMPLE
     .\tools\Deploy-BrowserAgentScheduledJobs.ps1 -Deploy -Services owa,copilot,banking -ExternalRecipient demo.recipient@example.com
 #>
+#Requires -Version 7.0
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
     [string]$ConfigPath = (Join-Path $PSScriptRoot '..\config\agents.json'),

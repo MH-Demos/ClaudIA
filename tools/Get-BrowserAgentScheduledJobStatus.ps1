@@ -33,6 +33,7 @@ Version 1.0.1 checks all configured regional BrowserAgent Container Apps Jobs.
 .EXAMPLE
     .\tools\Get-BrowserAgentScheduledJobStatus.ps1
 #>
+#Requires -Version 7.0
 [CmdletBinding()]
 param(
     [string]$ConfigPath = (Join-Path $PSScriptRoot '..\config\agents.json'),
