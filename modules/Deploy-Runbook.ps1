@@ -300,22 +300,37 @@ try {
 # are included even when config/agents.json has not been updated yet.
 $secrets['AgentConfig'] = $Config | ConvertTo-Json -Depth 40
 
-# Store the SIT reference from locale (country-specific) or fallback to sit-reference.txt
-$country = if ($Config.tenant.country) { $Config.tenant.country } else { 'FR' }
-$localePath = Join-Path $PSScriptRoot "..\config\locales\$country.json"
-if (Test-Path $localePath) {
-    $locale = Get-Content $localePath -Raw -Encoding utf8 | ConvertFrom-Json
+# Store the SIT reference and full locale (country-specific content pack).
+# Fail fast on an unknown country: the old silent fallback hydrated the tenant
+# with French SIT patterns regardless of the configured locale.
+$localeDir = Join-Path $PSScriptRoot '..\config\locales'
+$availableLocales = @()
+if (Test-Path $localeDir) {
+    $availableLocales = @(Get-ChildItem $localeDir -Filter '*.json' | ForEach-Object { $_.BaseName })
+}
+$country = if ($Config.tenant.country) { ([string]$Config.tenant.country).Trim().ToUpper() } else { 'US' }
+if ($country -eq 'GB') { $country = 'UK' }  # accept the ISO code as an alias for the UK locale
+if ($availableLocales.Count -gt 0) {
+    if ($availableLocales -notcontains $country) {
+        throw "Unknown country '$country' in config tenant.country. Available locales: $($availableLocales -join ', '). Fix the config (or add config/locales/$country.json) and re-run Step 5."
+    }
+    $localePath = Join-Path $localeDir "$country.json"
+    $localeRaw = Get-Content $localePath -Raw -Encoding utf8
+    $locale = $localeRaw | ConvertFrom-Json
+    if (-not $locale.sitReference -or -not $locale.fileTypes) {
+        throw "Locale file config/locales/$country.json is missing 'sitReference' or 'fileTypes'. Restore it from source control and re-run Step 5."
+    }
     $secrets['AgentSitReference'] = $locale.sitReference
     # Store the full locale JSON (runbook uses it for file types, scan templates, PII generators)
-    $secrets['AgentLocale'] = Get-Content $localePath -Raw -Encoding utf8
+    $secrets['AgentLocale'] = $localeRaw
     Write-Host "  Using $country locale (SIT reference + file types + scan templates)" -ForegroundColor Cyan
 } else {
-    # Fallback to the legacy sit-reference.txt file
+    # Legacy checkout without config/locales: French-only sit-reference.txt
     $sitPath = Join-Path $PSScriptRoot '..\config\sit-reference.txt'
     if (Test-Path $sitPath) {
         $secrets['AgentSitReference'] = Get-Content $sitPath -Raw -Encoding utf8
     }
-    Write-Host "  [WARN] No locale for '$country' -- using legacy sit-reference.txt" -ForegroundColor Yellow
+    Write-Host "  [WARN] config/locales/ not found -- using legacy sit-reference.txt. Agents will generate FRENCH SIT patterns regardless of tenant.country." -ForegroundColor Yellow
 }
 
 # Store the email threads JSON (multi-turn conversations)

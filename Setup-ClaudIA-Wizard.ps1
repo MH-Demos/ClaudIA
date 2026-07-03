@@ -583,7 +583,7 @@ $AzureRegions | ForEach-Object { [void]$cmbLoc.Items.Add($_) }
 $cmbLoc.Text = $script:State.Location
 $page4.Controls.Add($cmbLoc)
 
-Add-Label -Panel $page4 -Text 'User country code (2 letters, e.g. US, FR, GB):' -X 30 -Y 226 -W 420 | Out-Null
+Add-Label -Panel $page4 -Text 'User country code (content locale: US, FR, UK or DE):' -X 30 -Y 226 -W 420 | Out-Null
 $txtCountry = Add-TextBox -Panel $page4 -X 30 -Y 248 -W 80 -Value $script:State.Country
 
 $chkBrowser = New-Object System.Windows.Forms.CheckBox
@@ -615,6 +615,17 @@ $page4.Tag = {
     if ($c -notmatch '^[A-Za-z]{2}$') {
         [System.Windows.Forms.MessageBox]::Show('Country code must be exactly 2 letters, e.g. US.','ClaudIA') | Out-Null; return $false
     }
+    $c = $c.ToUpperInvariant()
+    if ($c -eq 'GB') { $c = 'UK' }  # ISO alias for the UK content locale
+    # Validate against the content locales actually shipped in config/locales/
+    # so an unsupported code fails here instead of at Step 5 deployment.
+    $localeDir = Join-Path $PSScriptRoot 'config\locales'
+    if (Test-Path $localeDir) {
+        $supportedLocales = @(Get-ChildItem $localeDir -Filter '*.json' | ForEach-Object { $_.BaseName })
+        if ($supportedLocales.Count -gt 0 -and $supportedLocales -notcontains $c) {
+            [System.Windows.Forms.MessageBox]::Show("No content locale for '$c'. Supported: $($supportedLocales -join ', ') (GB is accepted as UK).",'ClaudIA') | Out-Null; return $false
+        }
+    }
     # BLOCK#1 secondary: the typed domain must match the tenant we authenticated
     # to, otherwise the deployment targets a different directory than the user
     # believes. Compare against the signed-in UPN suffix.
@@ -631,7 +642,7 @@ $page4.Tag = {
     $script:State.Domain = $d
     $script:State.ResourceGroup = $rg
     $script:State.Location = $locValue
-    $script:State.Country = $c.ToUpperInvariant()
+    $script:State.Country = $c
     $script:State.EnableBrowser = $chkBrowser.Checked
     return $true
 }

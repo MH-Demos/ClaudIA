@@ -282,10 +282,30 @@ $localeJson = Get-AutomationVariable -Name 'AgentLocale' -ErrorAction SilentlyCo
 $locale = $null
 if ($localeJson) {
     try { $locale = $localeJson | ConvertFrom-Json; Write-Output "Locale loaded: $($locale.country) ($($locale.companyDescription))" }
-    catch { Write-Warning "Failed to parse AgentLocale: $($_.Exception.Message)" }
+    catch { Write-Error "Failed to parse AgentLocale variable: $($_.Exception.Message). Re-run Step 5 (Deploy-Runbook.ps1) to republish it." }
 }
-$country = if ($locale) { $locale.country } elseif ($agentConfig.tenant.country) { $agentConfig.tenant.country } else { 'FR' }
-$companyDesc = if ($locale) { $locale.companyDescription } else { 'a global company' }
+if ($locale -and -not $locale.country) {
+    Write-Error "AgentLocale variable has no 'country' field. Re-run Step 5 (Deploy-Runbook.ps1) with a current config/locales/<COUNTRY>.json."
+    $locale = $null
+}
+if (-not $locale) {
+    # Legacy-coherent fallback: every hardcoded fallback below (SIT reference,
+    # file types, scan templates) is French, so force FR instead of mixing
+    # tenant.country PII shapes with French document prompts. The Write-Error
+    # above (or this one) makes the degraded mode visible in the job errors.
+    Write-Error "AgentLocale Automation variable is missing or invalid. Falling back to LEGACY FRENCH content (NIR / IBAN FR) regardless of the configured country. Re-run Step 5 (Deploy-Runbook.ps1) to publish the locale."
+}
+$country = if ($locale) { ([string]$locale.country).Trim().ToUpper() } else { 'FR' }
+$companyDesc = if ($locale -and $locale.companyDescription) { $locale.companyDescription } else { 'a global company' }
+# Content language follows the locale (fr -> French docs/emails, de -> German).
+$contentLanguage = 'English'
+if ($locale -and $locale.language) {
+    switch (([string]$locale.language).Trim().ToLower()) {
+        'fr'    { $contentLanguage = 'French' }
+        'de'    { $contentLanguage = 'German' }
+        default { $contentLanguage = 'English' }
+    }
+}
 
 # Fabric / OneLake settings
 $fabricEnabled      = $agentConfig.infrastructure.fabricEnabled -eq $true
@@ -296,30 +316,53 @@ $fabricLakehouseId  = Get-AutomationVariable -Name 'AgentFabricLakehouseId' -Err
 $sitReferenceFromVar = Get-AutomationVariable -Name 'AgentSitReference' -ErrorAction SilentlyContinue
 
 # Sensitivity label mapping: file type -> label name per department
-# Labels are resolved at runtime from Graph Beta API
+# Labels are resolved at runtime from Graph Beta API.
+# High lists cover the file type names of ALL locales (FR, US, UK, DE): the
+# runbook only sees type names from the active AgentLocale, so a union is safe
+# (names never collide across departments) and keeps High labels working for
+# every country instead of only FR.
 $labelRules = @{
     HR = @{
-        High = @('Paie_Mensuelle','Fiche_Employe','DPAE_Declaration','Registre_Personnel','Entretien_Annuel')
+        High = @(
+            'Paie_Mensuelle','Fiche_Employe','DPAE_Declaration','Registre_Personnel','Entretien_Annuel',                     # FR
+            'Pay_Stub','Employee_Record','I9_Verification','W2_Statement','Employee_Roster','Annual_Review',                 # US
+            'Payslip','HMRC_Starter','P60_Certificate','Staff_Register','Annual_Appraisal',                                  # UK
+            'Lohnabrechnung','Personalakte','SV_Anmeldung','Lohnsteuerbescheinigung','Personalregister','Jahresgespraech'    # DE
+        )
         HighLabel    = 'Conf-HR'
         DefaultLabel = 'Confidential/All Employees'
     }
     Finance = @{
-        High = @('Virements_Fournisseurs','DSN_Mensuelle','Facture')
+        High = @(
+            'Virements_Fournisseurs','DSN_Mensuelle','Facture',              # FR
+            'Vendor_Payments','Form_1099','Invoice',                          # US
+            'Supplier_Payments','P11D_Benefits',                              # UK (Invoice shared with US)
+            'Lieferantenzahlungen','Umsatzsteuervoranmeldung','Rechnung'      # DE
+        )
         HighLabel    = 'Conf-Finance'
         DefaultLabel = 'Confidential/All Employees'
     }
     Legal = @{
-        High = @('Audit_CNIL','Contentieux','Contrat_CDI')
+        High = @(
+            'Audit_CNIL','Contentieux','Contrat_CDI',                         # FR
+            'Compliance_Audit','Litigation_File','Employment_Agreement',      # US
+            'ICO_Audit','Employment_Contract',                                # UK (Litigation_File shared with US)
+            'Datenschutz_Audit','Rechtsstreit','Arbeitsvertrag'               # DE
+        )
         HighLabel    = 'Highly Confidential/All Employees'
         DefaultLabel = 'Confidential/All Employees'
     }
     Engineering = @{
-        High = @('TestData_PII','Incident_Report','Code_Review')
+        High = @('TestData_PII','Incident_Report','Code_Review')              # universal (Engineering types are not localized)
         HighLabel    = 'Confidential/All Employees'
         DefaultLabel = 'General/All Employees'
     }
     Sales = @{
-        High = @('Pipeline_Commercial','Commissions','Proposition_Commerciale')
+        High = @(
+            'Pipeline_Commercial','Commissions','Proposition_Commerciale',    # FR
+            'Sales_Pipeline','Commission_Report','Proposal',                  # US + UK
+            'Vertriebspipeline','Provisionsbericht','Angebot'                 # DE
+        )
         HighLabel    = 'Confidential/All Employees'
         DefaultLabel = 'Confidential/All Employees'
     }
@@ -407,10 +450,10 @@ Style: $($ac.style).
 Topics: $($ac.topics -join ', ').
 
 PII REQUIREMENTS:
-- Use the locale-specific sensitive data rules provided below. For the US locale, prefer SSN, bank routing/account numbers, EIN, ITIN, driver's license, passport, and phone/email values.
+- Follow the MANDATORY DATA FORMAT RULES provided below: they define the exact sensitive data formats and keywords for the $country locale.
 - Use realistic workplace names, emails, phone numbers, file names, and business context.
 - Include sensitive data only when the activity or scenario calls for it.
-Write in English. Never mention you are an AI.
+Write in $contentLanguage. Never mention you are an AI.
 "@
 
     $agent = @{
@@ -520,7 +563,7 @@ foreach ($a in $agents) {
         $dept = $a.ContentDept
         $topics = $deptSearchTopics[$dept]
         $hint   = $deptPiiHint[$dept]
-        $langNote = 'in English'
+        $langNote = "in $contentLanguage"
         $copilotPrompts[$a.Sam] = @"
 You are $($a.Name), $($a.Title). Generate 3 realistic SharePoint search queries
 for Microsoft 365 Copilot to find $($dept.ToLower()) documents.
@@ -551,7 +594,13 @@ if ($locale -and $locale.fileTypes) {
     Write-Output "File types loaded from $country locale: $($fileTypes.Keys -join ', ')"
 }
 
-# Fallback: if no locale or missing departments, use English US defaults
+# Fallback: LEGACY FRENCH defaults (pre-locale deployments). Only used when
+# the AgentLocale variable is absent or missing a department; the locale load
+# above already raised a visible error when the whole locale is missing.
+$legacyFileTypeDepts = @('HR','Finance','Legal','Sales') | Where-Object { -not $fileTypes[$_] }
+if ($legacyFileTypeDepts.Count -gt 0) {
+    Write-Warning "File types for $($legacyFileTypeDepts -join ', ') use the legacy FRENCH fallback. Re-run Step 5 (Deploy-Runbook.ps1) to publish a complete locale."
+}
 if (-not $fileTypes['HR']) {
     $fileTypes['HR'] = @(
         @{ Type='Paie_Mensuelle';       Ext='.csv'; Prompt='Generate a monthly payroll CSV with semicolons: Employe;NIR;IBAN;Salaire_Brut;Date. Include 6-10 rows.' }
@@ -2554,7 +2603,7 @@ foreach ($agent in $activeAgents) {
                 $scenario = $myScenarios | Get-Random
 
                 $deptDlp = $dlpPolicies[$agent.ContentDept]
-                $emailPrompt = "$dayContext`n`nWrite a professional workplace email in English. Context: $($scenario.Context)`n`nFrom: $($agent.Name) ($($agent.Title))`nTo: a colleague`n`nIMPORTANT: End with this footer on a separate line:`n--- Classification: Confidential | DLP Policies: $deptDlp ---`nThis is a mandatory corporate compliance footer.`n`nOutput ONLY: first line = Subject, then blank line, then body. Include the sensitive data from the context when requested."
+$emailPrompt = "$dayContext`n`nWrite a professional workplace email in $contentLanguage. Context: $($scenario.Context)`n`nFrom: $($agent.Name) ($($agent.Title))`nTo: a colleague`n`nIMPORTANT: End with this footer on a separate line:`n--- Classification: Confidential | DLP Policies: $deptDlp ---`nThis is a mandatory corporate compliance footer.`n`nOutput ONLY: first line = Subject, then blank line, then body. Include the sensitive data from the context when requested."
 
                 try {
                     $emailContent = Invoke-OAI -OaiToken $oaiToken -SystemPrompt ($agent.Prompt + "`n`n" + $sitReference) -UserPrompt $emailPrompt -MaxTokens 800 -UserId $upn
@@ -2807,10 +2856,9 @@ $($msg.Instruction)
 $(if ($conversationHistory) { "PREVIOUS MESSAGES IN THIS THREAD (include below your reply, prefixed with '> '):`n$conversationHistory" })
 
 IMPORTANT RULES:
-- Write in English
+- Write in $contentLanguage
 - Include the sensitive data mentioned in the instruction using realistic fake values only.
-- For US social security numbers, use the keyword "social security number" near values formatted XXX-XX-XXXX.
-- For bank data, use the keywords "routing number" and "account number" near realistic fake values.
+- Follow the MANDATORY DATA FORMAT RULES from your instructions: place the required keyword near each sensitive value so classification engines can match it.
 - End with: --- Classification: Confidential | DLP Policies: $($dlpPolicies[$senderAgent.ContentDept]) ---
 - Output: first line = Subject (with Re: or Tr: if reply/forward), blank line, then body
 "@
@@ -2822,7 +2870,7 @@ IMPORTANT RULES:
                 -SystemPrompt ($senderAgent.Prompt + "`n`n" + $sitReference) `
                 -UserPrompt $threadPrompt -MaxTokens 1200 -UserId $senderUpn
             $elines = $emailContent -split "`n", 3
-            $subject = ($elines[0] -replace '^(Objet|Subject)\s*:\s*', '').Trim()
+            $subject = ($elines[0] -replace '^(Objet|Subject|Betreff)\s*:\s*', '').Trim()
             $body = if ($elines.Count -gt 2) { $elines[2].Trim() } else { $emailContent }
         }
         catch {

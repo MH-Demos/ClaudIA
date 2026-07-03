@@ -90,7 +90,8 @@ try {
 if (-not $ippsReady) { return }
 
 # Resolve SIT GUIDs dynamically based on tenant country (they vary by locale)
-$country = if ($Config.tenant.country) { $Config.tenant.country } else { 'FR' }
+$country = if ($Config.tenant.country) { ([string]$Config.tenant.country).Trim().ToUpper() } else { 'US' }
+if ($country -eq 'GB') { $country = 'UK' }  # ISO alias for the UK locale
 $allSits = Get-DlpSensitiveInformationType -ErrorAction SilentlyContinue
 
 # Map country → primary ID SIT pattern + bank SIT pattern
@@ -100,7 +101,7 @@ $sitMap = @{
     'UK' = @{ primary = 'U\.K\. National Insurance|NINO';        bank = 'SWIFT|Sort Code' }
     'DE' = @{ primary = 'Germany Identity Card|Germany Tax Identification|Steuer'; bank = 'International Banking Account|IBAN' }
 }
-$patterns = if ($sitMap[$country]) { $sitMap[$country] } else { $sitMap['FR'] }
+$patterns = if ($sitMap[$country]) { $sitMap[$country] } else { $sitMap['US'] }
 
 $primarySit = $allSits | Where-Object { $_.Name -match $patterns.primary } | Select-Object -First 1
 $bankSit    = $allSits | Where-Object { $_.Name -match $patterns.bank } | Select-Object -First 1

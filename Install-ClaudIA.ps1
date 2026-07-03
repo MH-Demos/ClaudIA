@@ -1034,11 +1034,12 @@ if (($needsSetup -or $script:ForceConfigurationPrompt) -and -not $DryRun -and -n
     } else {
         Write-Host "    [WARN] No locales directory found at config/locales/" -ForegroundColor Yellow
     }
-    $currentCountry = if ($config.tenant.country) { $config.tenant.country } else { 'FR' }
+    $currentCountry = if ($config.tenant.country) { $config.tenant.country } else { 'US' }
     Write-Host "    Country [$currentCountry]: " -NoNewline
     $newCountry = Read-Host
     if ($newCountry) {
-        $newCountry = $newCountry.ToUpper()
+        $newCountry = $newCountry.Trim().ToUpper()
+        if ($newCountry -eq 'GB') { $newCountry = 'UK' }  # ISO alias for the UK locale
         $localePath = Join-Path $localeDir "$newCountry.json"
         if (Test-Path $localePath) {
             if ($config.tenant.country -ne $newCountry) {
