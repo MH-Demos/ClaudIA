@@ -154,6 +154,9 @@
     "promptResponseLogging": true,
     "agentActivityWorkbook": true
   },
+  "monitoring": {
+    "alertEmail": ""
+  },
   "externalAiServices": [
     {
       "name": "Azure AI Foundry - Grok",

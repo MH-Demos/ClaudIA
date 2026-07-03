@@ -477,6 +477,90 @@ foreach ($sched in $Config.schedules) {
 
 Write-Host "  Runbook deployed with $($Config.schedules.Count) daily schedules." -ForegroundColor Green
 
+# =============================================================================
+# JOB-FAILURE ALERTING (Azure Monitor metric alert on the Automation Account)
+# =============================================================================
+# A scheduled run that fails silently (expired app secret, KV locked by nightly
+# policy, MI RBAC lost) used to go unnoticed until the workbook looked empty
+# days later. This creates an idempotent metric alert on TotalJob with Status
+# Failed/Suspended/Stopped (1h window, ~0.10 USD/month). Email delivery is
+# optional via monitoring.alertEmail in agents.json (action group
+# ag-claudia-alerts); without it the alert still fires and is visible in
+# Azure portal > Monitor > Alerts.
+$alertEmail = $null
+if ($Config.PSObject.Properties['monitoring'] -and $Config.monitoring -and $Config.monitoring.PSObject.Properties['alertEmail']) {
+    $alertEmail = [string]$Config.monitoring.alertEmail
+}
+$aaResourceId = "/subscriptions/${sub}/resourceGroups/${rg}/providers/Microsoft.Automation/automationAccounts/${aaName}"
+$alertActions = @()
+if (-not [string]::IsNullOrWhiteSpace($alertEmail)) {
+    Write-Host "  Creating action group ag-claudia-alerts ($alertEmail)..." -NoNewline
+    $agBody = @{
+        location = 'Global'
+        properties = @{
+            groupShortName = 'claudia'
+            enabled = $true
+            emailReceivers = @(@{ name = 'ClaudIAAdmin'; emailAddress = $alertEmail; useCommonAlertSchema = $true })
+        }
+    } | ConvertTo-Json -Depth 5
+    try {
+        $ag = Invoke-RestMethod -Method PUT -Uri "https://management.azure.com/subscriptions/${sub}/resourceGroups/${rg}/providers/Microsoft.Insights/actionGroups/ag-claudia-alerts?api-version=2023-01-01" `
+            -Headers $h -Body $agBody -ErrorAction Stop
+        $alertActions = @(@{ actionGroupId = $ag.id })
+        Write-Host " [OK]" -ForegroundColor Green
+    } catch {
+        Write-Host " [WARN] action group: $($_.Exception.Message)" -ForegroundColor Yellow
+    }
+}
+if ($alertActions.Count -eq 0) {
+    # Preserve any existing alert actions on rerun: a full PUT with actions=[]
+    # would silently detach a previously configured email notification when
+    # alertEmail was cleared or the action-group PUT failed transiently.
+    try {
+        $existingAlert = Invoke-RestMethod -Method GET -Uri "https://management.azure.com/subscriptions/${sub}/resourceGroups/${rg}/providers/Microsoft.Insights/metricAlerts/claudia-runbook-job-failures?api-version=2018-03-01" `
+            -Headers $h -ErrorAction Stop
+        if ($existingAlert.properties.actions) { $alertActions = @($existingAlert.properties.actions) }
+    } catch {} # Alert does not exist yet -- first deployment
+}
+Write-Host "  Creating job-failure alert claudia-runbook-job-failures..." -NoNewline
+$alertBody = @{
+    location = 'global'
+    properties = @{
+        description = 'ClaudIA: at least one Automation runbook job Failed/Suspended/Stopped in the last hour. Check the Invoke-AgentRunbook job output in the Automation Account.'
+        severity = 2
+        enabled = $true
+        scopes = @($aaResourceId)
+        evaluationFrequency = 'PT1H'
+        windowSize = 'PT1H'
+        autoMitigate = $true
+        criteria = @{
+            'odata.type' = 'Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria'
+            allOf = @(@{
+                criterionType = 'StaticThresholdCriterion'
+                name = 'FailedOrSuspendedJobs'
+                metricNamespace = 'Microsoft.Automation/automationAccounts'
+                metricName = 'TotalJob'
+                dimensions = @(@{ name = 'Status'; operator = 'Include'; values = @('Failed', 'Suspended', 'Stopped') })
+                operator = 'GreaterThan'
+                threshold = 0
+                timeAggregation = 'Total'
+            })
+        }
+        actions = $alertActions
+    }
+} | ConvertTo-Json -Depth 10
+try {
+    Invoke-RestMethod -Method PUT -Uri "https://management.azure.com/subscriptions/${sub}/resourceGroups/${rg}/providers/Microsoft.Insights/metricAlerts/claudia-runbook-job-failures?api-version=2018-03-01" `
+        -Headers $h -Body $alertBody -ErrorAction Stop | Out-Null
+    Write-Host " [OK]" -ForegroundColor Green
+    if ($alertActions.Count -eq 0) {
+        Write-Host "  [INFO] No monitoring.alertEmail configured -- the alert fires in the Azure portal only (Monitor > Alerts)." -ForegroundColor DarkGray
+        Write-Host "         Set monitoring.alertEmail in config/agents.json and rerun Step 5 for email delivery." -ForegroundColor DarkGray
+    }
+} catch {
+    Write-Host " [WARN] metric alert: $($_.Exception.Message) (non-blocking)" -ForegroundColor Yellow
+}
+
 
 
 
