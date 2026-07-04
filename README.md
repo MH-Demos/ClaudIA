@@ -89,6 +89,10 @@ This URL is a live reference portal for the current public MH Demos deployment. 
 
 Use a non-production Microsoft 365 tenant and an Azure subscription intended for lab use.
 
+**No-console path (recommended for first-time users):** double-click `Start-ClaudIA.cmd` in the repository root. It finds (or offers to install) PowerShell 7 and opens the graphical setup wizard (`Setup-ClaudIA-Wizard.ps1`), which walks through tools, Azure sign-in, lab settings, a dry run, and the real deployment. Prefer a single .exe? Build the native launchers once with `tools\Build-WizardExe.ps1` (no SDK needed) and share `dist\ClaudIA-Wizard-x64.exe` (Intel/AMD) or `dist\ClaudIA-Wizard-arm64.exe` (Windows on ARM).
+
+**Console path:**
+
 ```powershell
 az login --tenant contoso.onmicrosoft.com
 az account set --subscription 11111111-1111-1111-1111-111111111111

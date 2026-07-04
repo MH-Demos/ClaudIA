@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 2.0.1
+.VERSION 2.1.0
 .GUID 6f1b2c4e-9a7d-4f3a-bd11-7c2e9f4a1d22
 
 .AUTHOR
@@ -22,6 +22,14 @@ https://github.com/MH-Demos/ClaudIA
 Graphical, step-by-step setup wizard for ClaudIA aimed at non-technical users.
 
 .RELEASENOTES
+Version 2.1.0: multi-tenant state compatibility - when the shared
+config\agents.json already belongs to a DIFFERENT real tenant, the wizard now
+splits the deployment into config\tenants\<key>.json automatically (the
+installer's per-tenant state guard would otherwise refuse the run); the
+completion log names the actual config file written; added a hidden -SelfTest
+mode that builds the whole UI headlessly and validates the internal functions
+(used by the automated verification net and the exe build); repo-root
+resolution hardened for launcher scenarios.
 Version 2.0.1 (review of 2.0.0): fixed a systemic layout regression from the
 2.0.0 anti-clipping polish (the page body label grew to 80px and overlapped the
 first control of every page at y=110; now 66px) plus two specific overlaps (welcome list vs LAB checkbox; review summary vs the
@@ -74,10 +82,19 @@ first graphical wizard.
 #>
 
 [CmdletBinding()]
-param()
+param(
+    # Hidden: build the whole UI headlessly, validate internal functions, exit
+    # without showing the window. Used by tests and by the exe build pipeline.
+    [switch]$SelfTest
+)
 
 $ErrorActionPreference = 'Stop'
+# Repo root: the wizard script always lives in the repository root. When
+# launched through the native launcher (dist\ClaudIA-Wizard*.exe) or
+# Start-ClaudIA.cmd, those stubs resolve the root and pass -File explicitly,
+# so $PSScriptRoot is always valid here.
 $RepoRoot = $PSScriptRoot
+if (-not $RepoRoot) { $RepoRoot = (Get-Location).Path }
 $InstallerPath = Join-Path $RepoRoot 'Install-ClaudIA.ps1'
 $PrereqPath = Join-Path $RepoRoot 'prerequisites\Test-Prerequisites.ps1'
 $ConfigPath = Join-Path $RepoRoot 'config\agents.json'
@@ -105,6 +122,7 @@ function Resolve-WizardTenantConfigPath {
 # --- Guard: must run on PowerShell 7+ -------------------------------------
 if ($PSVersionTable.PSVersion.Major -lt 7) {
     Write-Host 'This wizard requires PowerShell 7. Please run Start-ClaudIA.cmd instead.' -ForegroundColor Red
+    if ($SelfTest) { exit 1 }
     return
 }
 
@@ -112,6 +130,7 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
 if (-not (Test-Path -LiteralPath $InstallerPath) -or -not (Test-Path -LiteralPath $ConfigPath)) {
     Write-Host 'Install-ClaudIA.ps1 or config\agents.json was not found.' -ForegroundColor Red
     Write-Host 'Place this wizard in the ClaudIA repository root and try again.' -ForegroundColor Yellow
+    if ($SelfTest) { exit 1 }
     return
 }
 
@@ -619,7 +638,7 @@ $page4.Tag = {
     if ($c -eq 'GB') { $c = 'UK' }  # ISO alias for the UK content locale
     # Validate against the content locales actually shipped in config/locales/
     # so an unsupported code fails here instead of at Step 5 deployment.
-    $localeDir = Join-Path $PSScriptRoot 'config\locales'
+    $localeDir = Join-Path $RepoRoot 'config\locales'
     if (Test-Path $localeDir) {
         $supportedLocales = @(Get-ChildItem $localeDir -Filter '*.json' | ForEach-Object { $_.BaseName })
         if ($supportedLocales.Count -gt 0 -and $supportedLocales -notcontains $c) {
@@ -649,9 +668,9 @@ $page4.Tag = {
 
 # ---- Page 5: Review + deploy ---------------------------------------------
 $page5 = New-Page -Heading 'Step 4 of 4 - Review and deploy' -Body @'
-Check the summary below. When you click Deploy, the wizard writes your settings
-into config\agents.json, checks prerequisites, and runs the installer. In full
-deployment mode it can also register Azure providers. A live log appears below.
+Check the summary below. When you click Deploy, the wizard saves your settings
+(to config\agents.json, or an isolated config\tenants file when another tenant
+is already configured), checks prerequisites, and runs the installer.
 '@
 $lblSummary = New-Object System.Windows.Forms.Label
 $lblSummary.AutoSize = $false
@@ -758,11 +777,75 @@ function Update-AgentsConfig {
     # rest. If a per-tenant file exists for the deploying domain, retarget to it
     # so multi-tenant runs stay isolated (see Resolve-WizardTenantConfigPath).
     $script:ConfigPath = Resolve-WizardTenantConfigPath -Domain $script:State.Domain -Default $script:ConfigPath
+
+    # Blanks the globally-unique resolved resource names inherited from another
+    # tenant so the installer regenerates fresh ones instead of colliding.
+    # Field list mirrors tools\Reset-UniqueNames.ps1 (Reset-Document).
+    function Clear-InheritedUniqueNames {
+        param([Parameter(Mandatory)]$Doc)
+        $uniqueFields = @(
+            @('infrastructure','openAiAccountName'), @('infrastructure','keyVaultName'),
+            @('adx','keyVaultName'), @('adx','clusterName'), @('adx','ingestBaseUri'), @('adx','queryBaseUri'),
+            @('activityStoryMap','storageAccountName'), @('activityStoryMap','functionStorageAccountName'),
+            @('activityStoryMap','functionAppName'), @('activityStoryMap','staticWebsiteUrl'),
+            @('activityStoryMap','apiBaseUrl'), @('activityStoryMap','launchUrl'),
+            @('browserAgents','workspaceId'), @('browserAgents','dataplaneUri'), @('browserAgents','playwrightServiceUrl')
+        )
+        foreach ($pair in $uniqueFields) {
+            $sec = $Doc.($pair[0])
+            if ($sec -and $sec.PSObject.Properties[$pair[1]]) { $sec.($pair[1]) = '' }
+        }
+        if ($Doc.activityStoryMap -and $Doc.activityStoryMap.source -and $Doc.activityStoryMap.source.PSObject.Properties['clusterName']) {
+            $Doc.activityStoryMap.source.clusterName = ''
+        }
+    }
+
+    # Multi-tenant state compatibility: if we are still targeting the SHARED
+    # config\agents.json but it already belongs to a DIFFERENT real tenant,
+    # writing this tenant's values into it would make the installer's per-tenant
+    # state guard refuse the run (template/cross-tenant overwrite protection).
+    # Split this deployment into its own config\tenants\<key>.json instead; the
+    # installer then archives the other tenant's state and pairs this one
+    # automatically.
+    $sharedPath = Join-Path $RepoRoot 'config\agents.json'
+    if ($script:ConfigPath -eq $sharedPath) {
+        try {
+            $shared = Get-Content -LiteralPath $sharedPath -Raw | ConvertFrom-Json
+            $sharedDomain = [string]$shared.tenant.domain
+            $placeholders = @('', 'contoso.example', 'example.com', 'example.test')
+            if ($sharedDomain -and $sharedDomain -notin $placeholders -and $sharedDomain -ine $script:State.Domain) {
+                $label = ($script:State.Domain -split '\.')[0]
+                $key = ($label -replace '[^A-Za-z0-9_-]', '')
+                if ($key) {
+                    $tenantsDir = Join-Path $RepoRoot 'config\tenants'
+                    if (-not (Test-Path -LiteralPath $tenantsDir)) { New-Item -ItemType Directory -Path $tenantsDir -Force | Out-Null }
+                    $newPath = Join-Path $tenantsDir ($key + '.json')
+                    if (-not (Test-Path -LiteralPath $newPath)) {
+                        # The copy inherits the OTHER tenant's resolved globally-unique
+                        # resource names (Key Vault, OpenAI, ADX cluster, storage...).
+                        $seed = Get-Content -LiteralPath $sharedPath -Raw | ConvertFrom-Json
+                        Clear-InheritedUniqueNames -Doc $seed
+                        $seed | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $newPath -Encoding utf8
+                    }
+                    $script:ConfigPath = $newPath
+                }
+            }
+        } catch { } # unreadable shared config falls through to the normal error below
+    }
+
     try {
         $json = Get-Content -LiteralPath $ConfigPath -Raw | ConvertFrom-Json
         if (-not $json -or -not $json.tenant) { throw 'missing the [tenant] section' }
     } catch {
         throw "Config file '$ConfigPath' is missing or not valid JSON ($($_.Exception.Message)). Restore it from source control (or delete the per-tenant copy under config\tenants\) and try again."
+    }
+    # Key-collision edge: the resolved per-tenant file may belong to a DIFFERENT
+    # tenant whose domain shares the same first DNS label (contoso.example vs
+    # contoso.onmicrosoft.com both key to 'contoso'). Blank its inherited unique
+    # names too, so this deployment regenerates its own instead of colliding.
+    $existingDomain = [string]$json.tenant.domain
+    if ($existingDomain -and $existingDomain -ine $script:State.Domain) {
+        Clear-InheritedUniqueNames -Doc $json
     }
     $json.tenant.domain = $script:State.Domain
     $json.tenant.tenantId = $script:State.TenantId
@@ -792,7 +875,11 @@ function Start-Deployment {
     try {
         Write-Log '=== Writing configuration ==='
         Update-AgentsConfig
-        Write-Log "Saved settings to config\agents.json"
+        $cfgRel = $script:ConfigPath.Replace($RepoRoot + '\', '')
+        Write-Log "Saved settings to $cfgRel"
+        if ($cfgRel -ne 'config\agents.json') {
+            Write-Log 'Per-tenant config in use: this deployment stays isolated from other tenants.'
+        }
 
         # HIGH#1: refresh PATH from the registry one more time right before we
         # spawn child pwsh processes (prereq check + installer). If the user
@@ -1139,4 +1226,39 @@ $form.Add_FormClosing({
 })
 
 Show-Page 0
+
+if ($SelfTest) {
+    # Headless validation: everything above already built the full UI (form,
+    # 6 pages, validators, timer) without showing it. Assert the invariants a
+    # broken refactor would trip, then exit 0/1. No dialog is ever shown.
+    $failures = @()
+    if ($pages.Count -ne 6) { $failures += "expected 6 pages, got $($pages.Count)" }
+    for ($i = 0; $i -lt $pages.Count; $i++) {
+        if (-not $pages[$i].Tag -or $pages[$i].Tag -isnot [scriptblock]) { $failures += "page $($i+1) has no validator scriptblock" }
+    }
+    if ($titles.Count -ne $pages.Count) { $failures += 'titles/pages count mismatch' }
+    if (-not (Test-Path -LiteralPath $InstallerPath)) { $failures += 'installer path missing' }
+    if (-not (Test-Path -LiteralPath $PrereqPath)) { $failures += 'prerequisite script missing' }
+    try { $null = Get-Content -LiteralPath $ConfigPath -Raw | ConvertFrom-Json } catch { $failures += "config template unparseable: $($_.Exception.Message)" }
+    # Resolve-WizardTenantConfigPath contract
+    $rDefault = Resolve-WizardTenantConfigPath -Domain '' -Default $ConfigPath
+    if ($rDefault -ne $ConfigPath) { $failures += 'tenant resolution: empty domain must return default' }
+    $rMissing = Resolve-WizardTenantConfigPath -Domain 'no-such-tenant-xyz.onmicrosoft.com' -Default $ConfigPath
+    if ($rMissing -ne $ConfigPath) { $failures += 'tenant resolution: unknown tenant must return default' }
+    # Page-5 summary builder must run without throwing
+    try { Update-Page5Summary } catch { $failures += "Update-Page5Summary threw: $($_.Exception.Message)" }
+    # Locale files must exist for the page-4 country validation
+    $locales = @(Get-ChildItem (Join-Path $RepoRoot 'config\locales') -Filter '*.json' -ErrorAction SilentlyContinue)
+    if ($locales.Count -lt 1) { $failures += 'no locale files found under config\locales' }
+
+    $deployTimer.Dispose()
+    $form.Dispose()
+    if ($failures.Count -gt 0) {
+        Write-Host "SELFTEST FAIL:`n - $($failures -join "`n - ")" -ForegroundColor Red
+        exit 1
+    }
+    Write-Host 'SELFTEST PASS: UI built headlessly, 6 pages + validators OK, tenant resolution OK, config template OK.' -ForegroundColor Green
+    exit 0
+}
+
 [void]$form.ShowDialog()

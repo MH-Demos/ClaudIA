@@ -154,6 +154,38 @@
     },
     {
       "directory": "ROOT",
+      "file": "Setup-ClaudIA-Wizard.ps1",
+      "version": "2.1.0",
+      "format": "ps1",
+      "changes": "Graphical setup wizard (WinForms, PowerShell 7) with per-tenant config split and headless -SelfTest mode",
+      "URI": "Setup-ClaudIA-Wizard.ps1"
+    },
+    {
+      "directory": "ROOT",
+      "file": "Start-ClaudIA.cmd",
+      "version": "1.0.0",
+      "format": "cmd",
+      "changes": "Double-click entry point: finds/installs PowerShell 7 then runs the setup wizard",
+      "URI": "Start-ClaudIA.cmd"
+    },
+    {
+      "directory": "tools",
+      "file": "Build-WizardExe.ps1",
+      "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Builds dist native launcher exes (x64 + ARM64/AnyCPU) with the in-box csc.exe",
+      "URI": "tools/Build-WizardExe.ps1"
+    },
+    {
+      "directory": "tools/wizard-launcher",
+      "file": "ClaudIA-WizardLauncher.cs",
+      "version": "1.0.0",
+      "format": "cs",
+      "changes": "Native launcher source: locates repo + pwsh and starts the setup wizard",
+      "URI": "tools/wizard-launcher/ClaudIA-WizardLauncher.cs"
+    },
+    {
+      "directory": "ROOT",
       "file": "Manage-Costs.ps1",
       "version": "1.0.0",
       "format": "ps1",

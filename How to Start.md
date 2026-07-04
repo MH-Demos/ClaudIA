@@ -2,6 +2,8 @@
 
 This guide explains how to reproduce ClaudIA from zero in a clean Microsoft 365 lab tenant and Azure subscription.
 
+Prefer a guided experience over a console? Double-click `Start-ClaudIA.cmd` in the repository root (or a `dist\ClaudIA-Wizard-*.exe` launcher built with `tools\Build-WizardExe.ps1`): the graphical wizard installs the tools below, signs in to Azure, collects the lab settings, and runs the same installer with a dry-run first. The rest of this guide documents the console path and the concepts behind both.
+
 If the tenant has never been configured for Microsoft 365 audit, Conditional Access, Purview, or demo users, read [If Your Tenant Is Completely New.md](If%20Your%20Tenant%20Is%20Completely%20New.md) before running the installer.
 
 ## 1. Local Workstation

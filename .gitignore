@@ -19,6 +19,7 @@ expansion-packs/claudia-teams-bot/config/Installation_definitions.json
 # Generated outputs
 logs/
 out/
+dist/
 BackupScripts/
 tools/BackupScripts/
 TemporaryBackup/

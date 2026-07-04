@@ -292,6 +292,29 @@ if ($pester5) {
 }
 
 # =============================================================================
+# CHECK 5b: WIZARD - GUI setup wizard headless self-test (needs pwsh)
+# =============================================================================
+Write-Host ""
+Write-Host "--- 5b. Setup wizard self-test ---" -ForegroundColor Cyan
+$wizardPath = Join-Path $repoRoot 'Setup-ClaudIA-Wizard.ps1'
+if ((Test-Path -LiteralPath $wizardPath) -and (Get-Command pwsh -ErrorAction SilentlyContinue)) {
+    # try/catch: under PS 5.1 with EAP=Stop, stderr from a native command
+    # captured via 2>&1 throws. A wizard crash must show as [FAIL], not kill
+    # the net mid-run (same pattern as the drift check).
+    $wizardOk = $false; $wizardOut = @()
+    try {
+        $wizardOut = & pwsh -NoProfile -ExecutionPolicy Bypass -File $wizardPath -SelfTest 2>&1
+        $wizardOk = ($LASTEXITCODE -eq 0)
+    } catch {
+        $wizardOut = @("wizard crashed: $($_.Exception.Message)")
+    }
+    Write-CheckResult -Check 'Wizard -SelfTest (headless UI build + validators)' -Ok $wizardOk `
+        -Detail $(($wizardOut | Select-Object -Last 3) -join '; ')
+} else {
+    Write-CheckResult -Check 'Wizard self-test skipped' -Ok $true -Detail 'pwsh or Setup-ClaudIA-Wizard.ps1 not available'
+}
+
+# =============================================================================
 # CHECK 6 (opt-in): Node content pack validation
 # =============================================================================
 if ($IncludeNode) {
