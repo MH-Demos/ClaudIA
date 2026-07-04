@@ -21,6 +21,9 @@ Full installation:
 Safe resume with existing state:
 
 ```powershell
+# On a multi-tenant clone, select the tenant first (guard refuses mismatched runs)
+$env:CLAUDIA_TENANT = '<tenant-domain>'
+
 .\Install-ClaudIA.ps1 -UseInstallationDefinitions -Step 4 -SkipPrerequisites
 .\Install-ClaudIA.ps1 -UseInstallationDefinitions -Step 5 -SkipPrerequisites
 .\Install-ClaudIA.ps1 -UseInstallationDefinitions -Step 6 -SkipPrerequisites
@@ -55,8 +58,11 @@ Most scripts assume:
 
 ## State Files
 
-- `config/agents.json`: editable source configuration.
-- `config/Installation_definitions.json`: generated real installation state. Treat it as the operational reference after the first deployment.
+- `config/agents.json`: editable source configuration (validated by `config/agents-schema.json`).
+- `config/tenants/<key>.json`: per-tenant configs that REPLACE `agents.json` when resolved (via `$env:CLAUDIA_TENANT`, az login auto-detect, or `-ConfigPath`).
+- `config/Installation_definitions.json`: generated real installation state, PAIRED to the resolved tenant. Treat it as the operational reference after the first deployment.
+- `config/tenants/<key>.definitions.json`: per-tenant archives of the state file, swapped in/out automatically at installer startup.
+- `config/backups/`: timestamped safety copies (resets, pre-fresh, unowned states).
 - `logs/Install-ClaudIA-*.log`: installer execution history.
 - `activity-story-map/web/images/manifest.json`: visual manifest for characters and services.
 
@@ -67,6 +73,7 @@ The current pattern is:
 - Key Vault stores real secret values.
 - Automation variables store non-secret configuration and secret names.
 - The runbook reads the secret name from Automation and resolves the value from Key Vault.
+- The app client secret is rotated with `az ad app credential reset --append` and stale `agent-deploy` secrets are pruned at the end of Step `5` (secrets younger than 15 minutes are never touched), so scheduled runbooks keep working if Step `5` fails mid-run.
 - Optional MDCA Cloud Discovery settings follow the same model: Step `10` stores the portal URL and API token in Key Vault and leaves only secret names plus non-secret stream settings in `config/agents.json`.
 
 Do not manually edit an Automation password variable to store a plaintext secret. If credential drift occurs, use:
@@ -88,9 +95,9 @@ Do not manually edit an Automation password variable to store a plaintext secret
 | `tools/Deploy-MdcaCloudDiscoveryConnector.ps1` | Effective config, MDCA URL/token prompt | Key Vault MDCA secrets, `agents.json` MDCA block | Azure CLI, Key Vault, MDCA API | Step `10`; optional pilot connector. |
 | `modules/Provision-M365Collaboration.ps1` | Agents/departments | Teams, SharePoint, channels/folders, Automation variables | Graph, Teams/SharePoint APIs | Step `4a`; rerun if departments or agents change. |
 | `modules/Provision-SensitivityLabels.ps1` | Config | Purview labels and label policy | ExchangeOnlineManagement/IPPS | Step `4b`; publishable labels only. |
-| `modules/Provision-Fabric.ps1` | Config | Fabric capacity/workspace/lakehouse variables | Fabric/Azure APIs | Step `4c`; currently disabled. |
-| `modules/Deploy-Runbook.ps1` | Config, runbook source | Key Vault secrets, Automation variables, runbook, schedules | Azure CLI, ARM, Key Vault | Step `5`; full refresh path for runtime. |
-| `modules/Invoke-AgentRunbook.ps1` | Automation variables, Key Vault, config JSON | M365 activity, labels, ADX telemetry | Managed Identity, Graph, OpenAI, Key Vault, ADX | Runtime script in Azure Automation. |
+| `modules/Provision-Fabric.ps1` | Config | Fabric capacity/workspace/lakehouse variables | Fabric/Azure APIs | Step `4c`; runs when `infrastructure.fabricEnabled` is `true`. |
+| `modules/Deploy-Runbook.ps1` | Config, runbook source | Key Vault secrets, Automation variables, runbook, schedules, job-failure alert | Azure CLI, ARM, Key Vault | Step `5`; full refresh path for runtime. Fails fast on unknown `tenant.country`. |
+| `modules/Invoke-AgentRunbook.ps1` | Automation variables, Key Vault, config JSON | M365 activity, labels, ADX telemetry | Managed Identity, Graph, OpenAI, Key Vault, ADX | Runtime script in Azure Automation. GENERATED from `modules/runbook/NN-*.ps1` by `tools/Build-Runbook.ps1` -- never edit directly. |
 | `modules/Configure-CoreDLP.ps1` | Config/domain, Purview SITs | DLP policies/rules | ExchangeOnlineManagement/IPPS | Step `6a`; category-based DLP. |
 | `modules/Configure-DLP.ps1` | Config/domain, SITs | DSPM for AI policies | ExchangeOnlineManagement/IPPS | Step `6b`; AI exposure policies. |
 | `modules/Configure-IRM.ps1` | Config/domain | IRM policy scaffolding | ExchangeOnlineManagement/IPPS | Step `6c`; some portal settings remain manual. |

@@ -164,21 +164,33 @@ Exit codes:
 az login --tenant <new-tenant-id>
 az account set --subscription <new-subscription-id>
 
-# 2. Preview the reset
-.\tools\Reset-UniqueNames.ps1 -WhatIf
+# 2. RECOMMENDED: create a per-tenant config so the old tenant's config and
+#    deployment state stay untouched (key = first DNS label of the new domain)
+Copy-Item .\config\agents.json .\config\tenants\<key>.json
+$env:CLAUDIA_TENANT = '<new-tenant-domain>'
 
-# 3. Apply the reset (a timestamped backup is written under config\backups\)
-.\tools\Reset-UniqueNames.ps1
+# 3. Preview the reset
+.\tools\Reset-UniqueNames.ps1 -WhatIf -ConfigPath .\config\tenants\<key>.json
 
-# 4. Update tenant.subscriptionId and tenant.tenantId in agents.json
+# 4. Apply the reset (a timestamped backup is written under config\backups\)
+.\tools\Reset-UniqueNames.ps1 -ConfigPath .\config\tenants\<key>.json
+
+# 5. Update tenant.subscriptionId and tenant.tenantId in the per-tenant config
 #    (this script does NOT change those - you change tenants intentionally)
 
-# 5. Pre-flight check the names the installer is about to generate
-.\tools\Test-NameAvailability.ps1
+# 6. Pre-flight check the names the installer is about to generate
+.\tools\Test-NameAvailability.ps1 -ConfigPath .\config\tenants\<key>.json
 
-# 6. Once Test-NameAvailability returns 0, run the wizard or the installer
+# 7. Once Test-NameAvailability returns 0, run the wizard or the installer
 .\Install-ClaudIA.ps1
 ```
+
+At startup the installer pairs `config/Installation_definitions.json` with the
+resolved tenant: the previous tenant's state is archived automatically at
+`config/tenants/<previous-key>.definitions.json` and this tenant starts fresh
+(or resumes its own archive). A guard refuses any run that would overwrite one
+tenant's state with another tenant's values, so forgetting `CLAUDIA_TENANT`
+fails loudly instead of corrupting state.
 
 If `Test-NameAvailability.ps1` returns `1`, edit the offending field in
 `agents.json` to a custom value (for example append your initials), then rerun
@@ -193,11 +205,23 @@ config/backups/agents.20260611-184205.bak.json
 config/backups/Installation_definitions.20260611-184205.bak.json
 ```
 
-To roll back, copy the backup back over the live file:
+To roll back `agents.json`, copy the backup back over the live file:
 
 ```powershell
 Copy-Item .\config\backups\agents.20260611-184205.bak.json .\config\agents.json -Force
-Copy-Item .\config\backups\Installation_definitions.20260611-184205.bak.json .\config\Installation_definitions.json -Force
+```
+
+To roll back the deployment state, restore into the PER-TENANT ARCHIVE (not the
+live file): the installer swaps the live `Installation_definitions.json` from the
+archive of whichever tenant it resolves at startup, so a copy placed directly on
+the live file would be archived/replaced on the next run if its `tenant.domain`
+does not match the resolved config.
+
+```powershell
+# <key> = first DNS label of the tenant the backup belongs to
+Copy-Item .\config\backups\Installation_definitions.20260611-184205.bak.json `
+    .\config\tenants\<key>.definitions.json -Force
+$env:CLAUDIA_TENANT = '<that-tenant-domain>'   # next installer run restores it as the live state
 ```
 
 ## Related documentation

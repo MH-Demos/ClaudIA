@@ -2,7 +2,24 @@
 
 ## Purpose
 
-Shared helper module used by installer, modules, tests, and tools. It centralizes UPN/secret naming, effective configuration loading, installation definitions, Graph consent validation, deployment result tracking, long-running notices, and connection cleanup.
+Shared helper FACADE used by installer, modules, tests, and tools. `Common.ps1` itself is
+a thin loader that dot-sources the three part files where the functions actually live:
+
+- `Common.Core.ps1`: pure helpers -- passwords (`New-AALabPassword`), identity
+  (`Get-AgentUpn`, `Get-AgentSecretName`), naming (`Get-KeyVaultName`, `Get-AAGlobalSuffix`),
+  object utils (`Set-AAObjectProperty`).
+- `Common.Config.ps1`: config/state -- tenant resolution (`Resolve-AATenantConfigPath`,
+  `ConvertTo-AATenantConfigKey`), per-tenant state pairing
+  (`Sync-AAInstallationDefinitionsWithTenant`), installation definitions
+  (`Initialize/Save/Set-AAInstallationDefinition*`), atomic JSON writes (`Save-AAJsonAtomic`),
+  effective config (`Get-AAEffectiveConfig`).
+- `Common.Azure.ps1`: az CLI wrapper, Key Vault secret writes, Graph consent validation,
+  public-network-access handling, connection cleanup. Also sets
+  `AZURE_CORE_ONLY_SHOW_ERRORS=true` so az CLI warnings on stderr do not become
+  terminating errors under `$ErrorActionPreference = 'Stop'`.
+
+All four files ship together -- copying `Common.ps1` alone breaks every consumer
+(the installer preflight and the update manifest both cover the part files).
 
 ## Execution
 

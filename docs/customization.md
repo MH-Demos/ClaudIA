@@ -55,18 +55,52 @@ Each agent has a `workload` field that determines their activity type:
 
 ## Changing File Types
 
-File type templates are embedded in the runbook (`modules/Invoke-AgentRunbook.ps1`). To add a new file type for a department:
+Department file types are **locale-driven**: they live in `config/locales/<COUNTRY>.json`
+under the `fileTypes` section (see [Multi-Country Locale Support](#multi-country-locale-support) below). To add a
+new file type for a department:
 
-1. Find the `$fileTypes` hashtable in the runbook
-2. Add a new entry under the department:
+1. Edit the active locale file (for example `config/locales/US.json`)
+2. Add a new entry under the department inside `fileTypes`:
 
-```powershell
-@{ Type='New_Report'; Ext='.csv'; Prompt='Generate a CSV with columns: ...' }
+```json
+{ "type": "New_Report", "ext": ".csv", "prompt": "Generate a CSV with columns: ..." }
 ```
+
+3. Re-run Step 5 (`.\Install-ClaudIA.ps1 -Step 5 -SkipPrerequisites`) to republish the
+   `AgentLocale` Automation variable.
+
+> **Never edit `modules/Invoke-AgentRunbook.ps1` directly** -- it is GENERATED from the
+> source parts under `modules/runbook/NN-*.ps1` by `tools/Build-Runbook.ps1`, and the
+> verification net (`tests\Invoke-StaticChecks.ps1`) fails when they are out of sync.
+> Runbook logic changes go: edit part file -> `.\tools\Build-Runbook.ps1` ->
+> `.\tools\Publish-RunbookOnly.ps1`.
 
 ## Changing SIT Patterns
 
 Edit `config/sit-reference.txt` to add or modify the SIT patterns injected into AI prompts. This file is appended to every agent's system prompt.
+
+## Job-Failure Alert Email
+
+Step 5 creates an Azure Monitor metric alert (`claudia-runbook-job-failures`) that fires
+when a runbook job ends Failed/Suspended/Stopped. By default it is portal-only
+(Azure Monitor > Alerts). To get email notifications, set the optional knob and re-run
+Step 5:
+
+```json
+"monitoring": { "alertEmail": "you@yourdomain.com" }
+```
+
+> If you deploy with a per-tenant config (`config/tenants/<key>.json`), remember those
+> files REPLACE `config/agents.json` entirely -- add the `monitoring` section there.
+
+## Editing agents.json Safely
+
+`config/agents.json` (and every `config/tenants/*.json`) is validated against
+`config/agents-schema.json` by the verification net. After any hand edit, run:
+
+```powershell
+.\tests\Invoke-StaticChecks.ps1
+```
 
 For example, to add a Belgian national number:
 

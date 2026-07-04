@@ -15,16 +15,25 @@ Main deployment wizard for the lab. It deploys or resumes the full ClaudIA envir
 
 ## Parameters
 
-- `ConfigPath`: path to `agents.json`. Default is `config/agents.json`.
+- `ConfigPath`: explicit config path. When omitted, the installer resolves the active
+  config in this order: `$env:CLAUDIA_TENANT` -> `config/tenants/<key>.json`; auto-detect
+  from the current az login domain; fallback `config/agents.json`. The deployment state
+  file (`config/Installation_definitions.json`) is automatically paired to the resolved
+  tenant (archives under `config/tenants/<key>.definitions.json`).
 - `SkipPrerequisites`: skips Step `0`.
+- `RegisterProviders`: registers missing Azure resource providers during Step `0`.
 - `Step`: runs a specific step. Step `4` includes `4a`, `4b`, `4c`; Step `6` includes `6a`, `6b`, `6c`; Step `10` configures the optional MDCA Cloud Discovery connector.
-- `DryRun`: shows intended changes where supported.
+- `DryRun`: shows intended changes where supported (note: still updates the deployment state file).
 - `UseExistingUsers`: selects existing Entra ID users instead of creating users from config.
 - `UseInstallationDefinitions`: merges values from `config/Installation_definitions.json` and avoids re-prompting for known installation values.
 - `Auto`: uses default answers for many prompts.
 - `AgentPassword`: shared lab password to use/reset/store for agents.
 
 ## Installer Steps
+
+The installer is an orchestrator: each step body lives in `modules/steps/Step*.ps1`
+(16 dot-sourced files) and runs in the installer scope. A blocked Step `4a` no longer
+aborts the run; `4b`/`4c` still execute.
 
 - `0`: prerequisites via `prerequisites/Test-Prerequisites.ps1`.
 - `1`: create/select agents via local logic and `modules/Select-ExistingUsers.ps1`.

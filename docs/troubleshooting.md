@@ -29,6 +29,47 @@ Confirm that:
 
 ## PowerShell And Repository Issues
 
+### Installer refuses to run: "Refusing to overwrite installation definitions of tenant ..."
+
+**Symptom**
+
+```text
+Refusing to overwrite installation definitions of tenant 'contoso.onmicrosoft.com' with a config that has no tenant identity (template?).
+```
+
+**Cause**
+
+The run resolved the template `config/agents.json` (or another tenant's config) while
+`config/Installation_definitions.json` holds real state for a different tenant. This
+guard exists precisely to prevent state corruption on multi-tenant clones.
+
+**Fix**
+
+Select the right tenant before the run (including `-DryRun`):
+
+```powershell
+$env:CLAUDIA_TENANT = 'contoso.onmicrosoft.com'
+.\Install-ClaudIA.ps1 ...
+```
+
+The installer then swaps the correct per-tenant state in automatically (archives live at
+`config/tenants/<key>.definitions.json`). To genuinely start over instead, delete
+`config/Installation_definitions.json` (a tenant-owned copy is preserved under
+`config/backups/` on `-Fresh` runs).
+
+### Step 5 fails: "Unknown country 'XX' in config tenant.country"
+
+**Cause**
+
+`tenant.country` must match a locale under `config/locales/` (US, FR, UK, DE; GB is
+accepted as a UK alias). Step 5 fails fast instead of silently generating content in the
+wrong language.
+
+**Fix**
+
+Set `tenant.country` to a shipped locale code (or add a custom
+`config/locales/<CODE>.json`), then re-run Step 5.
+
 ### PowerShell says the script is not digitally signed
 
 **Symptom**

@@ -166,6 +166,26 @@ Start from [config/agents.json](config/agents.json). Replace public placeholders
 | `adx.*` | Your ADX cluster, database, table, and app identity values if ADX is enabled. |
 | `activityStoryMap.*` | Your storage, function app, API, and optional Front Door values. |
 | `agents[*].userPrincipalName` | Persona users in your lab tenant. |
+| `monitoring.alertEmail` | Optional. Email address for the Automation job-failure alert created at Step 5. Leave empty for a portal-only alert. |
+
+Your edits are validated against `config/agents-schema.json` by the verification net
+(`.\tests\Invoke-StaticChecks.ps1`) -- run it after hand edits.
+
+### Multiple Tenants (or planning for a second one)
+
+If you deploy ClaudIA into more than one tenant from the same clone, create a
+per-tenant config instead of editing the shared template:
+
+```powershell
+Copy-Item .\config\agents.json .\config\tenants\contoso.json   # key = first DNS label of the tenant domain
+$env:CLAUDIA_TENANT = 'contoso.onmicrosoft.com'                # select it for every run
+```
+
+The installer pairs the deployment state file (`config/Installation_definitions.json`)
+with the resolved tenant automatically (archives at `config/tenants/<key>.definitions.json`).
+Set `$env:CLAUDIA_TENANT` (or pass `-ConfigPath`) before ANY installer run, including
+`-DryRun` -- a safety guard refuses runs that would overwrite one tenant's state with
+another tenant's (or with template) values.
 
 Do not write passwords, client secrets, access tokens, connection strings, or browser storage states into JSON files.
 
@@ -227,6 +247,10 @@ The wizard is designed to be re-run safely. Use dry run mode before changes when
 ```powershell
 .\Install-ClaudIA.ps1 -DryRun
 ```
+
+Note: even a dry run updates the deployment state file
+(`config/Installation_definitions.json`), and the tenant guard applies -- on a
+multi-tenant clone, set `$env:CLAUDIA_TENANT` first (see section 4).
 
 The installer can also resume one area at a time:
 

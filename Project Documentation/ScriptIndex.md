@@ -4,7 +4,7 @@
 | --- | --- | --- |
 | `Install-ClaudIA.ps1` | Main deployment wizard | Main script |
 | `Manage-Costs.ps1` | Cost status, estimates, and schedule/Fabric controls | No |
-| `modules/Common.ps1` | Shared helpers for config, Key Vault names, installation definitions, and cleanup | Dot-sourced by installer/modules/tools |
+| `modules/Common.ps1` | Facade loading `Common.Core.ps1` (pure helpers), `Common.Config.ps1` (config/state/atomic writes), `Common.Azure.ps1` (az/KV/Graph/PNA) | Dot-sourced by installer/modules/tools |
 | `modules/Configure-CoreDLP.ps1` | Category-based core DLP policies | Step `6a` |
 | `modules/Configure-DLP.ps1` | DSPM for AI DLP policies | Step `6b` |
 | `modules/Configure-IRM.ps1` | Insider Risk Management policy setup | Step `6c` |
@@ -12,7 +12,9 @@
 | `modules/Deploy-AzureInfra.ps1` | Azure resource group, OpenAI, Automation, Key Vault | Step `4` |
 | `modules/Deploy-Runbook.ps1` | Key Vault secrets, Automation variables, runbook, schedules | Step `5` |
 | `modules/Deploy-Workbook.ps1` | ADX-backed Azure Monitor Workbook | Step `7` |
-| `modules/Invoke-AgentRunbook.ps1` | Azure Automation runtime for agents | Deployed in Step `5` |
+| `modules/Invoke-AgentRunbook.ps1` | Azure Automation runtime for agents. GENERATED from `modules/runbook/NN-*.ps1` by `tools/Build-Runbook.ps1` -- never edit directly | Deployed in Step `5` |
+| `modules/steps/Step*.ps1` | Installer step bodies (16 files, dot-sourced by the orchestrator) | Steps `0`-`10` |
+| `modules/runbook/NN-*.ps1` | Runbook source parts assembled by `tools/Build-Runbook.ps1` | Via Step `5` artifact |
 | `modules/Provision-Fabric.ps1` | Fabric workspace/capacity/lakehouse provisioning | Step `4c` |
 | `modules/Provision-M365Collaboration.ps1` | Teams, SharePoint, folders/channels | Step `4a` |
 | `modules/Provision-SensitivityLabels.ps1` | Purview sensitivity labels and label policy | Step `4b` |
@@ -23,6 +25,9 @@
 | `tests/Test-AzureOpenAI.ps1` | Azure OpenAI smoke test | No |
 | `tests/Test-FullRun.ps1` | Starts runbook jobs for multiple agents | No |
 | `tests/Test-SingleAgent.ps1` | Starts one agent runbook job | Mentioned after install |
+| `tests/Invoke-StaticChecks.ps1` | Verification net: parse, ASCII, config schema, helper drift, runbook freshness, unit tests. Run before every commit | No |
+| `tests/unit/Common.Tests.ps1` | Pester 5 unit tests for Common helpers (run by the net) | No |
+| `tools/Build-Runbook.ps1` | Assembles `modules/Invoke-AgentRunbook.ps1` from `modules/runbook/` parts (`-Check` for CI) | No (pre-Step `5` build step) |
 | `tools/Add-StorylineAgents.ps1` | Add storyline personas | No |
 | `tools/Deploy-AdxTelemetry.ps1` | Provision ADX telemetry resources | Step `4` after Azure infra |
 | `tools/Get-RunbookStatus.ps1` | Inspect Automation runbook jobs | No |

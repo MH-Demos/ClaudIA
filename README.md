@@ -106,8 +106,8 @@ For the complete setup path, including local tools, Azure subscription requireme
 | [How to Start.md](How%20to%20Start.md) | End-to-end setup path for a new public user. |
 | [If Your Tenant Is Completely New.md](If%20Your%20Tenant%20Is%20Completely%20New.md) | Clean-tenant readiness guide for audit, Security Defaults, Conditional Access, demo users, photos, Activity Portal, and branding. |
 | [config](config) | Tenant, agent, locale, ADX, activity map, and installation definition templates. |
-| [modules](modules) | PowerShell modules used by the main installer. |
-| [tools](tools) | Operational tools for ADX, browser agents, story map publishing, costs, and validation. |
+| [modules](modules) | PowerShell modules used by the main installer, including `steps/` (dot-sourced installer step bodies) and `runbook/` (source parts assembled into `Invoke-AgentRunbook.ps1` by `tools/Build-Runbook.ps1`). |
+| [tools](tools) | Operational tools for ADX, browser agents, story map publishing, costs, runbook build, and validation. |
 | [UpdateInfo](UpdateInfo) | Script version manifest used by `tools/Update-ClaudIAScripts.ps1`. |
 | [prerequisites](prerequisites) | Workstation and cloud prerequisite checks. |
 | [BrowserAgents](BrowserAgents) | Playwright-based browser persona agents. |
@@ -191,4 +191,10 @@ When adding new work to this repository:
 3. Add setup steps to [How to Start.md](How%20to%20Start.md) when they affect new users.
 4. Keep sample configuration generic.
 5. Store secrets in Azure Key Vault or a secure runtime mechanism; never store them in Git.
-6. Run `.	ools\Test-PublicRepoSafety.ps1` before publishing.
+6. Run `.\tests\Invoke-StaticChecks.ps1` before every commit (parse, ASCII, config schema,
+   runbook freshness, unit tests) -- it must be GREEN.
+7. Never edit `modules\Invoke-AgentRunbook.ps1` directly: it is generated from
+   `modules\runbook\NN-*.ps1` by `tools\Build-Runbook.ps1`.
+8. Add any new shipped file to `UpdateInfo/update.json` (the updater only downloads
+   manifest-listed files) and to the installer structure preflight.
+9. Run `.\tools\Test-PublicRepoSafety.ps1` before publishing.
