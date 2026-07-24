@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.0
+.VERSION 1.1.0
 
 .GUID 377b3221-30aa-4184-80d1-bc9a5eb6b6d6
 
@@ -24,7 +24,7 @@ https://github.com/MH-Demos/ClaudIA
 Deploys the Activity Story Map Azure frontend and API
 
 .RELEASENOTES
-Initial version metadata for Deploys the Activity Story Map Azure frontend and API.
+Version 1.1.0 adds Entra-only Storage deployment, Flex Consumption, and OneDeploy support for hardened tenants.
 
 #>
 <#
@@ -81,6 +81,49 @@ function Invoke-AzRestJson {
         return Invoke-RestMethod -Method $Method -Uri $Url -Headers $headers -Body ([System.Text.Encoding]::UTF8.GetBytes($json)) -ContentType 'application/json'
     }
     return Invoke-RestMethod -Method $Method -Uri $Url -Headers $headers
+}
+
+function Invoke-AAFunctionOneDeploy {
+    param(
+        [Parameter(Mandatory)][string]$FunctionAppName,
+        [Parameter(Mandatory)][string]$ZipPath,
+        [int]$TimeoutSeconds = 900
+    )
+
+    $token = [string](az account get-access-token --resource 'https://appservice.azure.com' --query accessToken -o tsv 2>$null)
+    $token = $token.Trim()
+    if (-not $token) { throw 'Could not acquire the App Service token required by Kudu OneDeploy.' }
+
+    $scmBase = "https://${FunctionAppName}.scm.azurewebsites.net"
+    $uri = "$scmBase/api/publish?RemoteBuild=false&Deployer=ClaudIA"
+    $headers = @{ Authorization = ('{0} {1}' -f 'Bearer', $token) }
+    $headers['Cache-Control'] = 'no-cache'
+    $headers['User-Agent'] = 'ClaudIA-Installer'
+    $headers['x-ms-client-request-id'] = [guid]::NewGuid().ToString()
+    $response = Invoke-WebRequest -Method POST -Uri $uri -Headers $headers `
+        -ContentType 'application/zip' -Body ([System.IO.File]::ReadAllBytes($ZipPath)) `
+        -TimeoutSec 180 -SkipHttpErrorCheck -ErrorAction Stop
+    if ($response.StatusCode -ne 202) {
+        throw "Kudu OneDeploy returned HTTP $($response.StatusCode)."
+    }
+
+    $deploymentUri = [string]$response.Headers.Location
+    if (-not $deploymentUri) { $deploymentUri = "$scmBase/api/deployments/latest" }
+
+    $deadline = [DateTimeOffset]::UtcNow.AddSeconds($TimeoutSeconds)
+    while ([DateTimeOffset]::UtcNow -lt $deadline) {
+        $deployment = Invoke-RestMethod -Method GET -Uri $deploymentUri -Headers $headers -TimeoutSec 60 -ErrorAction Stop
+        $deploymentStatus = [int]$deployment.status
+        if ($deploymentStatus -eq 4) { return }
+        if ($deployment.complete -eq $true -or $deploymentStatus -eq 3) {
+            $detail = @($deployment.message, $deployment.status_text, $deployment.progress) |
+                Where-Object { $_ } | Select-Object -First 1
+            throw "Kudu OneDeploy failed with status ${deploymentStatus}: $detail"
+        }
+        Start-Sleep -Seconds 10
+    }
+
+    throw "Kudu OneDeploy did not complete within $TimeoutSeconds seconds."
 }
 
 if (-not $Config.adx -or $Config.adx.enabled -ne $true) {
@@ -140,7 +183,7 @@ az group create -n $resourceGroup -l $location -o none | Out-Null
 Write-Host 'Ensuring static website storage account...' -NoNewline
 $siteStorageExists = az storage account show -g $resourceGroup -n $siteStorageName --query name -o tsv 2>$null
 if (-not $siteStorageExists) {
-    az storage account create -n $siteStorageName -g $resourceGroup -l $location --sku Standard_LRS --kind StorageV2 --allow-blob-public-access true --https-only true -o none 2>$null
+    az storage account create -n $siteStorageName -g $resourceGroup -l $location --sku Standard_LRS --kind StorageV2 --allow-blob-public-access false --https-only true -o none 2>$null
     if ($LASTEXITCODE -ne 0) { throw "Failed to create storage account '$siteStorageName'." }
 }
 Write-Host ' OK' -ForegroundColor Green
@@ -165,9 +208,12 @@ if ($hardenedStorage) {
 #         front-end (the Function + API still deploy) and surface manual guidance.
 $staticSiteDeferred = $false
 Write-Host 'Ensuring static-site storage allows public access...' -NoNewline
+$siteStorageId = az storage account show -g $resourceGroup -n $siteStorageName --query id -o tsv
+Enable-AAMcapsPublicNetworkPolicyExclusion -ResourceId $siteStorageId -TenantDomain ([string]$Config.tenant.domain) | Out-Null
 $sitePna = az storage account show -g $resourceGroup -n $siteStorageName --query publicNetworkAccess -o tsv 2>$null
 if ($sitePna -ne 'Enabled') {
-    az storage account update -g $resourceGroup -n $siteStorageName --public-network-access Enabled --default-action Allow -o none 2>$null | Out-Null
+    az storage account update -g $resourceGroup -n $siteStorageName --public-network-access Enabled --default-action Allow `
+        --allow-shared-key-access false --allow-blob-public-access false -o none 2>$null | Out-Null
     Start-Sleep -Seconds 5
     $sitePna = az storage account show -g $resourceGroup -n $siteStorageName --query publicNetworkAccess -o tsv 2>$null
 }
@@ -186,7 +232,6 @@ if ($hardenedStorage) {
     Write-Host 'Granting Storage Blob Data Contributor to the signed-in user...' -NoNewline
     $operatorId = az ad signed-in-user show --query id -o tsv 2>$null
     if (-not $operatorId) { throw 'Could not resolve the signed-in user objectId for blob RBAC (az ad signed-in-user show failed).' }
-    $siteStorageId = az storage account show -g $resourceGroup -n $siteStorageName --query id -o tsv
     az role assignment create --assignee-object-id $operatorId --assignee-principal-type User --role 'Storage Blob Data Contributor' --scope $siteStorageId -o none 2>$null
     Write-Host ' OK' -ForegroundColor Green
 
@@ -221,6 +266,17 @@ if (-not $functionStorageExists) {
     if ($LASTEXITCODE -ne 0) { throw "Failed to create storage account '$functionStorageName'." }
 }
 Write-Host ' OK' -ForegroundColor Green
+$functionStorageId = az storage account show -g $resourceGroup -n $functionStorageName --query id -o tsv
+$visitContainerOutput = az storage container-rm create -g $resourceGroup --storage-account $functionStorageName `
+    -n activity-story-map --public-access off -o none 2>&1
+if ($LASTEXITCODE -ne 0) {
+    throw "Could not ensure the Story Map visit-state container: $(($visitContainerOutput | Out-String).Trim())"
+}
+if (Test-AAMcapsHardenedTenant -Domain ([string]$Config.tenant.domain)) {
+    Enable-AAMcapsPublicNetworkPolicyExclusion -ResourceId $functionStorageId -TenantDomain ([string]$Config.tenant.domain) | Out-Null
+    az storage account update -g $resourceGroup -n $functionStorageName --public-network-access Enabled --default-action Allow `
+        --allow-shared-key-access false --allow-blob-public-access false -o none 2>$null | Out-Null
+}
 
 $normalizedLocation = ($location -replace '\s', '').ToLowerInvariant()
 $useFlex = $false
@@ -300,6 +356,18 @@ if (-not $principalId) {
 }
 if (-not $principalId) { throw "Could not resolve managed identity principal id for '$functionAppName'." }
 
+# Flex package deployment always uses the function identity; hardened host
+# storage additionally requires Queue and Table access.
+if ($useFlex -or $hardenedStorage) {
+    $storageRoles = @('Storage Blob Data Owner')
+    if ($hardenedStorage) {
+        $storageRoles += 'Storage Queue Data Contributor', 'Storage Table Data Contributor'
+    }
+    foreach ($role in $storageRoles) {
+        az role assignment create --role $role --assignee-object-id $principalId --assignee-principal-type ServicePrincipal --scope $functionStorageId -o none 2>$null
+    }
+}
+
 if ($hardenedStorage) {
     # 'az functionapp create' wires AzureWebJobsStorage as a KEY-BASED connection
     # string. With allowSharedKeyAccess=false the runtime cannot read host keys
@@ -307,10 +375,6 @@ if ($hardenedStorage) {
     # Switch the host storage to identity-based access: grant the app MI the
     # data-plane roles, set AzureWebJobsStorage__accountName, drop the key string.
     Write-Host 'Configuring identity-based host storage (hardened tenant)...' -NoNewline
-    $functionStorageId = az storage account show -g $resourceGroup -n $functionStorageName --query id -o tsv
-    foreach ($role in 'Storage Blob Data Owner', 'Storage Queue Data Contributor', 'Storage Table Data Contributor') {
-        az role assignment create --role $role --assignee-object-id $principalId --assignee-principal-type ServicePrincipal --scope $functionStorageId -o none 2>$null
-    }
     az functionapp config appsettings set -g $resourceGroup -n $functionAppName --settings "AzureWebJobsStorage__accountName=$functionStorageName" -o none 2>$null | Out-Null
     az functionapp config appsettings delete -g $resourceGroup -n $functionAppName --setting-names AzureWebJobsStorage -o none 2>$null | Out-Null
     Write-Host ' OK' -ForegroundColor Green
@@ -386,24 +450,95 @@ if ($useFlex) {
     }
 }
 # Flex: deployment-container MI access and (hardened) host-storage RBAC can take
-# minutes to propagate; the health check fails until then ('Failed to fetch host key').
+# minutes to propagate. Deploy through Kudu OneDeploy with an App Service audience
+# Entra token, matching the Azure CLI Flex deployment flow.
 $deployAttempts = if ($useFlex) { 5 } else { 1 }
+$deployed = $false
+$lastDeployError = ''
 for ($attempt = 1; $attempt -le $deployAttempts; $attempt++) {
-    az functionapp deployment source config-zip -g $resourceGroup -n $functionAppName --src $zipPath -o none 2>$null | Out-Null
-    if ($LASTEXITCODE -eq 0) { break }
+    if ($useFlex) {
+        try {
+            Write-Host '  Deploying Flex package with Kudu OneDeploy and Entra authentication...' -ForegroundColor DarkYellow
+            Invoke-AAFunctionOneDeploy -FunctionAppName $functionAppName -ZipPath $zipPath
+            Write-Host '  Flex package deployed.' -ForegroundColor Green
+            $deployed = $true
+            break
+        } catch {
+            $lastDeployError = $_.Exception.Message
+        }
+    } else {
+        $zipOutput = & az functionapp deployment source config-zip -g $resourceGroup -n $functionAppName --src $zipPath -o none 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            $deployed = $true
+            break
+        }
+        $lastDeployError = ($zipOutput | Out-String).Trim()
+    }
+
     if ($attempt -lt $deployAttempts) {
         Write-Host "  Zip deploy retry $attempt/$deployAttempts (waiting for storage RBAC propagation)..." -ForegroundColor DarkYellow
         Start-Sleep -Seconds 45
-    } else {
-        Remove-Item -LiteralPath $zipPath -Force -ErrorAction SilentlyContinue
-        throw "Zip deployment to '$functionAppName' failed after $deployAttempts attempt(s)."
     }
+}
+if (-not $deployed) {
+    Remove-Item -LiteralPath $zipPath -Force -ErrorAction SilentlyContinue
+    throw "Deployment to '$functionAppName' failed after $deployAttempts attempt(s): $lastDeployError"
 }
 Remove-Item -LiteralPath $zipPath -Force
 
-$functionHost = az functionapp show -g $resourceGroup -n $functionAppName --query defaultHostName -o tsv
+$functionHost = ''
+for ($attempt = 1; $attempt -le 20; $attempt++) {
+    $functionDetailsJson = az functionapp show -g $resourceGroup -n $functionAppName -o json 2>$null
+    if ($functionDetailsJson) {
+        $functionDetails = $functionDetailsJson | ConvertFrom-Json
+        $functionHost = [string]$functionDetails.properties.defaultHostName
+        if (-not $functionHost) { $functionHost = [string]$functionDetails.defaultHostName }
+    }
+    if ($functionHost) { break }
+    Start-Sleep -Seconds 15
+}
+if (-not $functionHost) {
+    throw "Function App '$functionAppName' did not expose a default hostname after deployment."
+}
+
+$httpsUpdateOutput = az resource update -g $resourceGroup -n $functionAppName `
+    --resource-type Microsoft.Web/sites --set properties.httpsOnly=true -o none 2>&1
+if ($LASTEXITCODE -ne 0) {
+    throw "Could not enable HTTPS-only on '$functionAppName': $(($httpsUpdateOutput | Out-String).Trim())"
+}
 $apiBaseUrl = "https://$functionHost"
 $launchUrl = if ($staticSiteDeferred) { $apiBaseUrl } else { "$($staticEndpoint)?api=$apiBaseUrl" }
+
+if (-not $staticSiteDeferred) {
+    $runtimeConfigPath = Join-Path ([System.IO.Path]::GetTempPath()) "activity-story-map-config-$suffix.js"
+    try {
+        [System.IO.File]::WriteAllText($runtimeConfigPath, "window.ACTIVITY_API_BASE = `"$apiBaseUrl`";`n")
+        az storage blob upload --account-name $siteStorageName --auth-mode login --container-name '$web' `
+            --name 'config.js' --file $runtimeConfigPath --overwrite true -o none 2>$null | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "Could not publish the runtime API configuration to '$siteStorageName'." }
+    } finally {
+        Remove-Item -LiteralPath $runtimeConfigPath -Force -ErrorAction SilentlyContinue
+    }
+}
+
+$apiProbePaths = @('/api/graph?hours=1', '/api/visits')
+foreach ($probePath in $apiProbePaths) {
+    $apiReady = $false
+    for ($attempt = 1; $attempt -le 10; $attempt++) {
+        try {
+            $probe = Invoke-WebRequest -Uri "$apiBaseUrl$probePath" -TimeoutSec 120 -ErrorAction Stop
+            if ($probe.StatusCode -eq 200) {
+                $apiReady = $true
+                break
+            }
+        } catch {
+            if ($attempt -lt 10) { Start-Sleep -Seconds 15 }
+        }
+    }
+    if (-not $apiReady) {
+        throw "Function App '$functionAppName' was deployed but '$apiBaseUrl$probePath' did not become healthy."
+    }
+}
 
 $storyMapConfig = [ordered]@{
     enabled = $true
@@ -509,6 +644,3 @@ if (Test-AAMcapsHardenedTenant -Domain ([string]$Config.tenant.domain)) {
 }
 
 return [PSCustomObject]$storyMapConfig
-
-
-

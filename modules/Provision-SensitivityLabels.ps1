@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.0
+.VERSION 1.1.0
 
 .GUID 46dd4ec3-8689-457f-813e-3c30a5f55ada
 
@@ -24,7 +24,7 @@ https://github.com/MH-Demos/ClaudIA
 Provision sensitivity labels required by agent content classification
 
 .RELEASENOTES
-Initial version metadata for Provision sensitivity labels required by agent content classification.
+Version 1.1.0 adds noninteractive deployment support and resilient existing-label policy publication.
 
 #>
 <#
@@ -56,7 +56,8 @@ Initial version metadata for Provision sensitivity labels required by agent cont
 #>
 param(
     $Config,
-    [switch]$SkipPublish
+    [switch]$SkipPublish,
+    [switch]$Auto
 )
 
 $ErrorActionPreference = 'Stop'
@@ -79,6 +80,9 @@ try {
     Write-Host "      Connect-IPPSSession" -ForegroundColor Cyan
     Write-Host "    (requires ExchangeOnlineManagement module)" -ForegroundColor Gray
     Write-Host ""
+    if ($Auto) {
+        throw "Security & Compliance PowerShell must be connected before running sensitivity labels in -Auto mode. Run Connect-IPPSSession in this PowerShell session, then rerun Step 4."
+    }
     $tryConnect = Read-Host "    Try auto-connect now? (y/N)"
     if ($tryConnect -eq 'y') {
         try {
@@ -343,6 +347,23 @@ function Test-IsLabelGroup {
     return $false
 }
 
+function Get-AAQualifiedLabelName {
+    param(
+        $Label,
+        [array]$Labels
+    )
+
+    $parentId = Get-LabelPropertyValue -Label $Label -PropertyName 'ParentId'
+    if ($parentId) {
+        $parent = $Labels | Where-Object { $_.Guid.ToString() -eq $parentId.ToString() } | Select-Object -First 1
+        if ($parent) {
+            return "$($parent.DisplayName)/$($Label.DisplayName)"
+        }
+    }
+
+    return [string]$Label.DisplayName
+}
+
 function Get-PublishableLabelGuids {
     param(
         [array]$Labels,
@@ -361,7 +382,9 @@ function Get-PublishableLabelGuids {
     foreach ($identifier in $Identifiers) {
         $matches = @(
             $Labels | Where-Object {
+                $qualifiedName = Get-AAQualifiedLabelName -Label $_ -Labels $Labels
                 $_.DisplayName -eq $identifier -or
+                $qualifiedName -eq $identifier -or
                 (Get-LabelPropertyValue -Label $_ -PropertyName 'Name') -eq $identifier -or
                 (Get-LabelPropertyValue -Label $_ -PropertyName 'Identity') -eq $identifier
             }
@@ -401,25 +424,40 @@ if (-not $SkipPublish) {
     $policyName = 'CorpLab-Labels-Policy'
     Write-Host "  Publishing label policy '$policyName'..."
 
+    # Publish leaf labels only. Newer tenants ship built-in parent groups whose
+    # children share display names, so qualified parent/child names are required.
+    $targetLabelNames = @(
+        'General',
+        'General/All Employees',
+        'General/All Employees (unrestricted)',
+        'Confidential',
+        'Confidential/All Employees',
+        'Conf-HR',
+        'Conf-Finance',
+        'Highly Confidential',
+        'Highly Confidential/All Employees'
+    )
+    $allLabels = @(Get-Label -ErrorAction Stop)
+    $labelGuids = Get-PublishableLabelGuids -Labels $allLabels -Identifiers $targetLabelNames
     $existingPolicy = Get-LabelPolicy -Identity $policyName -ErrorAction SilentlyContinue
     if ($existingPolicy) {
-        Write-Host "    [EXISTS]" -ForegroundColor DarkYellow
-    } else {
-        # Get only publishable lab label GUIDs. Parent labels/label groups are
-        # containers in newer Purview tenants and New-LabelPolicy rejects them.
-        $targetLabelNames = @(
-            'General',
-            'General/All Employees',
-            'Confidential',
-            'Confidential/All Employees',
-            'Conf-HR',
-            'Conf-Finance',
-            'Highly Confidential',
-            'Highly Confidential/All Employees'
+        $publishedNames = @($existingPolicy.Labels | ForEach-Object { $_.ToString() })
+        $missingLabelGuids = @(
+            $allLabels | Where-Object {
+                $guid = $_.Guid.ToString()
+                if ($labelGuids -notcontains $guid) { return $false }
+                $qualifiedName = Get-AAQualifiedLabelName -Label $_ -Labels $allLabels
+                $identifiers = @($_.DisplayName, $_.Name, $guid, $qualifiedName) | ForEach-Object { $_.ToString() }
+                @($identifiers | Where-Object { $publishedNames -contains $_ }).Count -eq 0
+            } | ForEach-Object { $_.Guid.ToString() }
         )
-        $allLabels = @(Get-Label -ErrorAction Stop)
-        $labelGuids = Get-PublishableLabelGuids -Labels $allLabels -Identifiers $targetLabelNames
-
+        if ($missingLabelGuids.Count -gt 0) {
+            Set-LabelPolicy -Identity $policyName -AddLabels $missingLabelGuids -Confirm:$false -ErrorAction Stop
+            Write-Host "    [UPDATED] Added $($missingLabelGuids.Count) labels" -ForegroundColor Green
+        } else {
+            Write-Host "    [EXISTS] All target labels are already published" -ForegroundColor DarkYellow
+        }
+    } else {
         if ($labelGuids.Count -gt 0) {
             try {
                 New-LabelPolicy -Name $policyName `
@@ -440,6 +478,3 @@ if (-not $SkipPublish) {
 Write-Host ""
 Write-Host "  NOTE: Labels take 24-48h to propagate to Office apps." -ForegroundColor Yellow
 Write-Host "  The runbook applies labels via Graph API (works within minutes)." -ForegroundColor Yellow
-
-
-

@@ -10,7 +10,7 @@ The `paymentRequired` error raised by the runbook comes from Microsoft Graph whe
 POST /sites/{site-id}/drive/items/{item-id}/assignSensitivityLabel
 ```
 
-That endpoint is the SharePoint and OneDrive for Business `assignSensitivityLabel` API. Microsoft documents it as a protected, metered Microsoft Graph API. The app registration that calls it must be associated with an Azure subscription through a `Microsoft.GraphServices/accounts` resource before the API can be used.
+That endpoint is the SharePoint and OneDrive for Business `assignSensitivityLabel` API. Microsoft documents it as a protected, metered Microsoft Graph API. The app registration that calls it must be associated with an Azure subscription through a `Microsoft.GraphServices/accounts` resource before the API can be used. The tenant must also enable sensitivity labels for SharePoint and OneDrive; otherwise the call returns `generalException` with `Sensitivity label cannot be assigned since the feature is not enabled`.
 
 In this lab, the calling app is `app-claudia-dataagent`, stored in config as:
 
@@ -24,24 +24,25 @@ or, depending on the installation stage:
 application.clientId
 ```
 
-Current lab billing resource:
+Expected lab billing resource:
 
 | Field | Value |
 | --- | --- |
-| Subscription | `ab97362c-5d5f-49a5-bf87-c8480e54e062` |
-| Resource group | `MH-Agents-PAYG` |
+| Subscription | `<subscription-id>` |
+| Resource group | `rg-claudia-lab` |
 | Resource name | `graph-metered-app-claudia-dataagent` |
 | Resource type | `Microsoft.GraphServices/accounts` |
 | Location | `global` |
-| App ID | `22222222-2222-2222-2222-222222222222` |
-| Provisioning state | `Succeeded` |
-| Billing plan ID | `bdec0477-8c65-40ff-a6b5-693302a13f22` |
+| App ID | Resolved from `app-claudia-dataagent` in the local installation configuration |
+| Provisioning state | Expected: `Succeeded` |
+| Billing plan ID | Provider-managed; do not copy a tenant-specific value into the repository |
+| SharePoint AIP integration | `Enabled` |
 
 ## PAYG Services
 
 | Service | Why We Use It | Billing Model | Current Status | Notes |
 | --- | --- | --- | --- | --- |
-| Microsoft Graph metered APIs: SharePoint/OneDrive `assignSensitivityLabel` | Applies sensitivity labels to files at rest from the runbook | Metered per API call | Required for automatic label application through Graph | Enable by creating `Microsoft.GraphServices/accounts` linked to `app-claudia-dataagent` |
+| Microsoft Graph metered APIs: SharePoint/OneDrive `assignSensitivityLabel` | Applies sensitivity labels to files at rest from the runbook | Metered per API call | Enabled | `Microsoft.GraphServices/accounts` is linked to `app-claudia-dataagent`; SharePoint AIP integration is enabled |
 | Azure OpenAI | Generates realistic business documents, emails, and prompts | Token/model usage | Required | Cost depends on selected model, region, and quota |
 | Azure AI Foundry model deployments | Optional external AI simulation with non-Copilot model families | Token/model usage | Optional | Used by expansion scenarios such as ExternalAI |
 | Azure Data Explorer | Stores lab telemetry from the runbook and story map | Cluster/runtime + storage | Required for current telemetry architecture | Dev/Test SKU can reduce cost; streaming ingestion is enabled |
@@ -117,6 +118,31 @@ az resource show `
 
 After enabling it, request a new OAuth token before testing label application again. In practice, republishing/rerunning the runbook is enough because each run obtains fresh tokens.
 
+## Enable SharePoint and OneDrive Sensitivity Labels
+
+Graph metered billing does not enable the SharePoint tenant feature. A SharePoint Administrator or Global Administrator must enable it once with the SharePoint Online Management Shell:
+
+```powershell
+Connect-SPOService -Url 'https://<tenant>-admin.sharepoint.com'
+Set-SPOTenant -EnableAIPIntegration $true
+```
+
+Verify the tenant setting:
+
+```powershell
+(Get-SPOTenant).EnableAIPIntegration
+```
+
+The expected value is `True`. Allow time for propagation, obtain a fresh Graph token, and retry an existing supported file rather than creating more test content. A successful `assignSensitivityLabel` request returns HTTP `202 Accepted`.
+
+Verify the label without another metered assignment call:
+
+```text
+POST /sites/{site-id}/drive/items/{item-id}/extractSensitivityLabels
+```
+
+The returned `labels` collection must contain the requested `sensitivityLabelId`. If `Set-SPOTenant` fails because of a local module error, update or repair `Microsoft.Online.SharePoint.PowerShell` and retry in a fresh PowerShell 7 session; do not treat Graph billing alone as sufficient.
+
 ## Current ADX Note
 
 The runbook successfully writes file operation telemetry as:
@@ -131,7 +157,7 @@ If `Test-SingleAgent.ps1 -Services fileops` reports no ADX data while `tools\Get
 
 ## Label-Supported File Formats
 
-After Graph metered billing is enabled, a remaining `unsupportedMediaType` error means the API is reachable, but the file extension is not supported for `assignSensitivityLabel`.
+After Graph metered billing and SharePoint AIP integration are enabled, a remaining `unsupportedMediaType` error means the API is reachable, but the file extension is not supported for `assignSensitivityLabel`.
 
 For the Activity Explorer and sensitivity-label path, the runbook should prefer:
 
@@ -188,5 +214,7 @@ Recommended demo design:
 - Microsoft Graph: Enable metered APIs and services: https://learn.microsoft.com/en-us/graph/metered-api-setup
 - Microsoft Graph: Metered APIs and services list: https://learn.microsoft.com/en-us/graph/metered-api-list
 - Microsoft Graph: driveItem assignSensitivityLabel: https://learn.microsoft.com/en-us/graph/api/driveitem-assignsensitivitylabel
+- Microsoft Graph: driveItem extractSensitivityLabels: https://learn.microsoft.com/en-us/graph/api/driveitem-extractsensitivitylabels
+- Microsoft Purview: Enable sensitivity labels for files in SharePoint and OneDrive: https://learn.microsoft.com/en-us/purview/sensitivity-labels-sharepoint-onedrive-files
 - Microsoft Purview: Activity Explorer: https://learn.microsoft.com/en-us/purview/data-classification-activity-explorer
 - Microsoft Purview: Labeling activities available in Activity Explorer: https://learn.microsoft.com/en-us/azure/information-protection/audit-logs

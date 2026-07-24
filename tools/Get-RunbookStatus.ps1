@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.0
+.VERSION 1.0.1
 
 .GUID df922b3c-dfe7-4729-a9c4-187069c753f5
 
@@ -24,7 +24,7 @@ https://github.com/MH-Demos/ClaudIA
 Show recent Azure Automation runbook executions for the autonomous agents lab
 
 .RELEASENOTES
-Initial version metadata for Show recent Azure Automation runbook executions for the autonomous agents lab.
+Version 1.0.1 reads complete paginated job streams for reliable diagnostics.
 
 #>
 <#
@@ -77,7 +77,16 @@ function Get-AutomationJobStreams {
     )
 
     try {
-        @((Invoke-AzGet -Uri "$BaseUri/jobs/${JobId}/streams?api-version=2023-11-01").value)
+        $streams = [System.Collections.Generic.List[object]]::new()
+        $nextUri = "$BaseUri/jobs/${JobId}/streams?api-version=2023-11-01"
+        do {
+            $page = Invoke-AzGet -Uri $nextUri
+            foreach ($stream in @($page.value)) {
+                $streams.Add($stream)
+            }
+            $nextUri = $page.nextLink
+        } while ($nextUri)
+        return @($streams)
     } catch {
         @()
     }
@@ -284,6 +293,4 @@ $rows | Format-Table -AutoSize
 $summary = $rows | Group-Object Status | ForEach-Object { "$($_.Name)=$($_.Count)" }
 Write-Host ""
 Write-Host "Summary: $($summary -join ', ')" -ForegroundColor Cyan
-
-
 

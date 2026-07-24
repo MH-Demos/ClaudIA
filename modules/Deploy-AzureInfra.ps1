@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.0
+.VERSION 1.1.0
 
 .GUID 14141205-4bfa-4623-8070-86f59c9116ce
 
@@ -24,7 +24,7 @@ https://github.com/MH-Demos/ClaudIA
 Deploy Azure infrastructure: OpenAI, Automation, Key Vault, and ADX-ready runbook hosting
 
 .RELEASENOTES
-Initial version metadata for Deploy Azure infrastructure: OpenAI, Automation, Key Vault, and ADX-ready runbook hosting.
+Version 1.1.0 selects active, available, quota-compatible model versions and avoids deprecated deployments.
 
 #>
 <#
@@ -277,13 +277,17 @@ function Select-AAOpenAIChatModel {
     if ($ConfiguredName -and $ConfiguredVersion) {
         $exactCapacityMatch = $Models | Where-Object {
             $_.Name -eq $ConfiguredName -and $_.Version -eq $ConfiguredVersion -and
+            $_.LifecycleStatus -notin @('Deprecated', 'Deprecating') -and
             ($RequestedCapacity -le 0 -or (($_.MaxCapacity -ge $RequestedCapacity) -and ($null -eq $_.QuotaAvailable -or $_.QuotaAvailable -ge $RequestedCapacity)))
         } | Select-Object -First 1
         if ($exactCapacityMatch) { return $exactCapacityMatch }
     }
 
     if ($ConfiguredName) {
-        $sameName = @($Models | Where-Object { $_.Name -eq $ConfiguredName } | Sort-Object RecommendedScore, Version -Descending)
+        $sameName = @($Models | Where-Object {
+            $_.Name -eq $ConfiguredName -and
+            $_.LifecycleStatus -notin @('Deprecated', 'Deprecating')
+        } | Sort-Object RecommendedScore, Version -Descending)
         $sameNameWithCapacity = @($sameName | Where-Object {
             $RequestedCapacity -le 0 -or
             (($_.MaxCapacity -ge $RequestedCapacity) -and ($null -eq $_.QuotaAvailable -or $_.QuotaAvailable -ge $RequestedCapacity))
@@ -301,7 +305,9 @@ function Select-AAOpenAIChatModel {
         }
     }
 
-    $choices = @($Models | Where-Object { $_.LifecycleStatus -ne 'Deprecated' } | Sort-Object RecommendedScore, Name, Version -Descending)
+    $choices = @($Models | Where-Object {
+        $_.LifecycleStatus -notin @('Deprecated', 'Deprecating')
+    } | Sort-Object RecommendedScore, Name, Version -Descending)
     if ($RequestedCapacity -gt 0) {
         $capacityChoices = @($choices | Where-Object {
             $_.MaxCapacity -ge $RequestedCapacity -and
@@ -309,7 +315,9 @@ function Select-AAOpenAIChatModel {
         })
         if ($capacityChoices.Count -gt 0) { $choices = $capacityChoices }
     }
-    if ($choices.Count -eq 0) { $choices = @($Models | Sort-Object RecommendedScore, Name, Version -Descending) }
+    if ($choices.Count -eq 0) {
+        throw "No deployable Standard chat-completion Azure OpenAI models are available for this account/region."
+    }
     $choices = @($choices | Select-Object -First 20)
     $defaultChoice = $choices | Select-Object -First 1
 
@@ -430,10 +438,6 @@ Write-AALongRunningNotice -Activity "  Key Vault deployment"
 $kvExists = az keyvault show -n $kvName -g $rg --query name -o tsv 2>$null
 if ($kvExists) {
     Write-Host " [EXISTS]" -ForegroundColor DarkYellow
-    $kvIdForCheck = az keyvault show -n $kvName -g $rg --query id -o tsv 2>$null
-    if ($kvIdForCheck) {
-        Ensure-AAResourcePublicNetworkEnabled -ResourceId $kvIdForCheck -ApiVersion '2023-07-01' -DisplayName "Key Vault $kvName" -ResourceTypeLabel 'Key Vault' | Out-Null
-    }
 } else {
     $kvNameAvailable = az keyvault check-name --name $kvName --query nameAvailable -o tsv 2>$null
     if ($kvNameAvailable -eq 'false') {
@@ -455,6 +459,9 @@ $kvId = az keyvault show -n $kvName -g $rg --query id -o tsv 2>$null
 if (-not $kvId) {
     throw "Key Vault '$kvName' was not found after create/resolve."
 }
+Ensure-AAResourcePublicNetworkEnabled -ResourceId $kvId -ApiVersion '2023-07-01' `
+    -DisplayName "Key Vault $kvName" -ResourceTypeLabel 'Key Vault' `
+    -TenantDomain ([string]$Config.tenant.domain) -AllowMcapsPolicyExclusion | Out-Null
 
 # Allow the current operator to write secrets during Step 5.
 $currentUserObjectId = az ad signed-in-user show --query id -o tsv 2>$null
@@ -540,9 +547,10 @@ while (-not $deployedChat -and $deployAttempt -lt 2) {
         break
     }
 
-    if ("$oaiDeploymentOutput" -match 'InsufficientQuota' -and $deployAttempt -lt 2) {
+    $retryableChatFailure = "$oaiDeploymentOutput" -match 'InsufficientQuota|ServiceModelDeprecating|ServiceModelDeprecated|ModelDeprecated|model.*deprecated|model.*deprecat|model.*retired'
+    if ($retryableChatFailure -and $deployAttempt -lt 2) {
         Write-Host " [WARN]" -ForegroundColor Yellow
-        Write-Host "  Insufficient quota for $oaiModel. Selecting an alternate model with available quota..." -ForegroundColor DarkYellow
+        Write-Host "  Model $oaiModel version $oaiModelVersion cannot be deployed. Selecting an active alternate model with available quota..." -ForegroundColor DarkYellow
         $availableChatModels = Get-AAOpenAIChatModels -AccountName $oaiName -ResourceGroup $oaiRg -Location $loc
         $alternateModels = @($availableChatModels | Where-Object { -not ($_.Name -eq $oaiModel -and $_.Version -eq $oaiModelVersion) })
         $selectedChatModel = Select-AAOpenAIChatModel -Models $alternateModels -ConfiguredName '' -ConfiguredVersion '' -RequestedCapacity $oaiTpm -Auto:$true
@@ -689,6 +697,3 @@ Write-Host "  Telemetry backend: Azure Data Explorer. Run tools\Deploy-AdxTeleme
 Write-Host "  Infrastructure deployment complete." -ForegroundColor Green
 
 Write-AAHardeningTenantWarning
-
-
-

@@ -3,9 +3,9 @@
     {
       "directory": "modules",
       "file": "Common.ps1",
-      "version": "1.0.2",
+      "version": "1.1.0",
       "format": "ps1",
-      "changes": "Common script",
+      "changes": "Common helpers including Conditional Access assessment and safe Key Vault secret-state checks",
       "URI": "modules/Common.ps1"
     },
     {
@@ -35,25 +35,25 @@
     {
       "directory": "modules",
       "file": "Deploy-ActivityStoryMap.ps1",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "format": "ps1",
-      "changes": "Deploys the Activity Story Map Azure frontend and API",
+      "changes": "Deploy the Activity Story Map with Entra-only Storage, Flex Consumption, and OneDeploy support",
       "URI": "modules/Deploy-ActivityStoryMap.ps1"
     },
     {
       "directory": "modules",
       "file": "Deploy-AzureInfra.ps1",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "format": "ps1",
-      "changes": "Deploy Azure infrastructure: OpenAI, Automation, Key Vault, and ADX-ready runbook hosting",
+      "changes": "Deploy Azure infrastructure with active model-version and quota-aware selection",
       "URI": "modules/Deploy-AzureInfra.ps1"
     },
     {
       "directory": "modules",
       "file": "Deploy-Runbook.ps1",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "format": "ps1",
-      "changes": "Store agent secrets in Key Vault and deploy the runbook",
+      "changes": "Store agent secrets in Key Vault, preserve existing persona credentials during partial repair, and deploy the runbook",
       "URI": "modules/Deploy-Runbook.ps1"
     },
     {
@@ -67,9 +67,9 @@
     {
       "directory": "modules",
       "file": "Invoke-AgentRunbook.ps1",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "format": "ps1",
-      "changes": "Azure Automation Runbook - Parameterized AI-powered autonomous corporate agents",
+      "changes": "Run autonomous agents with hardened ADX, UTF-8, Teams, IRM, and labeling paths",
       "URI": "modules/Invoke-AgentRunbook.ps1"
     },
     {
@@ -83,7 +83,7 @@
     {
       "directory": "modules",
       "file": "Provision-M365Collaboration.ps1",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "format": "ps1",
       "changes": "Provision SharePoint site + Teams team + department channels for agents",
       "URI": "modules/Provision-M365Collaboration.ps1"
@@ -91,9 +91,9 @@
     {
       "directory": "modules",
       "file": "Provision-SensitivityLabels.ps1",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "format": "ps1",
-      "changes": "Provision sensitivity labels required by agent content classification",
+      "changes": "Provision and publish sensitivity labels in interactive or automatic deployment mode",
       "URI": "modules/Provision-SensitivityLabels.ps1"
     },
     {
@@ -115,7 +115,7 @@
     {
       "directory": "prerequisites",
       "file": "Test-Prerequisites.ps1",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "format": "ps1",
       "changes": "Validates local and cloud prerequisites for installing ClaudIA",
       "URI": "prerequisites/Test-Prerequisites.ps1"
@@ -123,9 +123,9 @@
     {
       "directory": "ROOT",
       "file": "Install-ClaudIA.ps1",
-      "version": "1.0.9",
+      "version": "1.2.0",
       "format": "ps1",
-      "changes": "ClaudIA - Interactive Deployment Wizard",
+      "changes": "Interactive deployment wizard with Conditional Access and secure first-run secret guardrails",
       "URI": "Install-ClaudIA.ps1"
     },
     {
@@ -155,15 +155,23 @@
     {
       "directory": "tests",
       "file": "Test-FullRun.ps1",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "format": "ps1",
       "changes": "Run the agent runbook for all configured users and summarize results",
       "URI": "tests/Test-FullRun.ps1"
     },
     {
       "directory": "tests",
-      "file": "Test-SingleAgent.ps1",
+      "file": "Test-InstallationGuardrails.ps1",
       "version": "1.0.0",
+      "format": "ps1",
+      "changes": "Validate Conditional Access classification and first-run persona secret decisions without tenant changes",
+      "URI": "tests/Test-InstallationGuardrails.ps1"
+    },
+    {
+      "directory": "tests",
+      "file": "Test-SingleAgent.ps1",
+      "version": "1.0.1",
       "format": "ps1",
       "changes": "Quick test: run a single agent and verify data in Azure Data Explorer",
       "URI": "tests/Test-SingleAgent.ps1"
@@ -210,6 +218,14 @@
     },
     {
       "directory": "tools",
+      "file": "Deploy-LabReachabilityRunbook.ps1",
+      "version": "1.1.0",
+      "format": "ps1",
+      "changes": "Schedule hardened-tenant policy-exclusion and public data-plane reachability repair",
+      "URI": "tools/Deploy-LabReachabilityRunbook.ps1"
+    },
+    {
+      "directory": "tools",
       "file": "Deploy-MdcaCloudDiscoveryConnector.ps1",
       "version": "1.0.1",
       "format": "ps1",
@@ -227,7 +243,7 @@
     {
       "directory": "tools",
       "file": "Enable-GraphMeteredBilling.ps1",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "format": "ps1",
       "changes": "Enables Microsoft Graph metered API billing for the lab app registration",
       "URI": "tools/Enable-GraphMeteredBilling.ps1"
@@ -275,7 +291,7 @@
     {
       "directory": "tools",
       "file": "Get-RunbookStatus.ps1",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "format": "ps1",
       "changes": "Show recent Azure Automation runbook executions for the autonomous agents lab",
       "URI": "tools/Get-RunbookStatus.ps1"
@@ -419,10 +435,18 @@
     {
       "directory": "tools",
       "file": "Reset-AgentPasswords.ps1",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "format": "ps1",
       "changes": "Reset configured agent passwords and synchronize their Key Vault secrets",
       "URI": "tools/Reset-AgentPasswords.ps1"
+    },
+    {
+      "directory": "tools",
+      "file": "Restore-LabPublicNetworkAccess.ps1",
+      "version": "1.1.0",
+      "format": "ps1",
+      "changes": "Restore ClaudIA public data planes and apply supported hardened-tenant policy-exclusion tags",
+      "URI": "tools/Restore-LabPublicNetworkAccess.ps1"
     },
     {
       "directory": "tools",

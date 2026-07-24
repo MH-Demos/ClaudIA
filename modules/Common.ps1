@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.2
+.VERSION 1.1.0
 
 .GUID a0c76a45-5021-47b3-98a4-626b744a5f58
 
@@ -24,7 +24,7 @@ https://github.com/MH-Demos/ClaudIA
 Common script
 
 .RELEASENOTES
-Version 1.0.2 adds partial deployment result status support.
+Version 1.1.0 adds Conditional Access assessment and Key Vault secret-state helpers for safe wizard repairs.
 
 #>
 function Invoke-AAAzCommand {
@@ -113,10 +113,105 @@ function Set-AAKeyVaultSecretValue {
         # File.WriteAllText writes UTF-8 without BOM and without a trailing newline,
         # which matches the default --encoding utf-8 of 'az keyvault secret set --file'.
         [System.IO.File]::WriteAllText($tmp, $Value)
-        az keyvault secret set --vault-name $VaultName --name $Name --file $tmp -o none 2>$null
+        $lastError = ''
+        for ($attempt = 1; $attempt -le 5; $attempt++) {
+            $result = & az keyvault secret set --vault-name $VaultName --name $Name --file $tmp -o none 2>&1
+            if ($LASTEXITCODE -eq 0) { return }
+
+            $lastError = ($result | Out-String).Trim()
+            if ($lastError -notmatch 'ForbiddenByConnection|Public network access is disabled' -or $attempt -eq 5) {
+                throw "Failed to set Key Vault secret '$Name' in '$VaultName': $lastError"
+            }
+
+            # Hardened lab policies can re-disable Key Vault between consecutive
+            # deployment operations. Re-open it only after that specific failure,
+            # then retry immediately while the policy remediation catches up.
+            $restoreResult = & az keyvault update --name $VaultName --public-network-access Enabled -o none 2>&1
+            if ($LASTEXITCODE -ne 0) {
+                throw "Failed to restore public access for Key Vault '$VaultName': $(($restoreResult | Out-String).Trim())"
+            }
+        }
     } finally {
         Remove-Item $tmp -Force -ErrorAction SilentlyContinue
     }
+}
+
+function Get-AAKeyVaultSecretValueFromAz {
+    param(
+        [Parameter(Mandatory)][string]$VaultName,
+        [Parameter(Mandatory)][string]$Name
+    )
+
+    $lastError = ''
+    for ($attempt = 1; $attempt -le 5; $attempt++) {
+        $result = & az keyvault secret show --vault-name $VaultName --name $Name --query value -o tsv 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            return ($result | Out-String).Trim()
+        }
+
+        $lastError = ($result | Out-String).Trim()
+        if ($lastError -notmatch 'ForbiddenByConnection|Public network access is disabled' -or $attempt -eq 5) {
+            throw "Failed to read Key Vault secret '$Name' from '$VaultName': $lastError"
+        }
+
+        $restoreResult = & az keyvault update --name $VaultName --public-network-access Enabled -o none 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to restore public access for Key Vault '$VaultName': $(($restoreResult | Out-String).Trim())"
+        }
+    }
+}
+
+function Get-AAKeyVaultSecretState {
+    param(
+        [Parameter(Mandatory)][string]$VaultName,
+        [Parameter(Mandatory)][string]$Name
+    )
+
+    $lastError = ''
+    for ($attempt = 1; $attempt -le 5; $attempt++) {
+        $result = & az keyvault secret show --vault-name $VaultName --name $Name --query id -o tsv 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            return [PSCustomObject]@{
+                Name = $Name
+                Status = 'Present'
+                Id = ($result | Out-String).Trim()
+            }
+        }
+
+        $lastError = ($result | Out-String).Trim()
+        if ($lastError -match 'SecretNotFound|was not found in this key vault') {
+            return [PSCustomObject]@{
+                Name = $Name
+                Status = 'Missing'
+                Id = $null
+            }
+        }
+
+        if ($lastError -notmatch 'ForbiddenByConnection|Public network access is disabled' -or $attempt -eq 5) {
+            throw "Failed to inspect Key Vault secret '$Name' in '$VaultName': $lastError"
+        }
+
+        $restoreResult = & az keyvault update --name $VaultName --public-network-access Enabled -o none 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to restore public access for Key Vault '$VaultName': $(($restoreResult | Out-String).Trim())"
+        }
+    }
+}
+
+function Get-AAAgentSecretWriteAction {
+    param(
+        [Parameter(Mandatory)][ValidateSet('Present','Missing')][string]$SecretState,
+        [Parameter(Mandatory)][bool]$HasAgentPassword,
+        [switch]$WriteMissingOnly
+    )
+
+    if ($SecretState -eq 'Missing') {
+        if ($HasAgentPassword) { return 'Write' }
+        return 'Missing'
+    }
+
+    if ($HasAgentPassword -and -not $WriteMissingOnly) { return 'Write' }
+    return 'Preserve'
 }
 
 function Get-AgentUpn {
@@ -154,6 +249,281 @@ function Get-AgentSecretName {
     $name = $local -replace '[^a-z0-9-]', '-'
     $name = $name -replace '-+', '-'
     return $name.Trim('-')
+}
+
+function Get-AAConditionalAccessPolicyAssessment {
+    param(
+        [Parameter(Mandatory)]$Policy,
+        [Parameter(Mandatory)][string]$ExclusionGroupId,
+        [string[]]$AgentUserIds = @(),
+        [string[]]$AgentGroupIds = @(),
+        [string[]]$ProtectedApplicationIds = @()
+    )
+
+    $normalize = {
+        param($Values)
+        return @($Values | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) } |
+            ForEach-Object { ([string]$_).ToLowerInvariant() })
+    }
+
+    $includeUsers = & $normalize @($Policy.conditions.users.includeUsers)
+    $includeGroups = & $normalize @($Policy.conditions.users.includeGroups)
+    $excludeGroups = & $normalize @($Policy.conditions.users.excludeGroups)
+    $agentUsers = & $normalize @($AgentUserIds)
+    $agentGroups = & $normalize @($AgentGroupIds + @($ExclusionGroupId))
+
+    $targetsAllUsers = $includeUsers -contains 'all'
+    $targetsAgentUser = @($includeUsers | Where-Object { $agentUsers -contains $_ }).Count -gt 0
+    $targetsAgentGroup = @($includeGroups | Where-Object { $agentGroups -contains $_ }).Count -gt 0
+    $targetsAgents = $targetsAllUsers -or $targetsAgentUser -or $targetsAgentGroup
+
+    $includeApplications = & $normalize @($Policy.conditions.applications.includeApplications)
+    $excludeApplications = & $normalize @($Policy.conditions.applications.excludeApplications)
+    $includeUserActions = & $normalize @($Policy.conditions.applications.includeUserActions)
+    $includeAuthContexts = & $normalize @($Policy.conditions.applications.includeAuthenticationContextClassReferences)
+    $graphApplications = & $normalize @(
+        '00000003-0000-0000-c000-000000000000'
+        $ProtectedApplicationIds
+    )
+
+    $targetsAllApplications = $includeApplications -contains 'all'
+    $targetsOffice365 = $includeApplications -contains 'office365'
+    $targetsGraph = @($includeApplications | Where-Object { $graphApplications -contains $_ }).Count -gt 0
+    $graphExcluded = @($excludeApplications | Where-Object { $graphApplications -contains $_ }).Count -gt 0
+    $office365Excluded = $excludeApplications -contains 'office365'
+    $targetsApplications = if ($excludeApplications -contains 'all') {
+        $false
+    } elseif ($targetsAllApplications) {
+        -not $graphExcluded
+    } else {
+        ($targetsGraph -and -not $graphExcluded) -or
+        ($targetsOffice365 -and -not $office365Excluded)
+    }
+    $isUserActionPolicy = (
+        $includeApplications.Count -eq 0 -and
+        ($includeUserActions.Count -gt 0 -or $includeAuthContexts.Count -gt 0)
+    )
+
+    $builtInControls = & $normalize @($Policy.grantControls.builtInControls)
+    $termsOfUse = & $normalize @($Policy.grantControls.termsOfUse)
+    $customFactors = & $normalize @($Policy.grantControls.customAuthenticationFactors)
+    $hasAuthenticationStrength = (
+        -not [string]::IsNullOrWhiteSpace([string]$Policy.grantControls.authenticationStrength.id) -or
+        -not [string]::IsNullOrWhiteSpace([string]$Policy.grantControls.authenticationStrength.displayName)
+    )
+    $controlType = if ($builtInControls -contains 'block') {
+        'Block'
+    } elseif ($builtInControls.Count -gt 0 -or $termsOfUse.Count -gt 0 -or $customFactors.Count -gt 0 -or $hasAuthenticationStrength) {
+        'Grant'
+    } else {
+        'None'
+    }
+
+    $state = [string]$Policy.state
+    $alreadyExcluded = $excludeGroups -contains $ExclusionGroupId.ToLowerInvariant()
+    $isCandidate = $targetsAgents -and $targetsApplications -and -not $isUserActionPolicy -and $controlType -ne 'None'
+    $action = if ($state -eq 'enabledForReportingButNotEnforced' -and $isCandidate) {
+        'ReportOnly'
+    } elseif ($state -ne 'enabled') {
+        'NoAction'
+    } elseif (-not $isCandidate) {
+        'NoAction'
+    } elseif ($alreadyExcluded) {
+        'AlreadyExcluded'
+    } else {
+        'Exclude'
+    }
+
+    $reason = if (-not $targetsAgents) {
+        'Does not target the ClaudIA personas.'
+    } elseif ($isUserActionPolicy) {
+        'Targets a user action or authentication context, not the agent Graph workload.'
+    } elseif (-not $targetsApplications) {
+        'Does not target all cloud apps, Office 365, or Microsoft Graph.'
+    } elseif ($controlType -eq 'None') {
+        'Has no BLOCK or GRANT control that prevents unattended agent sign-in.'
+    } elseif ($state -eq 'enabledForReportingButNotEnforced') {
+        'Report-only policy; no tenant change is made.'
+    } elseif ($state -ne 'enabled') {
+        "Policy state is '$state'."
+    } elseif ($alreadyExcluded) {
+        'The dedicated ClaudIA group is already excluded.'
+    } else {
+        "An enabled $controlType policy can prevent unattended ClaudIA sign-in."
+    }
+
+    $locations = @(
+        (& $normalize @($Policy.conditions.locations.includeLocations))
+        (& $normalize @($Policy.conditions.locations.excludeLocations))
+    )
+
+    return [PSCustomObject][ordered]@{
+        PolicyId = [string]$Policy.id
+        DisplayName = [string]$Policy.displayName
+        State = $state
+        TemplateId = [string]$Policy.templateId
+        ControlType = $controlType
+        TargetsAgents = $targetsAgents
+        TargetsApplications = $targetsApplications
+        IsUserActionPolicy = $isUserActionPolicy
+        AlreadyExcluded = $alreadyExcluded
+        UsesTrustedLocationCondition = @($locations | Where-Object { $_ -eq 'alltrusted' }).Count -gt 0
+        Action = $action
+        Reason = $reason
+    }
+}
+
+function Get-AAConditionalAccessUsersBody {
+    param(
+        [Parameter(Mandatory)]$Users,
+        [string]$ExclusionGroupId
+    )
+
+    $body = [ordered]@{}
+    foreach ($propertyName in @(
+        'includeUsers',
+        'excludeUsers',
+        'includeGroups',
+        'excludeGroups',
+        'includeRoles',
+        'excludeRoles'
+    )) {
+        $property = $Users.PSObject.Properties[$propertyName]
+        $body[$propertyName] = if ($property -and $null -ne $property.Value) {
+            @($property.Value)
+        } else {
+            @()
+        }
+    }
+
+    foreach ($propertyName in @('includeGuestsOrExternalUsers','excludeGuestsOrExternalUsers')) {
+        $property = $Users.PSObject.Properties[$propertyName]
+        if ($property -and $null -ne $property.Value) {
+            $body[$propertyName] = $property.Value
+        }
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($ExclusionGroupId)) {
+        $groups = @($body.excludeGroups |
+            Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) } |
+            ForEach-Object { [string]$_ })
+        if ($groups -notcontains $ExclusionGroupId) { $groups += $ExclusionGroupId }
+        $body.excludeGroups = @($groups | Select-Object -Unique)
+    }
+
+    return $body
+}
+
+function Get-AAConditionalAccessUsersDifferences {
+    param(
+        [Parameter(Mandatory)]$Expected,
+        [Parameter(Mandatory)]$Actual
+    )
+
+    $differences = @()
+    $normalizeSet = {
+        param($Values)
+        return @($Values |
+            Where-Object { $null -ne $_ } |
+            ForEach-Object { ([string]$_).ToLowerInvariant() } |
+            Sort-Object -Unique)
+    }
+
+    foreach ($propertyName in @(
+        'includeUsers',
+        'excludeUsers',
+        'includeGroups',
+        'excludeGroups',
+        'includeRoles',
+        'excludeRoles'
+    )) {
+        $expectedValues = @(& $normalizeSet @($Expected[$propertyName]))
+        $actualProperty = $Actual.PSObject.Properties[$propertyName]
+        $actualValues = if ($actualProperty) { @(& $normalizeSet @($actualProperty.Value)) } else { @() }
+        if (
+            $expectedValues.Count -ne $actualValues.Count -or
+            ($expectedValues.Count -gt 0 -and
+                @(Compare-Object -ReferenceObject $expectedValues -DifferenceObject $actualValues).Count -gt 0)
+        ) {
+            $differences += $propertyName
+        }
+    }
+
+    foreach ($propertyName in @('includeGuestsOrExternalUsers','excludeGuestsOrExternalUsers')) {
+        $expectedValue = if ($Expected.Contains($propertyName)) { $Expected[$propertyName] } else { $null }
+        $actualProperty = $Actual.PSObject.Properties[$propertyName]
+        $actualValue = if ($actualProperty) { $actualProperty.Value } else { $null }
+        $expectedJson = if ($null -ne $expectedValue) { $expectedValue | ConvertTo-Json -Depth 20 -Compress } else { '' }
+        $actualJson = if ($null -ne $actualValue) { $actualValue | ConvertTo-Json -Depth 20 -Compress } else { '' }
+        if ($expectedJson -cne $actualJson) { $differences += $propertyName }
+    }
+
+    return @($differences)
+}
+
+function ConvertTo-AAComparisonString {
+    param([AllowNull()]$Value)
+
+    if ($null -eq $Value) { return '<null>' }
+    if ($Value -is [System.Collections.IDictionary]) {
+        $parts = foreach ($key in @($Value.Keys | ForEach-Object { [string]$_ } | Sort-Object)) {
+            "${key}=$(ConvertTo-AAComparisonString -Value $Value[$key])"
+        }
+        return "{$($parts -join ';')}"
+    }
+    if ($Value -is [PSCustomObject]) {
+        $parts = foreach ($property in @($Value.PSObject.Properties | Sort-Object Name)) {
+            "$($property.Name)=$(ConvertTo-AAComparisonString -Value $property.Value)"
+        }
+        return "{$($parts -join ';')}"
+    }
+    if ($Value -is [System.Collections.IEnumerable] -and $Value -isnot [string]) {
+        $parts = @($Value | ForEach-Object { ConvertTo-AAComparisonString -Value $_ } | Sort-Object)
+        return "[$($parts -join ';')]"
+    }
+    return ($Value | ConvertTo-Json -Compress)
+}
+
+function Get-AAConditionalAccessConditionsBody {
+    param(
+        [Parameter(Mandatory)]$Conditions,
+        [Parameter(Mandatory)]$UsersBody
+    )
+
+    $body = $Conditions | ConvertTo-Json -Depth 50 | ConvertFrom-Json -AsHashtable
+    if ($null -eq $body) { throw 'Conditional Access policy conditions are empty.' }
+    $body['users'] = $UsersBody
+    return $body
+}
+
+function Get-AAConditionalAccessConditionsDifferences {
+    param(
+        [Parameter(Mandatory)]$Expected,
+        [Parameter(Mandatory)]$Actual
+    )
+
+    $differences = @(
+        Get-AAConditionalAccessUsersDifferences -Expected $Expected['users'] -Actual $Actual.users |
+            ForEach-Object { "users.$_" }
+    )
+    $propertyNames = @(
+        @($Expected.Keys | ForEach-Object { [string]$_ })
+        @($Actual.PSObject.Properties.Name)
+    ) | Where-Object { $_ -ne 'users' } | Sort-Object -Unique
+
+    foreach ($propertyName in $propertyNames) {
+        $expectedValue = if ($Expected.Contains($propertyName)) { $Expected[$propertyName] } else { $null }
+        $actualProperty = $Actual.PSObject.Properties[$propertyName]
+        $actualValue = if ($actualProperty) { $actualProperty.Value } else { $null }
+        if (
+            (ConvertTo-AAComparisonString -Value $expectedValue) -cne
+            (ConvertTo-AAComparisonString -Value $actualValue)
+        ) {
+            $differences += $propertyName
+        }
+    }
+
+    return @($differences)
 }
 
 function Get-KeyVaultName {
@@ -448,6 +818,24 @@ if (-not $Global:AAFlippedPnaResources) {
     $Global:AAFlippedPnaResources = [System.Collections.ArrayList]::new()
 }
 
+function Enable-AAMcapsPublicNetworkPolicyExclusion {
+    param(
+        [Parameter(Mandatory)][string]$ResourceId,
+        [Parameter(Mandatory)][string]$TenantDomain
+    )
+
+    if (-not (Test-AAMcapsHardenedTenant -Domain $TenantDomain)) { return $false }
+
+    $tagResult = & az tag update --resource-id $ResourceId --operation Merge --tags 'SecurityControl=Ignore' -o none 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "  [WARN] Could not apply the MCAPS public-network policy exclusion tag to '$ResourceId': $(($tagResult | Out-String).Trim())" -ForegroundColor Yellow
+        return $false
+    }
+
+    Write-Host "  [OK] Applied MCAPS policy exclusion tag SecurityControl=Ignore." -ForegroundColor Green
+    return $true
+}
+
 function Ensure-AAResourcePublicNetworkEnabled {
     <#
     .SYNOPSIS
@@ -477,7 +865,9 @@ function Ensure-AAResourcePublicNetworkEnabled {
         [Parameter(Mandatory)] [string]$ResourceId,
         [Parameter(Mandatory)] [string]$ApiVersion,
         [Parameter(Mandatory)] [string]$DisplayName,
-        [Parameter(Mandatory)] [string]$ResourceTypeLabel
+        [Parameter(Mandatory)] [string]$ResourceTypeLabel,
+        [string]$TenantDomain = '',
+        [switch]$AllowMcapsPolicyExclusion
     )
 
     $url = "https://management.azure.com${ResourceId}?api-version=${ApiVersion}"
@@ -496,6 +886,9 @@ function Ensure-AAResourcePublicNetworkEnabled {
     $pna = $null
     if ($resource.properties) { $pna = $resource.properties.publicNetworkAccess }
     if (-not $pna) { return $true }            # property not exposed; treat as OK
+    if ($AllowMcapsPolicyExclusion -and $TenantDomain) {
+        Enable-AAMcapsPublicNetworkPolicyExclusion -ResourceId $ResourceId -TenantDomain $TenantDomain | Out-Null
+    }
     if ($pna -eq 'Enabled') { return $true }   # already reachable
 
     Write-Host "  [INFO] $DisplayName has publicNetworkAccess='$pna'. Re-enabling it so the wizard can reach the data plane..." -ForegroundColor DarkYellow
@@ -505,9 +898,16 @@ function Ensure-AAResourcePublicNetworkEnabled {
     try {
         az rest --method PATCH --url $url --headers 'Content-Type=application/json' --body "@$bodyPath" -o none 2>$null
         if ($LASTEXITCODE -eq 0) {
-            [void]$Global:AAFlippedPnaResources.Add([PSCustomObject]@{ Type=$ResourceTypeLabel; Name=$DisplayName; Id=$ResourceId })
-            Write-Host "  [OK] $DisplayName publicNetworkAccess set to Enabled." -ForegroundColor Green
-            return $true
+            $verifiedJson = az rest --method GET --url $url -o json 2>$null
+            $verifiedPna = $null
+            if ($LASTEXITCODE -eq 0 -and $verifiedJson) {
+                try { $verifiedPna = ($verifiedJson | ConvertFrom-Json).properties.publicNetworkAccess } catch {}
+            }
+            if ($verifiedPna -eq 'Enabled') {
+                [void]$Global:AAFlippedPnaResources.Add([PSCustomObject]@{ Type=$ResourceTypeLabel; Name=$DisplayName; Id=$ResourceId })
+                Write-Host "  [OK] $DisplayName publicNetworkAccess set to Enabled." -ForegroundColor Green
+                return $true
+            }
         }
     } finally {
         if (Test-Path $bodyPath) { Remove-Item -LiteralPath $bodyPath -Force -ErrorAction SilentlyContinue }
@@ -517,7 +917,7 @@ function Ensure-AAResourcePublicNetworkEnabled {
     Write-Host "         Remediation options:" -ForegroundColor Yellow
     Write-Host "           1. Open the resource in the portal -> Networking -> set 'All networks', then rerun this step." -ForegroundColor Yellow
     Write-Host "           2. Run this step from a workstation that has private-endpoint reachability to the resource." -ForegroundColor Yellow
-    Write-Host "           3. Ask the subscription owner to exempt the resource from the Deny policy." -ForegroundColor Yellow
+    Write-Host "           3. Use the policy's documented exclusion tag or request a policy exemption." -ForegroundColor Yellow
     return $false
 }
 
@@ -898,6 +1298,3 @@ function Set-AAInstallationStepDefinition {
     }
     Save-AAInstallationDefinitions -Path $Path
 }
-
-
-

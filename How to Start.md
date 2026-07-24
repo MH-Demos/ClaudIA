@@ -45,7 +45,7 @@ Minimum cloud requirements:
 | Requirement | Notes |
 | --- | --- |
 | Azure subscription | Contributor or Owner access is recommended for the resource group used by ClaudIA. |
-| Microsoft Entra ID tenant | Global Administrator or equivalent setup rights are required during initial provisioning. |
+| Microsoft Entra ID tenant | Global Administrator or equivalent setup rights are required during initial provisioning. Conditional Access updates require Conditional Access Administrator or Security Administrator rights and the corresponding Graph policy permissions. |
 | Microsoft 365 E5 or equivalent trial/lab licenses | Needed for Purview, Defender, DLP, sensitivity labels, audit, Teams, Exchange, SharePoint, OneDrive, and optional Copilot scenarios. |
 | Azure Key Vault | Stores agent and app secrets so secrets stay outside the repository. |
 | Azure Automation | Runs autonomous agent jobs and operational runbooks. |
@@ -197,6 +197,14 @@ If prerequisites report that the deploying user has no admin directory role, Ste
 
 When prompted, sign in with a separate Global Administrator or Privileged Role Administrator if the Azure subscription account is not also a Microsoft 365 admin.
 
+During Step 2, the wizard enumerates Conditional Access policies before any
+policy write. It classifies active policies as BLOCK or GRANT, reports
+report-only policies without changing them, and offers to add only
+`grp-claudia-agent-mfa-exclusion` to policies that target the personas and the
+Graph/Office 365 workload. Existing conditions and exclusions are preserved.
+The wizard never creates or uses a named or trusted location. Security Defaults
+cannot exclude a group and must be disabled manually in a dedicated lab tenant.
+
 ## 6. Deploy Core ClaudIA
 
 Run the wizard:
@@ -232,6 +240,7 @@ The installer can also resume one area at a time:
 
 | Step | Area |
 | --- | --- |
+| `2` | Licenses, dedicated agent group, and Conditional Access BLOCK/GRANT exclusion audit. |
 | `3` | Register or repair `app-claudia-dataagent` and delegated Graph consent. |
 | `4` | Azure infrastructure, ADX telemetry, M365 collaboration, labels, and optional Fabric. |
 | `5` | Key Vault secrets, Automation variables, runbook, and schedules. |
@@ -240,6 +249,11 @@ The installer can also resume one area at a time:
 | `8` | Activity Story Map static site, API, and optional Front Door. |
 | `9` | Optional BrowserAgent cloud automation with Playwright Workspaces and Container Apps Jobs. |
 | `10` | Optional MDCA Cloud Discovery connector settings, Key Vault secrets, and API validation. |
+
+When Step 5 finds every persona secret in Key Vault, it preserves them without
+asking for a password. If only some are missing, interactive mode asks twice
+with masked input and writes only the missing entries. `-Auto` stops with an
+explicit repair command instead of accepting an empty or logged prompt.
 
 ## 7. Run A Smoke Test
 

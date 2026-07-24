@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.2
+.VERSION 1.0.3
 .GUID a29057cc-e679-4daa-832b-0bd1020462ce
 
 .AUTHOR
@@ -23,7 +23,7 @@ https://github.com/MH-Demos/ClaudIA
 Validates local and cloud prerequisites for installing ClaudIA
 
 .RELEASENOTES
-Version 1.0.2 removes Log Analytics provider registration from the ADX-only deployment path.
+Version 1.0.3 improves hardened-tenant provider and permission prerequisite diagnostics.
 
 #>
 <#
@@ -599,14 +599,20 @@ if ($Offline) {
                 if (-not $token) { return $null }
                 $headers = @{ Authorization = "Bearer $token" }
                 $skus = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/subscribedSkus' -Headers $headers -ErrorAction Stop).value
-                $copilot = @($skus | Where-Object { $_.skuPartNumber -match 'Copilot|M365_COPILOT|MICROSOFT_365_COPILOT' })
+                $copilot = @($skus | Where-Object {
+                    $_.skuPartNumber -match 'Copilot|M365_COPILOT|MICROSOFT_365_COPILOT' -or
+                    @($_.servicePlans | Where-Object {
+                        $_.servicePlanName -match '^M365_COPILOT_' -and
+                        $_.provisioningStatus -eq 'Success'
+                    }).Count -gt 0
+                })
                 if ($copilot.Count -gt 0) {
                     $available = 0
                     foreach ($sku in $copilot) {
                         $available += ([int]$sku.prepaidUnits.enabled - [int]$sku.consumedUnits)
                     }
                     if ($available -ge $copilotCount) {
-                        "Copilot SKU(s): $available available"
+                        "Copilot-capable SKU(s): $($copilot.skuPartNumber -join ', ') ($available available)"
                     }
                 }
             } "Copilot licenses are optional for base install, but required for Copilot personas." -WarningOnly
@@ -674,7 +680,5 @@ if ($AsJson) {
 } else {
     return $result
 }
-
-
 
 

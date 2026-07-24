@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.0
+.VERSION 1.1.0
 
 .GUID 5e9d7a2b-1f8c-4a3d-9b7e-2c4f6a8d1e0f
 
@@ -26,6 +26,9 @@ properties.publicNetworkAccess back to 'Enabled' on Key Vault, Azure OpenAI,
 Automation Account and Azure Data Explorer, and starts the ADX cluster if it
 has auto-stopped. Designed to run either locally (az CLI) or inside an Azure
 Automation runbook (-UseAutomationManagedIdentity).
+
+.RELEASENOTES
+Version 1.1.0 applies supported policy-exclusion tags and repairs all configured ClaudIA data planes.
 #>
 
 <#
@@ -124,6 +127,9 @@ $script:Started = [System.Collections.ArrayList]::new()
 function Resolve-FromDefinitions {
     if ($KeyVaultName -and $OpenAiAccountName -and $AutomationAccountName -and $AdxClusterName) { return }
     if (-not $InstallationDefinitionsPath) {
+        if ([string]::IsNullOrWhiteSpace($PSScriptRoot)) {
+            throw 'KeyVaultName, OpenAiAccountName, AutomationAccountName, and AdxClusterName must be supplied when running in Azure Automation.'
+        }
         $InstallationDefinitionsPath = Join-Path $PSScriptRoot '..\config\Installation_definitions.json'
     }
     if (-not (Test-Path $InstallationDefinitionsPath)) {
@@ -173,13 +179,36 @@ function Invoke-Arm {
     return Invoke-RestMethod -Method $Method -Uri $Url -Headers $headers
 }
 
+function Ensure-McapsPolicyExclusionTag {
+    param(
+        [string]$Token,
+        [string]$ResourceId,
+        [string]$ApiVersion,
+        $CurrentResource
+    )
+
+    $tags = @{}
+    if ($CurrentResource.tags) {
+        foreach ($property in $CurrentResource.tags.PSObject.Properties) {
+            $tags[$property.Name] = [string]$property.Value
+        }
+    }
+    if ($tags.SecurityControl -eq 'Ignore') { return }
+
+    $tags.SecurityControl = 'Ignore'
+    $url = "https://management.azure.com${ResourceId}?api-version=${ApiVersion}"
+    Invoke-Arm -Method PATCH -Url $url -Token $Token -Body @{ tags = $tags } | Out-Null
+    Write-Host "  [OK] Applied MCAPS policy exclusion tag to '$($CurrentResource.name)'." -ForegroundColor Green
+}
+
 function Enable-Pna {
     param(
         [string]$Token,
         [string]$ResourceId,
         [string]$ApiVersion,
         [string]$ResourceTypeLabel,
-        [string]$Name
+        [string]$Name,
+        [switch]$UseMcapsPolicyExclusion
     )
     $url = "https://management.azure.com${ResourceId}?api-version=${ApiVersion}"
     try {
@@ -193,6 +222,9 @@ function Enable-Pna {
     }
     $pna = $current.properties.publicNetworkAccess
     if (-not $pna) { Write-Host "  [SKIP] $ResourceTypeLabel '$Name' does not expose publicNetworkAccess." -ForegroundColor DarkGray; return }
+    if ($UseMcapsPolicyExclusion) {
+        Ensure-McapsPolicyExclusionTag -Token $Token -ResourceId $ResourceId -ApiVersion $ApiVersion -CurrentResource $current
+    }
     if ($pna -eq 'Enabled') { Write-Host "  [OK] $ResourceTypeLabel '$Name' already Enabled." -ForegroundColor DarkGray; return }
 
     Write-Host "  [INFO] $ResourceTypeLabel '$Name' is '$pna'. Re-enabling..." -ForegroundColor Yellow
@@ -238,6 +270,7 @@ function Enable-StoragePna {
     }
     $pna = $current.properties.publicNetworkAccess
     $defAction = $current.properties.networkAcls.defaultAction
+    Ensure-McapsPolicyExclusionTag -Token $Token -ResourceId $rid -ApiVersion '2023-01-01' -CurrentResource $current
     if ($pna -eq 'Enabled' -and $defAction -eq 'Allow') {
         Write-Host "  [OK] Storage '$Name' already reachable (Enabled / Allow)." -ForegroundColor DarkGray
         return
@@ -292,7 +325,7 @@ Write-Host "  Mode:            $(if ($UseAutomationManagedIdentity) { 'Azure Aut
 Write-Host ""
 
 if ($KeyVaultName) {
-    Enable-Pna -Token $token -ResourceId "$baseId/Microsoft.KeyVault/vaults/$KeyVaultName" -ApiVersion '2023-07-01' -ResourceTypeLabel 'Key Vault' -Name $KeyVaultName
+    Enable-Pna -Token $token -ResourceId "$baseId/Microsoft.KeyVault/vaults/$KeyVaultName" -ApiVersion '2023-07-01' -ResourceTypeLabel 'Key Vault' -Name $KeyVaultName -UseMcapsPolicyExclusion
 }
 if ($OpenAiAccountName) {
     Enable-Pna -Token $token -ResourceId "$baseId/Microsoft.CognitiveServices/accounts/$OpenAiAccountName" -ApiVersion '2024-10-01' -ResourceTypeLabel 'Azure OpenAI' -Name $OpenAiAccountName

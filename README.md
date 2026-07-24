@@ -97,6 +97,11 @@ az account set --subscription 11111111-1111-1111-1111-111111111111
 .\Install-ClaudIA.ps1
 ```
 
+Step 2 audits Conditional Access and can add only the dedicated ClaudIA agent
+group to relevant active BLOCK/GRANT policy exclusions. Step 5 preserves
+existing Key Vault persona secrets and uses a masked prompt if any are missing.
+Neither step creates or relies on a trusted location.
+
 For the complete setup path, including local tools, Azure subscription requirements, Microsoft 365 licensing, Key Vault usage, browser agents, images, and storyline replication, use [How to Start.md](How%20to%20Start.md). If the tenant is brand new, start with [If Your Tenant Is Completely New.md](If%20Your%20Tenant%20Is%20Completely%20New.md).
 
 ## Repository Map

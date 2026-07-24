@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.1
+.VERSION 1.1.0
 .GUID ca69ea41-4e4a-457f-883d-5989f6e2c987
 
 .AUTHOR
@@ -23,7 +23,7 @@ https://github.com/MH-Demos/ClaudIA
 Store agent secrets in Key Vault and deploy the runbook
 
 .RELEASENOTES
-Version 1.0.1 validates app client secrets against the configured ClaudIA tenant and fails early if a new secret cannot be generated.
+Version 1.1.0 preserves existing persona secrets when repairing only missing Key Vault entries.
 
 #>
 <#
@@ -63,8 +63,15 @@ Version 1.0.1 validates app client secrets against the configured ClaudIA tenant
     Parsed agents.json configuration object.
 .PARAMETER AgentPassword
     Password for all agent accounts (from Step 1).
+.PARAMETER WriteMissingAgentSecretsOnly
+    When AgentPassword is supplied during a repair, write only missing persona
+    secrets and preserve any persona secrets that already exist.
 #>
-param($Config, [string]$AgentPassword)
+param(
+    $Config,
+    [string]$AgentPassword,
+    [switch]$WriteMissingAgentSecretsOnly
+)
 . (Join-Path $PSScriptRoot 'Common.ps1')
 
 function Invoke-M365Az {
@@ -254,7 +261,7 @@ $secrets = @{
 Write-Host "  Storing credentials in Key Vault ($kvName)..." -NoNewline
 try {
     Set-AAKeyVaultSecretValue -VaultName $kvName -Name 'agent-client-secret' -Value $clientSecret
-    $storedClientSecret = az keyvault secret show --vault-name $kvName --name 'agent-client-secret' --query value -o tsv 2>$null
+    $storedClientSecret = Get-AAKeyVaultSecretValueFromAz -VaultName $kvName -Name 'agent-client-secret'
     if ([string]::IsNullOrWhiteSpace($storedClientSecret)) {
         throw "Key Vault secret 'agent-client-secret' was not stored with a client secret value."
     }
@@ -276,12 +283,15 @@ try {
 
     foreach ($agent in $Config.agents) {
         $secretName = Get-AgentSecretName -Agent $agent -Domain $domain
-        $stored = az keyvault secret show --vault-name $kvName --name $secretName --query value -o tsv 2>$null
-        if (-not [string]::IsNullOrWhiteSpace($AgentPassword)) {
+        $secretState = Get-AAKeyVaultSecretState -VaultName $kvName -Name $secretName
+        $writeAction = Get-AAAgentSecretWriteAction -SecretState $secretState.Status `
+            -HasAgentPassword (-not [string]::IsNullOrWhiteSpace($AgentPassword)) `
+            -WriteMissingOnly:$WriteMissingAgentSecretsOnly
+        if ($writeAction -eq 'Write') {
             Set-AAKeyVaultSecretValue -VaultName $kvName -Name $secretName -Value $AgentPassword
-            $stored = az keyvault secret show --vault-name $kvName --name $secretName --query value -o tsv 2>$null
+            $secretState = Get-AAKeyVaultSecretState -VaultName $kvName -Name $secretName
         }
-        if ([string]::IsNullOrWhiteSpace($stored)) {
+        if ($writeAction -eq 'Missing' -or $secretState.Status -ne 'Present') {
             throw "Key Vault secret '$secretName' is missing. Run tools\Add-StorylineAgents.ps1 with -StoreInKeyVault for expansion users, or rerun Step 5 with -AgentPassword to write a shared password."
         }
         $secrets["AgentPwdSecret-$($agent.sam)"] = $secretName
@@ -461,7 +471,4 @@ foreach ($sched in $Config.schedules) {
 }
 
 Write-Host "  Runbook deployed with $($Config.schedules.Count) daily schedules." -ForegroundColor Green
-
-
-
 
