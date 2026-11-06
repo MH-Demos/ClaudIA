@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.0
+.VERSION 1.0.1
 
 .GUID 6628773e-fd19-4e77-96ce-252193eb423f
 
@@ -24,7 +24,7 @@ https://github.com/MH-Demos/ClaudIA
 Enables Microsoft Graph metered API billing for the lab app registration
 
 .RELEASENOTES
-Initial version metadata for Enables Microsoft Graph metered API billing for the lab app registration.
+Version 1.0.1 adds provider-registration waits and linked application validation.
 
 #>
 <#
@@ -33,9 +33,10 @@ Initial version metadata for Enables Microsoft Graph metered API billing for the
 .DESCRIPTION
     Creates or reuses a Microsoft.GraphServices/accounts resource associated
     with the configured app-claudia-dataagent application registration. This is required
-    for metered APIs such as SharePoint/OneDrive assignSensitivityLabel.
+    for metered APIs such as SharePoint/OneDrive assignSensitivityLabel. SharePoint
+    tenant sensitivity-label integration must also be enabled separately.
 .EXAMPLE
-    .\tools\Enable-GraphMeteredBilling.ps1 -SubscriptionId ab97362c-5d5f-49a5-bf87-c8480e54e062 -ResourceGroup MH-Agents-PAYG
+    .\tools\Enable-GraphMeteredBilling.ps1 -SubscriptionId '<subscription-id>' -ResourceGroup '<resource-group>'
 #>
 [CmdletBinding()]
 param(
@@ -174,6 +175,7 @@ Write-Host " [OK]" -ForegroundColor Green
 Write-Host ""
 Write-Host "Graph metered API billing is enabled for app $AppId." -ForegroundColor Green
 Write-Host "A fresh OAuth token is required before retrying assignSensitivityLabel." -ForegroundColor Yellow
+Write-Host "Also verify (Get-SPOTenant).EnableAIPIntegration is True; see docs\payg-and-licensing-tracker.md." -ForegroundColor Yellow
 
 [PSCustomObject]@{
     SubscriptionId = $SubscriptionId
@@ -182,6 +184,7 @@ Write-Host "A fresh OAuth token is required before retrying assignSensitivityLab
     ResourceId = $resourceId
     AppId = $AppId
     ProvisioningState = $validation.properties.provisioningState
+    SharePointAipIntegrationRequired = $true
 }
 
 if ($null -ne $script:originalAzureExtensionDir) {
@@ -189,6 +192,4 @@ if ($null -ne $script:originalAzureExtensionDir) {
 } else {
     Remove-Item Env:\AZURE_EXTENSION_DIR -ErrorAction SilentlyContinue
 }
-
-
 

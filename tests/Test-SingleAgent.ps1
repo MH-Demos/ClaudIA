@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.0
+.VERSION 1.0.1
 
 .GUID 38687e2c-b7b6-4915-a40f-54a3c290f9c1
 
@@ -24,7 +24,7 @@ https://github.com/MH-Demos/ClaudIA
 Quick test: run a single agent and verify data in Azure Data Explorer
 
 .RELEASENOTES
-Initial version metadata for Quick test: run a single agent and verify data in Azure Data Explorer.
+Version 1.0.1 refreshes ADX authentication and recognizes Activity Explorer file-operation telemetry.
 
 #>
 <#
@@ -255,7 +255,15 @@ $output -split "`n" | Where-Object { $_ -match 'AUTH|KV|Uploaded|Teams|Fabric|Fi
 $streamsUri = "https://management.azure.com/subscriptions/$subId/resourceGroups/$rg/providers/Microsoft.Automation/automationAccounts/$aaName/jobs/$($j.name)/streams?api-version=2023-11-01"
 $streams = @()
 try {
-    $streams = @((Invoke-RestMethod $streamsUri -Headers $h).value)
+    $streamList = [System.Collections.Generic.List[object]]::new()
+    do {
+        $streamPage = Invoke-RestMethod $streamsUri -Headers $h
+        foreach ($stream in @($streamPage.value)) {
+            $streamList.Add($stream)
+        }
+        $streamsUri = $streamPage.nextLink
+    } while ($streamsUri)
+    $streams = @($streamList)
 } catch {
     Write-Host "  [WARN] Could not fetch job streams: $($_.Exception.Message)" -ForegroundColor Yellow
 }
@@ -355,7 +363,5 @@ if ($r -and $r.Tables -and $r.Tables[0].Rows.Count -gt 0) {
 } else {
     Write-Host "`n[WARN] No data in ADX yet. May need more time or runbook diagnostics review." -ForegroundColor Yellow
 }
-
-
 
 

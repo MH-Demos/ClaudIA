@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.1
+.VERSION 1.0.2
 
 .GUID 8ed907ad-2549-448c-83c8-ef880598982c
 
@@ -24,7 +24,7 @@ https://github.com/MH-Demos/ClaudIA
 Reset configured agent passwords and synchronize their Key Vault secrets
 
 .RELEASENOTES
-Version 1.0.1 uses the separate Microsoft 365 admin Azure CLI profile for Entra password resets and prints actionable failures.
+Version 1.0.2 stores repaired passwords through the hardened Key Vault helper without exposing values.
 
 #>
 <#
@@ -177,12 +177,13 @@ foreach ($agentInfo in $selectedAgents) {
     }
 
     Write-Host "    Storing Key Vault secret '$secretName'..." -NoNewline
-    az keyvault secret set --vault-name $kvName --name $secretName --value $AgentPassword -o none 2>$null
-    if ($LASTEXITCODE -eq 0) {
+    try {
+        Set-AAKeyVaultSecretValue -VaultName $kvName -Name $secretName -Value $AgentPassword
         $secretOk++
         Write-Host " [OK]" -ForegroundColor Green
-    } else {
+    } catch {
         Write-Host " [FAIL]" -ForegroundColor Red
+        Write-Host "    $($_.Exception.Message)" -ForegroundColor Yellow
     }
 }
 
@@ -202,6 +203,4 @@ Write-Host "Password reset complete: $resetOk/$($selectedAgents.Count) users, $s
 if ($RevealPassword) {
     Write-Host "Shared lab password: $AgentPassword" -ForegroundColor Yellow
 }
-
-
 

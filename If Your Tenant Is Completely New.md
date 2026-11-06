@@ -114,12 +114,25 @@ For a ClaudIA lab tenant:
 
 1. Confirm this is not a production tenant.
 2. Disable Security Defaults.
-3. Create a dedicated group for ClaudIA agent MFA exclusion, for example `grp-claudia-agent-mfa-exclusion`.
-4. Create a Conditional Access policy that requires MFA for normal users.
-5. Exclude only the dedicated ClaudIA agent group.
-6. Never assign admin roles to excluded agent accounts.
+3. Create a Conditional Access policy that requires MFA for normal users.
+4. Run ClaudIA Step 2 with Conditional Access Administrator, Security
+   Administrator, or broader lab setup rights.
+5. Let the wizard create or reuse
+   `grp-claudia-agent-mfa-exclusion`, enumerate every policy, and offer the
+   group exclusion only for active BLOCK/GRANT policies that can prevent agent
+   sign-in.
+6. Review report-only policies in the wizard output; the wizard does not modify
+   them.
+7. Never assign admin roles to excluded agent accounts.
 
 This is a lab-only exception. If an agent receives any privileged role, remove it from the MFA exclusion group immediately.
+
+The wizard re-reads each policy immediately before a PATCH, sends its complete
+existing `conditions` object with only `users.excludeGroups` extended, then
+reads it back and verifies every condition field. It does not create, select,
+or modify named/trusted locations. If the Graph token cannot read or update
+Conditional Access, the wizard stops with the required role and permission
+guidance instead of reporting success.
 
 ## 3. Audit Readiness
 
@@ -150,6 +163,10 @@ Before deployment, decide:
 - Password handling model.
 - License SKUs to assign.
 - Whether all personas are required for the first demo or only a minimum wave.
+
+Step 5 checks each expected persona secret before deploying the runbook.
+Existing secrets are preserved. Missing secrets trigger a masked,
+double-entry password prompt and only those missing entries are written.
 
 Run:
 

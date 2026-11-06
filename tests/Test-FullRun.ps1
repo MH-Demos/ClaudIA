@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.0
+.VERSION 1.0.1
 
 .GUID ad4455b3-ccda-4d74-922f-1bffd1241295
 
@@ -24,7 +24,7 @@ https://github.com/MH-Demos/ClaudIA
 Run the agent runbook for all configured users and summarize results
 
 .RELEASENOTES
-Initial version metadata for Run the agent runbook for all configured users and summarize results.
+Version 1.0.1 refreshes ADX authentication during long validation runs.
 
 #>
 <#
@@ -100,7 +100,16 @@ function Get-JobStreams {
     param([string]$SubId, [string]$ResourceGroup, [string]$AutomationAccount, [string]$JobId)
     $headers = Get-AzHeaders
     try {
-        @((Invoke-RestMethod "https://management.azure.com/subscriptions/$SubId/resourceGroups/$ResourceGroup/providers/Microsoft.Automation/automationAccounts/$AutomationAccount/jobs/$JobId/streams?api-version=2023-11-01" -Headers $headers).value)
+        $streams = [System.Collections.Generic.List[object]]::new()
+        $nextUri = "https://management.azure.com/subscriptions/$SubId/resourceGroups/$ResourceGroup/providers/Microsoft.Automation/automationAccounts/$AutomationAccount/jobs/$JobId/streams?api-version=2023-11-01"
+        do {
+            $page = Invoke-RestMethod $nextUri -Headers $headers
+            foreach ($stream in @($page.value)) {
+                $streams.Add($stream)
+            }
+            $nextUri = $page.nextLink
+        } while ($nextUri)
+        return @($streams)
     } catch {
         @()
     }
@@ -554,6 +563,4 @@ $results |
 $summary = $results | Group-Object Status | ForEach-Object { "$($_.Name)=$($_.Count)" }
 Write-Host ""
 Write-Host "Summary: $($summary -join ', ')" -ForegroundColor Cyan
-
-
 

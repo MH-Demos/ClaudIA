@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.1.0
+.VERSION 1.2.0
 .GUID eae37755-6eb4-444f-9e77-e8d699645e18
 
 .AUTHOR
@@ -23,7 +23,7 @@ https://github.com/MH-Demos/ClaudIA
 ClaudIA - Interactive Deployment Wizard
 
 .RELEASENOTES
-Version 1.1.0 natively integrates the cross-tenant pre-flight: clears persisted globally-unique resource names when the subscription changes (Step 0) and verifies worldwide name availability before any resource is created (Step 4 pre-flight). In -Auto mode the pre-flight passes -AutoFix so colliding names are rewritten in agents.json with alternative deterministic candidates and the installer reloads the config in-place before deploying.
+Version 1.2.0 adds Conditional Access policy-aware group exclusions and a masked first-run password prompt that preserves existing persona secrets.
 
 #>
 <#
@@ -77,10 +77,11 @@ Version 1.1.0 natively integrates the cross-tenant pre-flight: clears persisted 
       Optional: uploads Images/Characters profile photos to Entra users.
       -> Calls tools/Set-EntraUserPhotos.ps1.
 
-    Step 2: LICENSES + MFA EXCLUSION
+    Step 2: LICENSES + CONDITIONAL ACCESS GUARDRAIL
       Assigns M365 E5 (all agents) + Copilot (Wave 2) licenses via Graph API.
       Creates grp-claudia-agent-mfa-exclusion security group and adds all agents.
-      -> MANUAL: Exclude this group from your Conditional Access MFA policy.
+      Audits Conditional Access and adds only this group to relevant active
+      BLOCK/GRANT policy exclusions. Report-only policies are not changed.
 
     Step 3: REGISTER ENTRA APP
       Creates app-claudia-dataagent with 11 delegated scopes for ROPC.
@@ -780,6 +781,244 @@ function Get-AAGraphAccessToken {
         if ($token) { return [string]$token }
     }
     return (az account get-access-token --resource https://graph.microsoft.com --query accessToken -o tsv 2>$null)
+}
+
+function Get-AAGraphPagedCollection {
+    param(
+        [Parameter(Mandatory)][string]$Uri,
+        [Parameter(Mandatory)][hashtable]$Headers
+    )
+
+    $items = @()
+    $next = $Uri
+    while ($next) {
+        $response = Invoke-RestMethod -Method GET -Uri $next -Headers $Headers -ErrorAction Stop
+        if ($response.PSObject.Properties['value']) {
+            $items += @($response.value)
+            $next = [string]$response.'@odata.nextLink'
+        } else {
+            $items += $response
+            $next = $null
+        }
+    }
+    return @($items)
+}
+
+function ConvertFrom-AASecureString {
+    param([Parameter(Mandatory)][Security.SecureString]$SecureString)
+
+    $pointer = [IntPtr]::Zero
+    try {
+        $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureString)
+        return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer)
+    } finally {
+        if ($pointer -ne [IntPtr]::Zero) {
+            [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer)
+        }
+    }
+}
+
+function Read-AAConfirmedAgentPassword {
+    while ($true) {
+        $first = Read-Host "  Shared password for missing persona secrets" -AsSecureString
+        $second = Read-Host "  Confirm shared password" -AsSecureString
+        $firstPlain = $null
+        $secondPlain = $null
+        try {
+            $firstPlain = ConvertFrom-AASecureString -SecureString $first
+            $secondPlain = ConvertFrom-AASecureString -SecureString $second
+            if ([string]::IsNullOrWhiteSpace($firstPlain)) {
+                Write-Host "  [ERROR] Password cannot be empty." -ForegroundColor Red
+                continue
+            }
+            if ($firstPlain -cne $secondPlain) {
+                Write-Host "  [ERROR] Passwords do not match. Try again." -ForegroundColor Red
+                continue
+            }
+            return $firstPlain
+        } finally {
+            $secondPlain = $null
+            if ($first) { $first.Dispose() }
+            if ($second) { $second.Dispose() }
+        }
+    }
+}
+
+function Invoke-AAConditionalAccessGuardrail {
+    param(
+        [Parameter(Mandatory)][hashtable]$GraphHeaders,
+        [Parameter(Mandatory)][string]$ExclusionGroupId,
+        [Parameter(Mandatory)][string[]]$AgentUserIds,
+        [switch]$AutoMode
+    )
+
+    Write-Host ""
+    Write-Host "  Auditing Conditional Access policies..." -ForegroundColor Cyan
+
+    $agentGroupIds = @($ExclusionGroupId)
+    $groupMembershipReadFailed = $false
+    foreach ($userId in $AgentUserIds) {
+        try {
+            $memberships = @(Get-AAGraphPagedCollection `
+                -Uri "https://graph.microsoft.com/v1.0/users/$userId/transitiveMemberOf/microsoft.graph.group?`$select=id" `
+                -Headers $GraphHeaders)
+            $agentGroupIds += @($memberships | ForEach-Object { [string]$_.id })
+        } catch {
+            $groupMembershipReadFailed = $true
+            break
+        }
+    }
+    $agentGroupIds = @($agentGroupIds | Where-Object { $_ } | Select-Object -Unique)
+    if ($groupMembershipReadFailed) {
+        Write-Host "  [WARN] Transitive agent group membership could not be read; all-user and direct-user policies are still evaluated." -ForegroundColor Yellow
+    }
+
+    $protectedApplicationIds = @()
+    try {
+        $graphSp = @((Invoke-RestMethod `
+            -Uri "https://graph.microsoft.com/v1.0/servicePrincipals?`$filter=appId eq '00000003-0000-0000-c000-000000000000'&`$select=id" `
+            -Headers $GraphHeaders -ErrorAction Stop).value) | Select-Object -First 1
+        if ($graphSp) { $protectedApplicationIds += [string]$graphSp.id }
+    } catch {
+        Write-Host "  [WARN] Microsoft Graph service-principal ID could not be resolved; built-in Graph identifiers are still evaluated." -ForegroundColor Yellow
+    }
+
+    try {
+        $policies = @(Get-AAGraphPagedCollection `
+            -Uri 'https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies?$select=id,displayName,state,templateId,conditions,grantControls,sessionControls' `
+            -Headers $GraphHeaders)
+    } catch {
+        $detail = if ($_.ErrorDetails.Message) { $_.ErrorDetails.Message } else { $_.Exception.Message }
+        throw "Conditional Access policies could not be enumerated. Sign in with an account that has Conditional Access Administrator or Security Administrator and a Graph token with Policy.Read.All and Policy.ReadWrite.ConditionalAccess. No Conditional Access policy was changed. Details: $detail"
+    }
+
+    $securityDefaultsState = 'Unknown'
+    try {
+        $securityDefaults = Invoke-RestMethod -Method GET `
+            -Uri 'https://graph.microsoft.com/v1.0/policies/identitySecurityDefaultsEnforcementPolicy' `
+            -Headers $GraphHeaders -ErrorAction Stop
+        $securityDefaultsState = if ($securityDefaults.isEnabled) { 'Enabled' } else { 'Disabled' }
+    } catch {
+        Write-Host "  [WARN] Security Defaults state could not be read with this Graph token." -ForegroundColor Yellow
+        Write-Host "         Verify it manually in Entra admin center > Identity > Overview > Properties > Manage security defaults." -ForegroundColor DarkYellow
+    }
+
+    $assessments = @($policies | ForEach-Object {
+        Get-AAConditionalAccessPolicyAssessment -Policy $_ -ExclusionGroupId $ExclusionGroupId `
+            -AgentUserIds $AgentUserIds -AgentGroupIds $agentGroupIds `
+            -ProtectedApplicationIds $protectedApplicationIds
+    })
+    Write-Host "  Conditional Access policies discovered: $($assessments.Count)" -ForegroundColor Gray
+    foreach ($assessment in $assessments) {
+        $managed = if ($assessment.TemplateId) { ' [managed template]' } else { '' }
+        switch ($assessment.Action) {
+            'Exclude' {
+                Write-Host "    [CHANGE][$($assessment.ControlType)] $($assessment.DisplayName)$managed" -ForegroundColor Yellow
+            }
+            'AlreadyExcluded' {
+                Write-Host "    [OK][$($assessment.ControlType)] $($assessment.DisplayName)$managed - group already excluded" -ForegroundColor Green
+            }
+            'ReportOnly' {
+                Write-Host "    [REPORT-ONLY][$($assessment.ControlType)] $($assessment.DisplayName)$managed - no change" -ForegroundColor DarkYellow
+            }
+            default {
+                Write-Host "    [SKIP][$($assessment.ControlType)] $($assessment.DisplayName)$managed - $($assessment.Reason)" -ForegroundColor DarkGray
+            }
+        }
+    }
+
+    if ($securityDefaultsState -eq 'Enabled') {
+        throw "Security Defaults is enabled. It cannot exclude the ClaudIA group, so unattended ROPC cannot work. Disable Security Defaults in this lab tenant before continuing; no Conditional Access policy was changed."
+    }
+
+    $toPatch = @($assessments | Where-Object { $_.Action -eq 'Exclude' })
+    $patchedPolicyIds = @()
+    $alreadyExcludedPolicyIds = @(
+        $assessments | Where-Object { $_.Action -eq 'AlreadyExcluded' } | ForEach-Object { $_.PolicyId }
+    )
+    $failedPolicies = @()
+    $applyChanges = $true
+    if ($toPatch.Count -gt 0 -and -not $AutoMode) {
+        $choice = Read-Host "  Add only 'grp-claudia-agent-mfa-exclusion' to these $($toPatch.Count) active policy exclusion list(s)? (Y/n)"
+        $applyChanges = $choice -notin @('n','N','no','NO')
+    }
+
+    if ($toPatch.Count -gt 0 -and $applyChanges) {
+        foreach ($assessment in $toPatch) {
+            try {
+                $policyUri = "https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies/$($assessment.PolicyId)"
+                $freshPolicy = Invoke-RestMethod -Method GET `
+                    -Uri "${policyUri}?`$select=id,displayName,state,templateId,conditions,grantControls,sessionControls" `
+                    -Headers $GraphHeaders -ErrorAction Stop
+                $freshAssessment = Get-AAConditionalAccessPolicyAssessment -Policy $freshPolicy `
+                    -ExclusionGroupId $ExclusionGroupId -AgentUserIds $AgentUserIds `
+                    -AgentGroupIds $agentGroupIds -ProtectedApplicationIds $protectedApplicationIds
+                if ($freshAssessment.Action -eq 'AlreadyExcluded') {
+                    $alreadyExcludedPolicyIds += $assessment.PolicyId
+                    $alreadyExcludedPolicyIds = @($alreadyExcludedPolicyIds | Select-Object -Unique)
+                    Write-Host "    [OK] '$($assessment.DisplayName)' was already updated by another operation." -ForegroundColor Green
+                    continue
+                }
+                if ($freshAssessment.Action -ne 'Exclude') {
+                    Write-Host "    [SKIP] '$($assessment.DisplayName)' no longer requires an enforced exclusion." -ForegroundColor DarkYellow
+                    continue
+                }
+
+                $usersBody = Get-AAConditionalAccessUsersBody `
+                    -Users $freshPolicy.conditions.users -ExclusionGroupId $ExclusionGroupId
+                $conditionsBody = Get-AAConditionalAccessConditionsBody `
+                    -Conditions $freshPolicy.conditions -UsersBody $usersBody
+                $body = @{
+                    conditions = $conditionsBody
+                } | ConvertTo-Json -Depth 50 -Compress
+                Invoke-RestMethod -Method PATCH `
+                    -Uri $policyUri `
+                    -Headers $GraphHeaders -Body $body -ErrorAction Stop | Out-Null
+                $verified = Invoke-RestMethod -Method GET `
+                    -Uri "${policyUri}?`$select=id,conditions" `
+                    -Headers $GraphHeaders -ErrorAction Stop
+                $conditionDifferences = @(Get-AAConditionalAccessConditionsDifferences `
+                    -Expected $conditionsBody -Actual $verified.conditions)
+                if ($conditionDifferences.Count -gt 0) {
+                    throw "Graph accepted the PATCH but changed unexpected condition fields: $($conditionDifferences -join ', '). Review this policy immediately."
+                }
+                $patchedPolicyIds += $assessment.PolicyId
+                Write-Host "    [OK] Excluded the ClaudIA group from '$($assessment.DisplayName)'." -ForegroundColor Green
+            } catch {
+                $failedPolicies += $assessment.DisplayName
+                Write-Host "    [FAIL] $($assessment.DisplayName): $($_.Exception.Message)" -ForegroundColor Red
+            }
+        }
+    } elseif ($toPatch.Count -gt 0) {
+        Write-Host "  [MANUAL] Conditional Access exclusions were declined." -ForegroundColor Yellow
+        Write-Host "           Entra admin center > Protection > Conditional Access > Policies" -ForegroundColor DarkYellow
+        Write-Host "           Exclude only 'grp-claudia-agent-mfa-exclusion' from the policies marked [CHANGE]." -ForegroundColor DarkYellow
+    }
+
+    if ($failedPolicies.Count -gt 0) {
+        throw "Conditional Access guardrail failed for: $($failedPolicies -join ', '). Confirm Conditional Access Administrator or Security Administrator rights and Policy.ReadWrite.ConditionalAccess consent. No trusted location was created."
+    }
+
+    Write-Host "  [OK] No named or trusted location was created, selected, or changed." -ForegroundColor Green
+    $status = if ($toPatch.Count -gt 0 -and -not $applyChanges) {
+        'ManualRequired'
+    } elseif ($securityDefaultsState -eq 'Unknown' -or $groupMembershipReadFailed) {
+        'ReadyWithManualReview'
+    } else {
+        'Ready'
+    }
+    return [PSCustomObject][ordered]@{
+        status = $status
+        securityDefaults = $securityDefaultsState
+        agentGroupMembershipScope = if ($groupMembershipReadFailed) { 'Partial' } else { 'Complete' }
+        policiesDiscovered = $assessments.Count
+        policiesPatched = $patchedPolicyIds.Count
+        patchedPolicyIds = @($patchedPolicyIds)
+        alreadyExcludedPolicyIds = @($alreadyExcludedPolicyIds)
+        reportOnlyPolicyIds = @($assessments | Where-Object { $_.Action -eq 'ReportOnly' } | ForEach-Object { $_.PolicyId })
+        pendingPolicyIds = if ($applyChanges) { @() } else { @($toPatch | ForEach-Object { $_.PolicyId }) }
+        trustedLocationStrategy = 'NotUsed'
+    }
 }
 
 function Test-AAM365AdminProfileHasTenantAdminRole {
@@ -1647,6 +1886,7 @@ if (Test-AAInstallStep '1') {
                 if ($resetChoice -eq 'n') {
                     Write-Host "  [SKIP] You must provide the password at Step 5." -ForegroundColor DarkYellow
                     Write-Host "  Tip: re-run with -AgentPassword 'yourpassword'" -ForegroundColor Gray
+                    $agentPassword = $null
                 } else {
                     Write-Host "  Resetting passwords..." -NoNewline
                     $resetOk = 0
@@ -1715,7 +1955,9 @@ if (Test-AAInstallStep '1') {
 # STEP 2: ASSIGN LICENSES + MFA EXCLUSION
 # ============================================================================
 if (Test-AAInstallStep '2') {
-    Write-Host "=== Step 2: Assigning licenses + MFA exclusion ===" -ForegroundColor Cyan
+    Write-Host "=== Step 2: Assigning licenses + Conditional Access guardrail ===" -ForegroundColor Cyan
+    $conditionalAccessResult = $null
+    $agentUserIds = @()
 
     if (-not $DryRun) {
         $gt = Get-AAGraphAccessToken
@@ -1727,12 +1969,21 @@ if (Test-AAInstallStep '2') {
         # Find best available license SKU (E3, E5, E7, or equivalent)
         $skus = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/subscribedSkus" -Headers $gh).value
         $eligible = $skus | Where-Object { $_.skuPartNumber -match 'E[357]|SPE_|ENTERPRISEP|EMSPREMIUM|M365_' }
-        $copilotSku = $skus | Where-Object { $_.skuPartNumber -match 'Copilot' }
+        $copilotSku = @($skus | Where-Object { $_.skuPartNumber -match 'Copilot' })
 
         if ($eligible) {
             $bestSku = $eligible | Sort-Object { $_.prepaidUnits.enabled } -Descending | Select-Object -First 1
+            $bestSkuIncludesCopilot = @($bestSku.servicePlans | Where-Object {
+                $_.servicePlanName -match '^M365_COPILOT_' -and
+                $_.provisioningStatus -eq 'Success'
+            }).Count -gt 0
+            $bundledCopilotPlanIds = @($bestSku.servicePlans | Where-Object {
+                $_.servicePlanName -match 'COPILOT' -and
+                $_.provisioningStatus -eq 'Success'
+            } | ForEach-Object { $_.servicePlanId })
             $availLic = $bestSku.prepaidUnits.enabled - $bestSku.consumedUnits
-            Write-Host "  Found license: $($bestSku.skuPartNumber) ($availLic available)" -ForegroundColor Cyan
+            $copilotDetail = if ($bestSkuIncludesCopilot) { ', Copilot included' } else { '' }
+            Write-Host "  Found license: $($bestSku.skuPartNumber) ($availLic available$copilotDetail)" -ForegroundColor Cyan
 
             if ($availLic -le 0) {
                 Write-Host "  [WARN] No available licenses to assign. Agents will rely on tenant-wide service enablement." -ForegroundColor Yellow
@@ -1752,13 +2003,19 @@ if (Test-AAInstallStep '2') {
                 if (-not $userId) { Write-Host "  [SKIP] $upn not found (replication delay)" -ForegroundColor DarkYellow; continue }
 
                 # Try to assign license (will fail gracefully if no seats available)
+                $baseLicenseAssigned = $false
                 if ($availLic -gt 0) {
-                    $licBody = @{addLicenses=@(@{skuId=$bestSku.skuId}); removeLicenses=@()} | ConvertTo-Json -Depth 3
+                    $licenseAssignment = @{skuId=$bestSku.skuId}
+                    if ($bestSkuIncludesCopilot -and -not $agent.copilotLicense) {
+                        $licenseAssignment.disabledPlans = $bundledCopilotPlanIds
+                    }
+                    $licBody = @{addLicenses=@($licenseAssignment); removeLicenses=@()} | ConvertTo-Json -Depth 4
                     try {
                         Invoke-RestMethod -Method POST -Uri "https://graph.microsoft.com/v1.0/users/$userId/assignLicense" `
                             -Headers $gh -Body $licBody | Out-Null
                         Write-Host "  $($agent.displayName): $($bestSku.skuPartNumber)" -NoNewline -ForegroundColor Green
                         $availLic--
+                        $baseLicenseAssigned = $true
                     } catch {
                         $licenseError = $_.Exception.Message
                         Write-Host "  $($agent.displayName): license assign failed ($licenseError)" -NoNewline -ForegroundColor DarkYellow
@@ -1768,7 +2025,10 @@ if (Test-AAInstallStep '2') {
                 }
 
                 # Assign Copilot if needed
-                if ($agent.copilotLicense -and $copilotSku) {
+                if ($agent.copilotLicense -and $bestSkuIncludesCopilot -and $baseLicenseAssigned) {
+                    Write-Host " + Copilot (bundled)" -ForegroundColor Green
+                    $copilotAssignedCount++
+                } elseif ($agent.copilotLicense -and $copilotSku.Count -gt 0) {
                     $copBody = @{addLicenses=@(@{skuId=$copilotSku[0].skuId}); removeLicenses=@()} | ConvertTo-Json -Depth 3
                     try {
                         Invoke-RestMethod -Method POST -Uri "https://graph.microsoft.com/v1.0/users/$userId/assignLicense" `
@@ -1831,45 +2091,50 @@ if (Test-AAInstallStep '2') {
             }
         }
 
-        # Add agents to group
+        # Resolve every agent before changing group membership.
         foreach ($agent in $agents) {
             $upn = Get-AgentUpn -Agent $agent -Domain $domain
-            $userId = $null
-            try { $userId = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/users/$upn" -Headers $gh).id } catch {}
-            if ($userId) {
-                try {
-                    Invoke-RestMethod -Method POST -Uri "https://graph.microsoft.com/v1.0/groups/$($grp.id)/members/`$ref" `
-                        -Headers $gh -Body (@{'@odata.id'="https://graph.microsoft.com/v1.0/directoryObjects/$userId"} | ConvertTo-Json) | Out-Null
-                } catch {} # already member
+            try {
+                $userId = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/users/$upn?`$select=id" -Headers $gh -ErrorAction Stop).id
+            } catch {
+                throw "Agent '$upn' could not be resolved before configuring the Conditional Access exclusion group: $($_.Exception.Message)"
+            }
+            $agentUserIds += [string]$userId
+        }
+
+        # Add agents to the dedicated group without hiding unexpected Graph errors.
+        foreach ($userId in $agentUserIds) {
+            try {
+                Invoke-RestMethod -Method POST -Uri "https://graph.microsoft.com/v1.0/groups/$($grp.id)/members/`$ref" `
+                    -Headers $gh -Body (@{'@odata.id'="https://graph.microsoft.com/v1.0/directoryObjects/$userId"} | ConvertTo-Json) `
+                    -ErrorAction Stop | Out-Null
+            } catch {
+                $detail = if ($_.ErrorDetails.Message) { $_.ErrorDetails.Message } else { $_.Exception.Message }
+                if ($detail -notmatch 'added object references already exist|already exist') {
+                    throw "Could not add agent object '$userId' to '$($grp.displayName)': $detail"
+                }
             }
         }
         Write-Host "  All agents added to MFA exclusion group." -ForegroundColor Green
+
+        $conditionalAccessResult = Invoke-AAConditionalAccessGuardrail -GraphHeaders $gh `
+            -ExclusionGroupId ([string]$grp.id) -AgentUserIds $agentUserIds -AutoMode:$Auto
     } else {
-        Write-Host "  [DRY-RUN] Would assign E5 + Copilot licenses and create MFA exclusion group" -ForegroundColor DarkYellow
+        Write-Host "  [DRY-RUN] Would assign licenses, create the dedicated exclusion group, audit all Conditional Access policies, and patch only relevant active BLOCK/GRANT exclusions." -ForegroundColor DarkYellow
     }
 
     Set-AAInstallationStepDefinition -Path $installationDefinitionsPath -Step '2' -Value ([ordered]@{
-        activity = 'Licenses and MFA exclusion'
+        activity = 'Licenses and Conditional Access guardrail'
         completedAt = (Get-Date).ToString('o')
         dryRun = [bool]$DryRun
         mfaExclusionGroup = 'grp-claudia-agent-mfa-exclusion'
         mfaExclusionGroupId = if ($grp) { $grp.id } else { $null }
         selectedLicenseSku = if ($bestSku) { $bestSku.skuPartNumber } else { $null }
-        copilotSku = if ($copilotSku) { $copilotSku[0].skuPartNumber } else { $null }
+        copilotSku = if ($bestSkuIncludesCopilot) { $bestSku.skuPartNumber } elseif ($copilotSku.Count -gt 0) { $copilotSku[0].skuPartNumber } else { $null }
+        copilotBundled = [bool]$bestSkuIncludesCopilot
         agentUpns = @($agents | ForEach-Object { Get-AgentUpn -Agent $_ -Domain $domain })
+        conditionalAccess = $conditionalAccessResult
     })
-
-    Write-Host ""
-    Write-Host "  MANUAL STEP REQUIRED:" -ForegroundColor Yellow
-    Write-Host "    1. Go to Entra admin center > Conditional Access" -ForegroundColor Yellow
-    Write-Host "    2. Edit your MFA policy > Exclude > Groups > Add 'grp-claudia-agent-mfa-exclusion'" -ForegroundColor Yellow
-    Write-Host "    3. Save the policy" -ForegroundColor Yellow
-    Write-Host ""
-    if (-not $Auto -and -not $DryRun) {
-        Read-Host "  Press Enter when done (or skip if CA is not enforced)"
-    } elseif ($Auto) {
-        Write-Host "  [AUTO] Skipping MFA manual step -- ensure CA exclusion is configured" -ForegroundColor DarkYellow
-    }
     Write-Host ""
 }
 
@@ -2050,7 +2315,7 @@ if (Test-AAInstallStep '4b') {
     if (-not $DryRun) {
         $deployLabels = if ($Auto) { 'y' } else { Read-Host "  Deploy sensitivity labels? (Y/n)" }
         if ($deployLabels -ne 'n') {
-            & (Join-Path $PSScriptRoot 'modules\Provision-SensitivityLabels.ps1') -Config $config
+            & (Join-Path $PSScriptRoot 'modules\Provision-SensitivityLabels.ps1') -Config $config -Auto:$Auto
         } else {
             Write-Host "  [SKIP] Labels skipped. Ensure they exist for file classification." -ForegroundColor DarkYellow
         }
@@ -2117,14 +2382,40 @@ if (Test-AAInstallStep '5') {
         if (-not $agentPassword -and $PSBoundParameters.ContainsKey('AgentPassword')) {
             $agentPassword = $PSBoundParameters['AgentPassword']
         }
-        if (-not $agentPassword) {
-            Write-Host "  No -AgentPassword provided. Existing per-agent Key Vault secrets will be preserved." -ForegroundColor Cyan
-            Write-Host "  Provide -AgentPassword only when intentionally writing one shared password to every agent secret." -ForegroundColor Gray
+
+        $kvName = Get-KeyVaultName -Config $config
+        Write-Host "  Inspecting persona secrets in Key Vault '$kvName'..." -NoNewline
+        $missingAgentSecrets = @()
+        foreach ($agent in $agents) {
+            $secretName = Get-AgentSecretName -Agent $agent -Domain $domain
+            $secretState = Get-AAKeyVaultSecretState -VaultName $kvName -Name $secretName
+            if ($secretState.Status -eq 'Missing') { $missingAgentSecrets += $secretName }
         }
+        if ($missingAgentSecrets.Count -eq 0) {
+            Write-Host " [OK] all $(@($agents).Count) present" -ForegroundColor Green
+        } else {
+            Write-Host " [MISSING] $($missingAgentSecrets.Count)/$(@($agents).Count)" -ForegroundColor Yellow
+        }
+
+        $writeMissingAgentSecretsOnly = $false
+        if (-not $agentPassword -and $missingAgentSecrets.Count -gt 0) {
+            if ($Auto) {
+                throw "Persona secrets are missing from Key Vault: $($missingAgentSecrets -join ', '). Auto mode cannot prompt for a password. Rerun interactively, or run: .\Install-ClaudIA.ps1 -Step 5 -SkipPrerequisites -AgentPassword '<shared-lab-password>'"
+            }
+            Write-Host "  A password is required only for the missing secrets; existing persona secrets will be preserved." -ForegroundColor Yellow
+            $agentPassword = Read-AAConfirmedAgentPassword
+            $writeMissingAgentSecretsOnly = $true
+        } elseif (-not $agentPassword) {
+            Write-Host "  Existing per-agent Key Vault secrets will be preserved; no password prompt is needed." -ForegroundColor Cyan
+        } elseif ($PSBoundParameters.ContainsKey('AgentPassword')) {
+            Write-Host "  Explicit -AgentPassword supplied; all persona secrets will be synchronized intentionally." -ForegroundColor Cyan
+        }
+
         $oldM365ConfigDir = $env:CLAUDIA_M365_AZURE_CONFIG_DIR
         if ($script:AAM365AzConfigDir) { $env:CLAUDIA_M365_AZURE_CONFIG_DIR = $script:AAM365AzConfigDir }
         try {
-            & (Join-Path $PSScriptRoot 'modules\Deploy-Runbook.ps1') -Config $config -AgentPassword $agentPassword
+            & (Join-Path $PSScriptRoot 'modules\Deploy-Runbook.ps1') -Config $config `
+                -AgentPassword $agentPassword -WriteMissingAgentSecretsOnly:$writeMissingAgentSecretsOnly
         } finally {
             if ($null -ne $oldM365ConfigDir) { $env:CLAUDIA_M365_AZURE_CONFIG_DIR = $oldM365ConfigDir }
             else { Remove-Item Env:\CLAUDIA_M365_AZURE_CONFIG_DIR -ErrorAction SilentlyContinue }
@@ -2294,6 +2585,7 @@ if (Test-AAInstallStep '8') {
                 -InstallationDefinitionsPath $installationDefinitionsPath
             if ($storyMapResult) {
                 Set-AAObjectProperty -Object $config -Name 'activityStoryMap' -Value $storyMapResult
+                Set-AAInstallationDefinition -Path $installationDefinitionsPath -Section 'activityStoryMap' -Value $storyMapResult
             }
             $deployFrontDoor = if ($Auto) { 'N' } else { Read-Host "  Enable Azure Front Door for the Activity Story Map? (y/N)" }
             if ($deployFrontDoor -in @('y','Y','yes','YES')) {
@@ -2593,9 +2885,3 @@ if ($script:RunAllSteps -or $Step -eq 6) {
 }
 Write-Host ""
 Stop-Transcript | Out-Null
-
-
-
-
-
-

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.2
+.VERSION 1.0.3
 .GUID 0bca2ea4-0a13-4efe-a80c-c9187dbb9c8f
 
 .AUTHOR
@@ -23,7 +23,7 @@ https://github.com/MH-Demos/ClaudIA
 Provision SharePoint site + Teams team + department channels for agents
 
 .RELEASENOTES
-Version 1.0.2 creates collaboration expansion teams with the signed-in admin as initial owner to avoid Teams template impersonation failures.
+Version 1.0.3 improves collaboration provisioning in split-admin and hardened tenant deployments.
 
 #>
 <#
@@ -95,6 +95,13 @@ function Resolve-AutomationAccountResourceGroup {
     if ($restId) { return $ResourceGroup }
 
     return $null
+}
+
+function ConvertTo-AASharePointFolderName {
+    param([Parameter(Mandatory)][string]$Name)
+
+    $safeName = ($Name -replace '[\\/:*?"<>|]', ' - ') -replace '\s+', ' '
+    return $safeName.Trim().TrimEnd('.')
 }
 
 # Resolve actual AA resource group (may differ from config)
@@ -488,8 +495,9 @@ if ($spoSiteId) {
     Write-Host "  Creating department folders..." -NoNewline
     $created = 0
     foreach ($d in $depts) {
+        $folderName = ConvertTo-AASharePointFolderName -Name $d
         $folderBody = @{
-            name = $d
+            name = $folderName
             folder = @{}
             '@microsoft.graph.conflictBehavior' = 'fail'
         } | ConvertTo-Json
@@ -499,7 +507,8 @@ if ($spoSiteId) {
                 -Headers $gh -Body $folderBody | Out-Null
             $created++
         } catch {
-            # Folder already exists (nameAlreadyExists) -- expected on re-run
+            $folderError = "$($_.Exception.Message) $($_.ErrorDetails.Message)"
+            if ($folderError -notmatch 'nameAlreadyExists') { throw }
         }
     }
     # Also create Engineering subfolders for Fabric workload
@@ -588,8 +597,5 @@ Write-Host "    Members:  $($memberRefs.Count) agents" -ForegroundColor Gray
 if ($collaborationSites.Count -gt 0) {
     Write-Host "    Expansion teams: $($collaborationSites.Count)" -ForegroundColor Gray
 }
-
-
-
 
 

@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 1.0.0
+.VERSION 1.1.0
 
 .GUID 0ca67639-d16b-45c3-bd8f-50c63358043d
 
@@ -24,7 +24,7 @@ https://github.com/MH-Demos/ClaudIA
 Azure Automation Runbook - Parameterized AI-powered autonomous corporate agents
 
 .RELEASENOTES
-Initial version metadata for Azure Automation Runbook - Parameterized AI-powered autonomous corporate agents.
+Version 1.1.0 hardens ADX token renewal, UTF-8 telemetry, Teams chat, IRM documents, and sensitivity labeling.
 
 #>
 <#
@@ -188,6 +188,13 @@ function Get-AgentSecretName {
     $name = $local -replace '[^a-z0-9-]', '-'
     $name = $name -replace '-+', '-'
     return $name.Trim('-')
+}
+
+function ConvertTo-AASharePointFolderName {
+    param([Parameter(Mandatory)][string]$Name)
+
+    $safeName = ($Name -replace '[\\/:*?"<>|]', ' - ') -replace '\s+', ' '
+    return $safeName.Trim().TrimEnd('.')
 }
 
 function Resolve-ContentDepartment {
@@ -1225,6 +1232,10 @@ $script:adxDatabase      = $null
 $script:adxTable         = $null
 $script:adxMapping       = $null
 $script:adxToken         = $null
+$script:adxTokenExpiresAtUtc = [DateTimeOffset]::MinValue
+$script:adxTenantId      = $null
+$script:adxClientId      = $null
+$script:adxClientSecret  = $null
 
 function Get-AdxAppToken {
     param(
@@ -1242,7 +1253,34 @@ function Get-AdxAppToken {
         -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token" `
         -ContentType 'application/x-www-form-urlencoded' `
         -Body $body -ErrorAction Stop
-    return $tokenResponse.access_token
+    $expiresInSeconds = if ($tokenResponse.expires_in) { [int]$tokenResponse.expires_in } else { 3600 }
+    return [PSCustomObject]@{
+        AccessToken = [string]$tokenResponse.access_token
+        ExpiresAtUtc = [DateTimeOffset]::UtcNow.AddSeconds($expiresInSeconds)
+    }
+}
+
+function Update-AdxAppToken {
+    param([switch]$Force)
+
+    $refreshBefore = [DateTimeOffset]::UtcNow.AddMinutes(5)
+    if (-not $Force -and $script:adxToken -and $script:adxTokenExpiresAtUtc -gt $refreshBefore) {
+        return
+    }
+    if (-not $script:adxTenantId -or -not $script:adxClientId -or -not $script:adxClientSecret) {
+        throw 'ADX application credentials are not initialized.'
+    }
+
+    $tokenResult = Get-AdxAppToken `
+        -TenantId $script:adxTenantId `
+        -ClientId $script:adxClientId `
+        -ClientSecret $script:adxClientSecret
+    if (-not $tokenResult.AccessToken) {
+        throw 'The ADX token endpoint returned an empty access token.'
+    }
+
+    $script:adxToken = $tokenResult.AccessToken
+    $script:adxTokenExpiresAtUtc = $tokenResult.ExpiresAtUtc
 }
 
 function Initialize-AdxIngestion {
@@ -1268,10 +1306,17 @@ function Initialize-AdxIngestion {
         $script:adxDatabase = ConvertTo-AAPlainString $adxConfig.databaseName
         $script:adxTable = ConvertTo-AAPlainString $adxConfig.tableName
         $script:adxMapping = ConvertTo-AAPlainString $adxConfig.mappingName
-        $script:adxToken = Get-AdxAppToken -TenantId $adxConfig.tenantId -ClientId $adxConfig.clientId -ClientSecret $adxSecret
+        $script:adxTenantId = ConvertTo-AAPlainString $adxConfig.tenantId
+        $script:adxClientId = ConvertTo-AAPlainString $adxConfig.clientId
+        $script:adxClientSecret = $adxSecret
+        Update-AdxAppToken -Force
         Write-Output "  [ADX] Ingestion initialized for $($script:adxDatabase).$($script:adxTable)"
     }
     catch {
+        $script:adxIngestBaseUri = $null
+        $script:adxToken = $null
+        $script:adxTokenExpiresAtUtc = [DateTimeOffset]::MinValue
+        $script:adxClientSecret = $null
         Write-Warning "  [ADX] Failed to initialize ingestion: $($_.Exception.Message)"
     }
 }
@@ -1287,9 +1332,10 @@ function Push-AgentActivity {
         [int]$TokensOut = 0,
         [string]$PromptContent = '',
         [string]$ResponseContent = '',
-        [hashtable]$Properties = @{}
+        [hashtable]$Properties = @{},
+        [bool]$RetryOnAuthFailure = $true
     )
-    if (-not $script:adxToken -or -not $script:adxIngestBaseUri) { return }
+    if (-not $script:adxIngestBaseUri) { return }
 
     # Keep payloads compact and bounded for near-real-time ingestion.
     if ($PromptContent.Length -gt 30000) { $PromptContent = $PromptContent.Substring(0, 30000) + '...[truncated]' }
@@ -1318,23 +1364,53 @@ function Push-AgentActivity {
     $record = @{
         TimeGenerated = (Get-Date).ToUniversalTime().ToString('o')
         Event = $event
-    } | ConvertTo-Json -Depth 10 -Compress
+    }
 
     $encodedDb = [System.Uri]::EscapeDataString($script:adxDatabase)
     $encodedTable = [System.Uri]::EscapeDataString($script:adxTable)
     $encodedMapping = [System.Uri]::EscapeDataString($script:adxMapping)
     $ingestUri = "$($script:adxIngestBaseUri.TrimEnd('/'))/v1/rest/ingest/$encodedDb/${encodedTable}?streamFormat=json&mappingName=$encodedMapping"
+    $jsonBody = ConvertTo-AAJsonBody -Value $record -Depth 12
 
     try {
+        Update-AdxAppToken
         Invoke-RestMethod -Method POST `
             -Uri $ingestUri `
-            -ContentType 'application/json' `
+            -ContentType 'application/json; charset=utf-8' `
             -Headers @{ Authorization = "Bearer $($script:adxToken)" } `
-            -Body $record | Out-Null
+            -Body $jsonBody `
+            -ErrorAction Stop | Out-Null
     }
     catch {
+        $statusCode = 0
+        try { $statusCode = [int]$_.Exception.Response.StatusCode } catch { $statusCode = 0 }
+        if ($RetryOnAuthFailure -and $statusCode -in @(401, 403)) {
+            try {
+                Update-AdxAppToken -Force
+                Push-AgentActivity `
+                    -AgentUPN $AgentUPN `
+                    -AgentName $AgentName `
+                    -Department $Department `
+                    -ActivityType $ActivityType `
+                    -Detail $Detail `
+                    -TokensIn $TokensIn `
+                    -TokensOut $TokensOut `
+                    -PromptContent $PromptContent `
+                    -ResponseContent $ResponseContent `
+                    -Properties $Properties `
+                    -RetryOnAuthFailure $false
+                return
+            }
+            catch {
+                $details = if ($_.ErrorDetails.Message) { $_.ErrorDetails.Message } else { $_.Exception.Message }
+                Write-Warning "  [ADX] Token refresh failed for '$ActivityType' and '$AgentName': $details"
+                return
+            }
+        }
+
         $details = if ($_.ErrorDetails.Message) { $_.ErrorDetails.Message } else { $_.Exception.Message }
-        Write-Warning "  [ADX] Failed to ingest activity '$ActivityType' for '$AgentName': $details"
+        $httpDetail = if ($statusCode) { "HTTP $statusCode; " } else { '' }
+        Write-Warning "  [ADX] Failed to ingest activity '$ActivityType' for '$AgentName' (${httpDetail}$($jsonBody.Length) UTF-8 bytes): $details"
     }
 }
 
@@ -1614,7 +1690,7 @@ function Invoke-DevonInsiderRiskSequence {
     $scenario = $scenarios | Get-Random
     $caseId = "IRM-DEVON-$((Get-Date).ToString('yyyyMMdd-HHmmss'))-$(Get-Random -Minimum 100 -Maximum 999)"
     $folder = 'Insider Risk Devon'
-    $fileName = "${caseId}_support_exports.txt"
+    $fileName = "${caseId}_support_exports.docx"
     $targetPath = "$folder/$fileName"
     $externalRecipient = 'devon.reyes.exfil@outlook.com'
     $eventCount = 0
@@ -1635,14 +1711,15 @@ bank account number: 492017388201
 Support case: SR-948211
 Notes: Raw customer support evidence copied for external AI triage and off-platform review.
 "@
-    $bytes = [System.Text.Encoding]::UTF8.GetBytes($content)
+    $contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    $bytes = New-AADocxBytes -Title "Customer escalation export - $caseId" -Content $content
     $labels = Get-SensitivityLabels -Token $Token
-    $highLabel = Get-LabelByName -Labels $labels -Names @('Highly Confidential/All Employees','Confidential/All Employees','Confidential')
+    $highLabel = Get-LabelByName -Labels $labels -Names @('Conf-HR','Conf-Finance','Confidential/All Employees')
     $lowLabel = Get-LabelByName -Labels $labels -Names @('General/All Employees','General')
 
     try {
         $uploadUri = "https://graph.microsoft.com/v1.0/sites/$spoSiteId/drive/root:/$folder/${fileName}:/content"
-        $uploadResult = Invoke-Graph -Token $Token -Method PUT -Uri $uploadUri -Body $bytes -ContentType 'text/plain'
+        $uploadResult = Invoke-Graph -Token $Token -Method PUT -Uri $uploadUri -Body $bytes -ContentType $contentType
         Write-Output "    [IRM] Uploaded source evidence: $targetPath"
 
         $labelApplied = ''
@@ -1682,8 +1759,8 @@ Notes: Raw customer support evidence copied for external AI triage and off-platf
             }
         $eventCount++
 
-        $downloaded = Invoke-Graph -Token $Token -Method GET -Uri "https://graph.microsoft.com/v1.0/sites/$spoSiteId/drive/items/$($uploadResult.id)/content" -ContentType 'text/plain'
-        $downloadedText = if ($downloaded) { [string]$downloaded } else { $content }
+        Invoke-Graph -Token $Token -Method GET -Uri "https://graph.microsoft.com/v1.0/sites/$spoSiteId/drive/items/$($uploadResult.id)/content" -ContentType $contentType | Out-Null
+        $downloadedText = $content
         Write-Output "    [IRM] Downloaded from Microsoft 365 location: $fileName"
         Push-AgentActivity -AgentUPN $UserUpn -AgentName $Agent.Name -Department $Agent.Dept `
             -ActivityType 'insider_risk' -Detail "$($scenario.Name) | Download from Microsoft 365 location" `
@@ -2238,7 +2315,7 @@ foreach ($agent in $activeAgents) {
         'Lists'    { @('lists','microsoft lists','sharepoint','spo') }
         'Fabric'   { @('fabric','microsoft fabric','sharepoint','spo') }
         'Meetings' { @('meetings','teams','microsoft teams') }
-        'ExternalAI' { @('externalai','external ai','ai','foundry','irm','insider risk','insider risk management') }
+        'ExternalAI' { @('externalai','external ai','ai','foundry') }
         default    { @('spo','sharepoint','sharepoint online','files') }
     }
     $workloadAliases += @('fileops','activity explorer','activityexplorer','audit')
@@ -2312,7 +2389,7 @@ foreach ($agent in $activeAgents) {
 
             # -- Upload to SharePoint or execute workload-specific action ----
             $fileName  = "$($ft.Type)_${date}_$(Get-Random -Min 100 -Max 999)$($ft.Ext)"
-            $folder    = $agent.Dept
+            $folder    = ConvertTo-AASharePointFolderName -Name $agent.Dept
             $workload  = if ($agent.Workload) { $agent.Workload } else { 'SPO' }
             $service = switch ($workload) {
                 'Teams'    { 'Microsoft Teams' }
@@ -2376,12 +2453,11 @@ foreach ($agent in $activeAgents) {
                         $target = $colleagues | Get-Random
                         $recipientName = $target.Name
                         $recipientUPN = "$($target.Sam)@$domain"
-                        $targetId = Invoke-Graph -Token $token -Method GET -Uri "https://graph.microsoft.com/v1.0/users/$($target.Sam)@$domain" | Select-Object -ExpandProperty id
                         $chatBody = @{
                             chatType = 'oneOnOne'
                             members = @(
                                 @{ '@odata.type' = '#microsoft.graph.aadUserConversationMember'; 'user@odata.bind' = "https://graph.microsoft.com/v1.0/users('$($agentUserId)')"; roles=@('owner') }
-                                @{ '@odata.type' = '#microsoft.graph.aadUserConversationMember'; 'user@odata.bind' = "https://graph.microsoft.com/v1.0/users('$targetId')"; roles=@('owner') }
+                                @{ '@odata.type' = '#microsoft.graph.aadUserConversationMember'; 'user@odata.bind' = "https://graph.microsoft.com/v1.0/users('$recipientUPN')"; roles=@('owner') }
                             )
                         } | ConvertTo-Json -Depth 4
                         $chat = Invoke-Graph -Token $token -Method POST -Uri "https://graph.microsoft.com/v1.0/chats" -Body ([System.Text.Encoding]::UTF8.GetBytes($chatBody)) -ContentType 'application/json'
@@ -2620,7 +2696,8 @@ foreach ($agent in $activeAgents) {
     }
 
     # -- Compliance scan: detect unlabeled files in department folder --------
-    $unlabeled = Get-UnlabeledFiles -Token $token -SiteId $spoSiteId -Folder $agent.Dept
+    $scanFolder = ConvertTo-AASharePointFolderName -Name $agent.Dept
+    $unlabeled = Get-UnlabeledFiles -Token $token -SiteId $spoSiteId -Folder $scanFolder
     if ($unlabeled -and $unlabeled.Count -gt 0) {
         $fileList = ($unlabeled | Select-Object -First 5 | ForEach-Object { $_.name }) -join ', '
         $complianceHtml = "&#9888; <b>Compliance alert ($($agent.Dept))</b>: $($unlabeled.Count) unlabeled file(s) detected.<br/><small>Files: $fileList</small><br/><small>Recommended action: apply a sensitivity label in Microsoft Purview.</small>"
@@ -2723,7 +2800,14 @@ foreach ($agent in $activeAgents) {
     $insiderRiskCount = 0
     $insiderRiskAliases = @('irm','insider risk','insider risk management','purview irm','risk','exfiltration','exfiltrate')
     if ($agent.Sam -eq 'devon.reyes' -and (Test-ServiceRequested -Aliases $insiderRiskAliases)) {
-        $insiderRiskCount = Invoke-DevonInsiderRiskSequence -Agent $agent -Token $token -UserUpn $upn
+        $insiderRiskResult = @(Invoke-DevonInsiderRiskSequence -Agent $agent -Token $token -UserUpn $upn)
+        foreach ($item in $insiderRiskResult) {
+            if ($item -is [int]) {
+                $insiderRiskCount = [int]$item
+            } elseif ($item) {
+                Write-Output $item
+            }
+        }
         $totalInsiderRisk += $insiderRiskCount
     }
 
@@ -2895,8 +2979,3 @@ Please review and advise on the next action.$historyNote
 }
 
 Write-Output "`n=== COMPLETE: $totalFiles files uploaded, $($script:totalFileOps) file operations, $totalEmails emails + $totalThreadEmails thread emails sent, $totalExternalAi external AI interactions, $totalInsiderRisk insider risk events ==="
-
-
-
-
-

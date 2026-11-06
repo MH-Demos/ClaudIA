@@ -132,6 +132,12 @@ The following rule is mandatory:
 
 If an agent receives any privileged directory role, remove it from the MFA exclusion group immediately. The automation pattern can also include a Sentinel alert and remediation runbook to enforce this.
 
+Step 2 enumerates Conditional Access policies and distinguishes enforced
+BLOCK/GRANT controls from report-only or unrelated policies. It can append only
+the dedicated ClaudIA group to `excludeGroups`; it preserves all other policy
+conditions and verifies the saved exclusion. ClaudIA never uses a named or
+trusted location as an MFA bypass.
+
 ## Secret Management Rules
 
 Runtime secrets belong in Azure Key Vault.

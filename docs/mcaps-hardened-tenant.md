@@ -34,7 +34,8 @@ unless you put automation in place.
 ## Why it happens
 
 MCAPS, Microsoft Managed Environment and most internal "hardened" test
-tenants enforce an Azure Policy assignment that, on a daily schedule, flips
+tenants enforce an Azure Policy assignment that either modifies resources at
+write time or periodically flips
 `properties.publicNetworkAccess` back to `Disabled` on:
 
 - Key Vault (`Microsoft.KeyVault/vaults`)
@@ -76,8 +77,10 @@ broken end-to-end.
 
 Recommendation: keep `publicNetworkAccess=Enabled` on Key Vault, rely on
 Entra ID + RBAC (the wizard already configures Key Vault with
-`--enable-rbac-authorization true`), and re-enable PNA on a schedule using
-the runbook below.
+`--enable-rbac-authorization true`), and use the policy's documented
+`SecurityControl=Ignore` resource tag when the management-group policy
+supports it. The tag is applied only to the ClaudIA resources that require a
+public data plane. The reachability runbook below preserves that state.
 
 ## Fix: schedule the reachability runbook
 
@@ -99,11 +102,14 @@ The deployer does four things:
 3. Uploads `tools\Restore-LabPublicNetworkAccess.ps1` as a PowerShell 7.2
    runbook named `Restore-LabPublicNetworkAccess`.
 4. Creates a daily 06:00 UTC schedule named `Daily-Reachability-Restore` and
-   links it to the runbook with `-ResourceGroup <rg>` and
+   links it to the runbook with the discovered Key Vault, Azure OpenAI,
+   Automation Account and ADX names, plus `-ResourceGroup <rg>` and
    `-UseAutomationManagedIdentity:$true`.
 
 After deployment, the runbook idempotently:
 
+- applies the MCAPS `SecurityControl=Ignore` exclusion tag to Key Vault and
+  ClaudIA storage resources before opening their public data planes;
 - PATCHes `publicNetworkAccess=Enabled` on Key Vault, Azure OpenAI,
   Automation Account and the ADX cluster (only if currently not Enabled).
 - Issues `/start` on the ADX cluster if its state is `Stopped`.
@@ -156,7 +162,15 @@ If the policy forced it to `false`, the deployment switches to:
   SystemAssignedIdentity` (no keys anywhere), and
 - **Entra ID blob auth** (`--auth-mode login`) for the static website upload,
   granting the signed-in user `Storage Blob Data Contributor` and retrying
-  while RBAC propagates.
+  while RBAC propagates, and
+- the Kudu **OneDeploy** API with an Entra token scoped to
+  `https://appservice.azure.com`, matching the Azure CLI Flex deployment flow.
+
+The storage accounts keep `allowSharedKeyAccess=false` and
+`allowBlobPublicAccess=false`; the policy exclusion tag is used only so the
+public static endpoint and managed-identity deployment container remain
+reachable. The visit counter stores its state in a private
+`activity-story-map` container using the Function's managed identity.
 
 The wizard also pre-checks plan availability before creating anything:
 Consumption (Dynamic SKU) quota via `Microsoft.Web/geoRegions?sku=Dynamic`,
@@ -167,15 +181,17 @@ Windows Consumption path is used.
 
 ## Also worth knowing about hardened tenants
 
-These items are NOT handled by the wizard or the runbook and may require
-separate action depending on the lab features you enable:
+These items require special awareness depending on the lab features you enable:
 
 - **VM auto-deallocation at off-hours.** No impact on the core ClaudIA lab
   today, but matters if you add Hybrid Runbook Workers, self-hosted
   Integration Runtimes or ADX VNet injection.
-- **Conditional Access blocking ROPC.** If you enable BrowserAgent persona
-  logins, exclude `grp-claudia-agent-mfa-exclusion` from MFA and "Block
-  legacy authentication" policies.
+- **Conditional Access blocking ROPC.** Step 2 now enumerates active
+  BLOCK/GRANT policies, reports report-only policies, and can append only
+  `grp-claudia-agent-mfa-exclusion` to applicable exclusions. It preserves
+  existing conditions and never creates or relies on a trusted location.
+  Security Defaults still requires a separate manual lab-tenant decision
+  because it has no per-group exclusion.
 - **`disableLocalAuth=true` on Cognitive Services.** ClaudIA already uses
   managed identity for Azure OpenAI, so this is fine. For Storage, see the
   dedicated `allowSharedKeyAccess` section above - the wizard auto-detects

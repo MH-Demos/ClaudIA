@@ -21,20 +21,61 @@ function parseConnectionString(value) {
     const index = part.indexOf("=");
     if (index > 0) parts[part.slice(0, index)] = part.slice(index + 1);
   });
-  if (!parts.AccountName || !parts.AccountKey) {
-    throw new Error("AzureWebJobsStorage must include AccountName and AccountKey.");
-  }
+  if (!parts.AccountName || !parts.AccountKey) return null;
   const protocol = parts.DefaultEndpointsProtocol || "https";
   const suffix = parts.EndpointSuffix || "core.windows.net";
   return {
+    authMode: "sharedKey",
     accountName: parts.AccountName,
     accountKey: parts.AccountKey,
     blobEndpoint: parts.BlobEndpoint || `${protocol}://${parts.AccountName}.blob.${suffix}`
   };
 }
 
-function blobAuthHeader({ method, url, headers, contentLength = "" }) {
-  const storage = parseConnectionString(process.env.AzureWebJobsStorage);
+function storageConfig() {
+  const sharedKey = parseConnectionString(process.env.AzureWebJobsStorage);
+  if (sharedKey) return sharedKey;
+
+  const accountName = process.env.AzureWebJobsStorage__accountName;
+  if (!accountName) {
+    throw new Error("Identity-based AzureWebJobsStorage requires AzureWebJobsStorage__accountName.");
+  }
+  return {
+    authMode: "managedIdentity",
+    accountName,
+    blobEndpoint: process.env.AzureWebJobsStorage__blobServiceUri ||
+      `https://${accountName}.blob.core.windows.net`
+  };
+}
+
+async function getManagedIdentityToken() {
+  const endpoint = process.env.IDENTITY_ENDPOINT || process.env.MSI_ENDPOINT;
+  const header = process.env.IDENTITY_HEADER || process.env.MSI_SECRET;
+  if (!endpoint || !header) {
+    throw new Error("Managed identity endpoint is not available.");
+  }
+
+  const resource = encodeURIComponent("https://storage.azure.com/");
+  const separator = endpoint.includes("?") ? "&" : "?";
+  const response = await fetch(`${endpoint}${separator}api-version=2019-08-01&resource=${resource}`, {
+    headers: {
+      "X-IDENTITY-HEADER": header,
+      Metadata: "true"
+    }
+  });
+  if (!response.ok) {
+    throw new Error(`Managed identity token request failed: ${response.status}`);
+  }
+  const payload = await response.json();
+  return payload.access_token;
+}
+
+async function blobAuthorization({ method, headers, contentLength = "" }) {
+  const storage = storageConfig();
+  if (storage.authMode === "managedIdentity") {
+    return ["Bearer", await getManagedIdentityToken()].join(" ");
+  }
+
   const canonicalizedHeaders = Object.keys(headers)
     .filter((key) => key.toLowerCase().startsWith("x-ms-"))
     .map((key) => [key.toLowerCase(), String(headers[key]).trim()])
@@ -62,14 +103,11 @@ function blobAuthHeader({ method, url, headers, contentLength = "" }) {
     .createHmac("sha256", Buffer.from(storage.accountKey, "base64"))
     .update(stringToSign, "utf8")
     .digest("base64");
-  return {
-    url,
-    authorization: `SharedKey ${storage.accountName}:${signature}`
-  };
+  return `SharedKey ${storage.accountName}:${signature}`;
 }
 
 function blobUrl() {
-  const storage = parseConnectionString(process.env.AzureWebJobsStorage);
+  const storage = storageConfig();
   return `${storage.blobEndpoint.replace(/\/$/, "")}/${containerName}/${blobName}`;
 }
 
@@ -78,12 +116,13 @@ async function readVisitState() {
     "x-ms-date": new Date().toUTCString(),
     "x-ms-version": storageVersion
   };
-  const signed = blobAuthHeader({ method: "GET", url: blobUrl(), headers });
-  const response = await fetch(signed.url, {
+  const url = blobUrl();
+  const authorization = await blobAuthorization({ method: "GET", headers });
+  const response = await fetch(url, {
     method: "GET",
     headers: {
       ...headers,
-      Authorization: signed.authorization
+      Authorization: authorization
     }
   });
   if (response.status === 404) return {};
@@ -99,17 +138,16 @@ async function writeVisitState(state) {
     "x-ms-date": new Date().toUTCString(),
     "x-ms-version": storageVersion
   };
-  const signed = blobAuthHeader({
+  const authorization = await blobAuthorization({
     method: "PUT",
-    url: blobUrl(),
     headers,
     contentLength: Buffer.byteLength(body).toString()
   });
-  const response = await fetch(signed.url, {
+  const response = await fetch(blobUrl(), {
     method: "PUT",
     headers: {
       ...headers,
-      Authorization: signed.authorization,
+      Authorization: authorization,
       "Content-Length": Buffer.byteLength(body).toString()
     },
     body
